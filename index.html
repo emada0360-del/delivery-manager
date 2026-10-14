@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة التحكم - تطبيق التوصيل</title>
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs (Compat Version) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -40,14 +40,14 @@
     </div>
 
     <script>
-        // إعدادات Firebase الحقيقية لمشروعك
+        // إعدادات Firebase الصحيحة والمحدثة
         const firebaseConfig = {
-            apiKey: "AIzaSyDvPf59NY7BOnakIMFCcI1fexpdWooF_vY",
+            apiKey: "AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M",
             authDomain: "baqubah-delivery.firebaseapp.com",
             projectId: "baqubah-delivery",
-            storageBucket: "baqubah-delivery.appspot.com",
-            messagingSenderId: "607200279395",
-            appId: "1:607200279395:web:859d9c7fb693a1b0b6d56"
+            storageBucket: "baqubah-delivery.firebasestorage.app",
+            messagingSenderId: "607280279395",
+            appId: "1:607280279395:web:859d9c7fb693a1b0b66d56"
         };
 
         // تهيئة Firebase
@@ -68,7 +68,7 @@
             }
         });
 
-        // دالة تسجيل الدخول مع إظهار الخطأ التقني بدقة
+        // دالة تسجيل الدخول
         async function login() {
             const userInput = document.getElementById('username').value.trim();
             const passInput = document.getElementById('password').value;
