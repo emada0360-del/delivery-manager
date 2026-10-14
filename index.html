@@ -4,43 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة التحكم - تطبيق التوصيل</title>
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
     <style>
-        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        * { box-sizing: border-box; font-family: system-ui, sans-serif; }
         body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .card { background-color: #1e293b; padding: 2rem; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; }
         h2 { margin-bottom: 1.5rem; color: #f8fafc; }
         input { width: 100%; padding: 12px; margin-bottom: 1rem; border-radius: 8px; border: 1px solid #334155; background-color: #0f172a; color: #fff; font-size: 1rem; }
-        button { width: 100%; padding: 12px; background-color: #f8fafc; color: #0f172a; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
-        button:hover { background-color: #e2e8f0; }
+        button { width: 100%; padding: 12px; background-color: #f8fafc; color: #0f172a; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; }
         .error { color: #ef4444; font-size: 0.85rem; margin-top: 1rem; display: none; direction: ltr; text-align: right; background: #331111; padding: 8px; border-radius: 6px; }
         .dashboard { display: none; text-align: right; }
     </style>
 </head>
 <body>
-
-    <!-- شاشة تسجيل الدخول -->
     <div id="loginSection" class="card">
-        <h2>دخول المدير (محدث)</h2>
+        <h2>دخول المدير V2</h2>
         <input type="text" id="username" placeholder="اليوزر أو البريد" value="admin@baqubah.app">
         <input type="password" id="password" placeholder="كلمة المرور" value="199766">
         <button id="loginBtn" onclick="login()">دخول</button>
         <div id="loginError" class="error"></div>
     </div>
-
-    <!-- شاشة لوحة التحكم عند الدخول -->
     <div id="dashboardSection" class="card dashboard">
         <h2>مرحباً بك في لوحة التحكم 👋</h2>
-        <p>تم تسجيل الدخول بنجاح كـ مدير للنظام.</p>
-        <button onclick="logout()">تسجيل الخروج</button>
+        <p>تم تسجيل الدخول بنجاح.</p>
+        <button onclick="auth.signOut()">تسجيل الخروج</button>
     </div>
-
     <script>
-        // إعدادات Firebase المحدثة بدقة
         const firebaseConfig = {
             apiKey: "AIzaSyDvPf59YMY7BonaRIBFCcilfEXpdMo0F_M",
             authDomain: "baqubah-delivery.firebaseapp.com",
@@ -49,71 +40,27 @@
             messagingSenderId: "607280279395",
             appId: "1:607280279395:web:859d9c7fb693a1b0b66d56"
         };
-
-        // تهيئة Firebase
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // مراقبة حالة التسجيل
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                document.getElementById('loginSection').style.display = 'none';
-                document.getElementById('dashboardSection').style.display = 'block';
-            } else {
-                document.getElementById('loginSection').style.display = 'block';
-                document.getElementById('dashboardSection').style.display = 'none';
-            }
+        auth.onAuthStateChanged(user => {
+            document.getElementById('loginSection').style.display = user ? 'none' : 'block';
+            document.getElementById('dashboardSection').style.display = user ? 'block' : 'none';
         });
 
-        // دالة تسجيل الدخول
         async function login() {
-            const userInput = document.getElementById('username').value.trim();
-            const passInput = document.getElementById('password').value;
-            const errorEl = document.getElementById('loginError');
-            const btn = document.getElementById('loginBtn');
-            
-            errorEl.style.display = 'none';
-
-            if (!userInput || !passInput) {
-                errorEl.textContent = 'يرجى إدخال اليوزر وكلمة المرور';
-                errorEl.style.display = 'block';
-                return;
-            }
-
-            const email = userInput.includes('@') ? userInput : `${userInput}@baqubah.app`;
-
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value;
+            const err = document.getElementById('loginError');
+            err.style.display = 'none';
             try {
-                btn.textContent = 'جاري التحقق...';
-                btn.disabled = true;
-
-                const userCredential = await auth.signInWithEmailAndPassword(email, passInput);
-                const user = userCredential.user;
-
-                const userDocRef = db.collection('users').doc(user.uid);
-                const doc = await userDocRef.get();
-
-                if (!doc.exists) {
-                    await userDocRef.set({
-                        role: 'admin',
-                        name: 'المدير',
-                        username: 'admin',
-                        active: true
-                    });
-                }
-            } catch (error) {
-                console.error(error);
-                btn.textContent = 'دخول';
-                btn.disabled = false;
-                errorEl.textContent = 'خطأ Firebase: ' + error.message;
-                errorEl.style.display = 'block';
+                const email = u.includes('@') ? u : `${u}@baqubah.app`;
+                await auth.signInWithEmailAndPassword(email, p);
+            } catch (e) {
+                err.textContent = 'خطأ Firebase: ' + e.message;
+                err.style.display = 'block';
             }
-        }
-
-        function logout() {
-            auth.signOut();
         }
     </script>
 </body>
