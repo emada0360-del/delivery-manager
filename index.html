@@ -17,7 +17,7 @@
         input { width: 100%; padding: 12px; margin-bottom: 1rem; border-radius: 8px; border: 1px solid #334155; background-color: #0f172a; color: #fff; font-size: 1rem; }
         button { width: 100%; padding: 12px; background-color: #f8fafc; color: #0f172a; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
         button:hover { background-color: #e2e8f0; }
-        .error { color: #ef4444; font-size: 0.9rem; margin-top: 1rem; display: none; }
+        .error { color: #ef4444; font-size: 0.85rem; margin-top: 1rem; display: none; direction: ltr; text-align: right; background: #331111; padding: 8px; border-radius: 6px; }
         .dashboard { display: none; text-align: right; }
     </style>
 </head>
@@ -28,7 +28,7 @@
         <h2>دخول المدير</h2>
         <input type="text" id="username" placeholder="اليوزر أو البريد" value="admin@baqubah.app">
         <input type="password" id="password" placeholder="كلمة المرور" value="199766">
-        <button onclick="login()">دخول</button>
+        <button id="loginBtn" onclick="login()">دخول</button>
         <div id="loginError" class="error"></div>
     </div>
 
@@ -68,11 +68,13 @@
             }
         });
 
-        // دالة تسجيل الدخول مع المعالجة التلقائية لصلاحيات المدير
+        // دالة تسجيل الدخول مع إظهار الخطأ التقني بدقة
         async function login() {
             const userInput = document.getElementById('username').value.trim();
             const passInput = document.getElementById('password').value;
             const errorEl = document.getElementById('loginError');
+            const btn = document.getElementById('loginBtn');
+            
             errorEl.style.display = 'none';
 
             if (!userInput || !passInput) {
@@ -81,14 +83,16 @@
                 return;
             }
 
-            // تحويل اليوزر إلى بريد إلكتروني تلقائياً
             const email = userInput.includes('@') ? userInput : `${userInput}@baqubah.app`;
 
             try {
+                btn.textContent = 'جاري التحقق...';
+                btn.disabled = true;
+
                 const userCredential = await auth.signInWithEmailAndPassword(email, passInput);
                 const user = userCredential.user;
 
-                // التحقق من وجود مستند الصلاحيات أو إنشاؤه تلقائياً في Firestore
+                // التحقق من إنشاء مستند الصلاحيات في Firestore تلقائياً
                 const userDocRef = db.collection('users').doc(user.uid);
                 const doc = await userDocRef.get();
 
@@ -102,7 +106,9 @@
                 }
             } catch (error) {
                 console.error(error);
-                errorEl.textContent = 'اليوزر أو الرمز غير صحيح';
+                btn.textContent = 'دخول';
+                btn.disabled = false;
+                errorEl.textContent = 'خطأ Firebase: ' + error.message;
                 errorEl.style.display = 'block';
             }
         }
