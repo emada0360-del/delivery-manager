@@ -3,71 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم - تطبيق التوصيل</title>
+    <title>لوحة التحكم</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <style>
-        * { box-sizing: border-box; font-family: system-ui, sans-serif; }
-        body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background-color: #1e293b; padding: 2rem; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; }
-        h2 { margin-bottom: 1.5rem; color: #f8fafc; }
-        input { width: 100%; padding: 12px; margin-bottom: 1rem; border-radius: 8px; border: 1px solid #334155; background-color: #0f172a; color: #fff; font-size: 1rem; }
-        button { width: 100%; padding: 12px; background-color: #f8fafc; color: #0f172a; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; }
-        .error { color: #ef4444; font-size: 0.85rem; margin-top: 1rem; display: none; direction: ltr; text-align: right; background: #331111; padding: 8px; border-radius: 6px; }
-        .dashboard { display: none; text-align: right; }
+        body { background-color: #0f172a; color: #fff; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .box { background: #1e293b; padding: 2rem; border-radius: 10px; width: 350px; text-align: center; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #475569; background: #0f172a; color: #fff; }
+        button { width: 100%; padding: 10px; background: #fff; color: #0f172a; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .error { color: #ef4444; font-size: 0.85rem; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
-    <div id="loginSection" class="card">
+    <div class="box" id="loginBox">
         <h2>دخول المدير</h2>
-        <input type="text" id="username" placeholder="اليوزر أو البريد" value="admin@baqubah.app">
-        <input type="password" id="password" placeholder="كلمة المرور" value="199766">
-        <button id="loginBtn" onclick="login()">دخول</button>
-        <div id="loginError" class="error"></div>
+        <input type="text" id="email" value="admin@baqubah.app">
+        <input type="password" id="pass" value="199766">
+        <button onclick="login()">دخول</button>
+        <div id="err" class="error"></div>
     </div>
-    
-    <div id="dashboardSection" class="card dashboard">
-        <h2>مرحباً بك في لوحة التحكم 👋</h2>
-        <p>تم تسجيل الدخول بنجاح كـ مدير للنظام.</p>
-        <button onclick="auth.signOut()">تسجيل الخروج</button>
+    <div class="box" id="dashBox" style="display:none;">
+        <h2>مرحباً بك 👋</h2>
+        <p>تم تسجيل الدخول بنجاح.</p>
+        <button onclick="firebase.auth().signOut()">تسجيل الخروج</button>
     </div>
-
     <script>
-        // إعدادات Firebase من مشروعك الأصلي
-        const firebaseConfig = {
-            apiKey: "AIzaSyDvPf59NY7BOnakIMFCcI1fexpdWooF_vY",
+        firebase.initializeApp({
+            apiKey: "AIzaSyDvPf59YMY7BonaRIBFCcilfEXpdMo0F_M",
             authDomain: "baqubah-delivery.firebaseapp.com",
             projectId: "baqubah-delivery",
-            storageBucket: "baqubah-delivery.appspot.com",
-            messagingSenderId: "607200279395",
-            appId: "1:607200279395:web:859d9c7fb693a1b0b6d56"
-        };
-
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-
-        auth.onAuthStateChanged(user => {
-            document.getElementById('loginSection').style.display = user ? 'none' : 'block';
-            document.getElementById('dashboardSection').style.display = user ? 'block' : 'none';
+            storageBucket: "baqubah-delivery.firebasestorage.app",
+            messagingSenderId: "607280279395",
+            appId: "1:607280279395:web:859d9c7fb693a1b0b66d56"
         });
-
-        async function login() {
-            const u = document.getElementById('username').value.trim();
-            const p = document.getElementById('password').value;
-            const err = document.getElementById('loginError');
-            err.style.display = 'none';
-
-            try {
-                const email = u.includes('@') ? u : `${u}@baqubah.app`;
-                await auth.signInWithEmailAndPassword(email, p);
-            } catch (e) {
-                err.textContent = 'خطأ Firebase: ' + e.message;
-                err.style.display = 'block';
-            }
+        firebase.auth().onAuthStateChanged(u => {
+            document.getElementById('loginBox').style.display = u ? 'none' : 'block';
+            document.getElementById('dashBox').style.display = u ? 'block' : 'none';
+        });
+        function login() {
+            let e = document.getElementById('email').value;
+            let p = document.getElementById('pass').value;
+            firebase.auth().signInWithEmailAndPassword(e, p).catch(err => {
+                let d = document.getElementById('err');
+                d.textContent = err.message;
+                d.style.display = 'block';
+            });
         }
     </script>
 </body>
