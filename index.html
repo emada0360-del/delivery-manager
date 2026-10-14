@@ -20,27 +20,33 @@
 </head>
 <body>
     <div id="loginSection" class="card">
-        <h2>دخول المدير V2</h2>
+        <h2>دخول المدير</h2>
         <input type="text" id="username" placeholder="اليوزر أو البريد" value="admin@baqubah.app">
         <input type="password" id="password" placeholder="كلمة المرور" value="199766">
         <button id="loginBtn" onclick="login()">دخول</button>
         <div id="loginError" class="error"></div>
     </div>
+    
     <div id="dashboardSection" class="card dashboard">
         <h2>مرحباً بك في لوحة التحكم 👋</h2>
-        <p>تم تسجيل الدخول بنجاح.</p>
+        <p>تم تسجيل الدخول بنجاح كـ مدير للنظام.</p>
         <button onclick="auth.signOut()">تسجيل الخروج</button>
     </div>
+
     <script>
+        // إعدادات Firebase من مشروعك الأصلي
         const firebaseConfig = {
-            apiKey: "AIzaSyDvPf59YMY7BonaRIBFCcilfEXpdMo0F_M",
+            apiKey: "AIzaSyDvPf59NY7BOnakIMFCcI1fexpdWooF_vY",
             authDomain: "baqubah-delivery.firebaseapp.com",
             projectId: "baqubah-delivery",
-            storageBucket: "baqubah-delivery.firebasestorage.app",
-            messagingSenderId: "607280279395",
-            appId: "1:607280279395:web:859d9c7fb693a1b0b66d56"
+            storageBucket: "baqubah-delivery.appspot.com",
+            messagingSenderId: "607200279395",
+            appId: "1:607200279395:web:859d9c7fb693a1b0b6d56"
         };
-        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const auth = firebase.auth();
         const db = firebase.firestore();
 
@@ -54,6 +60,7 @@
             const p = document.getElementById('password').value;
             const err = document.getElementById('loginError');
             err.style.display = 'none';
+
             try {
                 const email = u.includes('@') ? u : `${u}@baqubah.app`;
                 await auth.signInWithEmailAndPassword(email, p);
