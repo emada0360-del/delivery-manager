@@ -1,122 +1,116 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>لوحة المدير</title>
-<style>
-:root{--bg:#eef1f4;--c:#fff;--t:#1b2a41;--m:#667085;--a:#f2a900;--g:#15803d;--r:#b91c1c;--b:#d9dee5}
-@media(prefers-color-scheme:dark){:root{--bg:#12161c;--c:#1c222b;--t:#e8ecf1;--m:#98a2b3;--b:#2b3340}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--t);font:15px/1.6 "Noto Sans Arabic",Tahoma,sans-serif}
-header{background:#1b2a41;color:#fff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:2}
-header b{font-size:17px;border-bottom:3px solid var(--a)}
-header button{background:none;border:1px solid #5b6b85;color:#fff;padding:4px 10px;border-radius:6px}
-#nav{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;background:var(--c);border-bottom:1px solid var(--b)}
-#nav button{flex:none;padding:7px 14px;border:1px solid var(--b);background:none;color:var(--t);border-radius:20px;font:inherit}
-#nav button.on{background:var(--a);border-color:var(--a);color:#1b2a41;font-weight:700}
-#main,#login{max-width:640px;margin:0 auto;padding:12px}
-.card{background:var(--c);border:1px solid var(--b);border-radius:10px;padding:12px;margin-bottom:10px}
-.card p{margin:4px 0;color:var(--m)}
-.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.f{display:flex;flex-direction:column;gap:8px}
-label{display:flex;flex-direction:column;gap:3px;color:var(--m);font-size:13px}
-input{padding:10px;border:1px solid var(--b);border-radius:8px;background:var(--bg);color:var(--t);font:inherit;width:100%}
-button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--t);background:var(--t);color:var(--bg);cursor:pointer}
-button.d{background:none;color:var(--r);border-color:var(--r)}
-button.o{background:none;color:var(--t)}
-.tag{font-size:12px;padding:2px 10px;border-radius:12px;background:var(--b)}
-.s-delivered{background:#dcfce7;color:#14532d}.s-cancelled,.s-returned{background:#fee2e2;color:#7f1d1d}
-.bad{color:var(--r);font-weight:700}.empty{text-align:center;color:var(--m);padding:24px}
-#login{margin-top:12vh}#err{color:var(--r);min-height:22px}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - تطبيق التوصيل</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background-color: #1e293b; padding: 2rem; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; }
+        h2 { margin-bottom: 1.5rem; color: #f8fafc; }
+        input { width: 100%; padding: 12px; margin-bottom: 1rem; border-radius: 8px; border: 1px solid #334155; background-color: #0f172a; color: #fff; font-size: 1rem; }
+        button { width: 100%; padding: 12px; background-color: #f8fafc; color: #0f172a; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+        button:hover { background-color: #e2e8f0; }
+        .error { color: #ef4444; font-size: 0.9rem; margin-top: 1rem; display: none; }
+        .dashboard { display: none; text-align: right; }
+    </style>
 </head>
 <body>
-<div id="login" style="display:block"><div class="card f"><h2 style="margin:0">دخول المدير</h2>
-<input id="u" placeholder="اليوزر نيم (مثال: admin)" autocapitalize="none"><input id="p" type="password" placeholder="الرمز">
-<div id="err"></div><button onclick="login()">دخول</button></div></div>
-<div id="app" style="display:none"><header><b>لوحة المدير</b><button onclick="auth.signOut()">خروج</button></header>
-<div id="nav"></div><div id="main"></div></div>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-firestore-compat.js"></script>
-<script>
-const cfg={apiKey:"AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M",authDomain:"baqubah-delivery.firebaseapp.com",projectId:"baqubah-delivery",storageBucket:"baqubah-delivery.firebasestorage.app",messagingSenderId:"607280279395",appId:"1:607280279395:web:859d9c7fb693a1b0b66d56"};
-firebase.initializeApp(cfg);
-const auth=firebase.auth(),db=firebase.firestore(),$=s=>document.querySelector(s),TS=firebase.firestore.FieldValue;
-const D={orders:[],areas:[],drivers:[],stores:[]};
-const ST={storeCommission:500,driverPct:10,debtLimit:15000,batchMinutes:15,batchDiscount:30};
-const SL={new:'جديد',accepted:'مقبول',picked:'مستلم من المتجر',delivered:'مسلّم',returned:'مرتجع',cancelled:'ملغي'};
-const TABS=[['orders','الطلبات'],['areas','المناطق'],['drivers','السواق'],['stores','المتاجر'],['settings','الإعدادات']];
-let tab='orders',on=false;
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const N=n=>Number(n||0).toLocaleString('en-US');
-const mail=u=>u.trim().toLowerCase()+'@baqubah.app';
-const nm=(c,id)=>(D[c].find(x=>x.id==id)||{}).name||'—';
-const log=(a,id,n)=>db.collection('logs').add({action:a,ref:id,note:String(n),by:auth.currentUser?.email||'admin',at:TS.serverTimestamp()});
-const show=v=>{$('#login').style.display=v=='login'?'block':'none';$('#app').style.display=v=='app'?'block':'none'};
 
-async function login(){$('#err').textContent='';try{await auth.signInWithEmailAndPassword(mail($('#u').value),$('#p').value)}catch(e){$('#err').textContent='اليوزر أو الرمز غير صحيح'}}
-auth.onAuthStateChanged(async u=>{
- if(!u){show('login');return}
- try{
-  const r=db.collection('users').doc(u.uid);let d=await r.get();
-  if(!d.exists){const any=await db.collection('users').limit(1).get();
-   if(any.empty){await r.set({role:'admin',name:'المدير',username:u.email.split('@')[0],active:true});d=await r.get()}}
-  if(!d.exists||d.data().role!=='admin'){await auth.signOut();show('login');$('#err').textContent='هذا الحساب ليس حساب مدير';return}
-  start()
- }catch(e){show('login');$('#err').textContent='خطأ في الاتصال: '+e.message}
-});
-function start(){show('app');if(on)return;on=true;
- for(const k of Object.keys(D))db.collection(k).onSnapshot(s=>{D[k]=s.docs.map(x=>({id:x.id,...x.data()}));render()});
- db.collection('settings').doc('main').onSnapshot(s=>{if(s.exists)Object.assign(ST,s.data());render()})}
-function go(k){tab=k;render(true)}
-function render(f){
- if(!f&&document.activeElement&&document.activeElement.tagName=='INPUT')return;
- $('#nav').innerHTML=TABS.map(([k,t])=>`<button class="${k==tab?'on':''}" onclick="go('${k}')">${t}</button>`).join('');
- $('#main').innerHTML=V[tab]()}
+    <!-- شاشة تسجيل الدخول -->
+    <div id="loginSection" class="card">
+        <h2>دخول المدير</h2>
+        <input type="text" id="username" placeholder="اليوزر أو البريد" value="admin@baqubah.app">
+        <input type="password" id="password" placeholder="كلمة المرور" value="199766">
+        <button onclick="login()">دخول</button>
+        <div id="loginError" class="error"></div>
+    </div>
 
-const form=(col,btn)=>`<div class="card f"><input id="${col}n" placeholder="الاسم"><input id="${col}u" placeholder="اليوزر نيم (إنجليزي)" autocapitalize="none"><input id="${col}p" type="password" placeholder="الرمز (6 خانات على الأقل)"><input id="${col}t" placeholder="رقم الهاتف" inputmode="tel"><button onclick="addAcct('${col}')">${btn}</button></div>`;
-const V={
- orders:()=>{const o=[...D.orders].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-  return o.length?o.map(x=>`<div class="card"><div class="row"><b>${esc(x.item||'طلب')}</b><span class="tag s-${x.status}">${SL[x.status]||esc(x.status)}</span></div>
-<p>${esc(nm('stores',x.storeId))} ← ${esc(nm('areas',x.areaId))}${x.driverId?' | السائق: '+esc(nm('drivers',x.driverId)):''}</p>
-<p>سعر الطلب ${N(x.price)} | الكروة ${N(x.fee)}${x.fragile?' | قابل للكسر':''}</p>
-<div class="row"><button class="o" onclick="editFee('${x.id}')">تعديل الكروة</button>${x.status!='cancelled'?`<button class="d" onclick="cancelO('${x.id}')">إلغاء الطلب</button>`:''}</div></div>`).join(''):'<p class="empty">ما كو طلبات لحد الآن. تظهر هنا لما يرفعها المتجر.</p>'},
- areas:()=>`<div class="card f"><input id="an" placeholder="اسم المنطقة"><input id="ap" type="number" placeholder="الكروة بالدينار"><button onclick="addArea()">إضافة منطقة</button></div>`+
-  [...D.areas].sort((a,b)=>a.price-b.price).map(a=>`<div class="card"><div class="row"><b>${esc(a.name)}</b><span>${N(a.price)} د.ع</span></div><div class="row"><button class="o" onclick="setPrice('${a.id}')">تعديل السعر</button><button class="${a.active?'d':'o'}" onclick="tgl('areas','${a.id}')">${a.active?'إيقاف':'تفعيل'}</button></div>${a.active?'':'<p>موقوفة: ما تظهر للمتاجر</p>'}</div>`).join(''),
- drivers:()=>form('drivers','إضافة سائق')+D.drivers.map(d=>{const full=(d.balance||0)>=ST.debtLimit;return `<div class="card"><div class="row"><b>${esc(d.name)}</b><span>${esc(d.username)}</span></div>
-<p class="${full?'bad':''}">الدين: ${N(d.balance)} / ${N(ST.debtLimit)}${full?' (متوقف عن الطلبات)':''}</p>${d.active?'':'<p>الحساب معطّل</p>'}
-<div class="row"><button onclick="settle('${d.id}')">تسديد</button><button class="${d.active?'d':'o'}" onclick="tgl('drivers','${d.id}')">${d.active?'تعطيل':'تفعيل'}</button></div></div>`}).join(''),
- stores:()=>form('stores','إضافة متجر')+D.stores.map(s=>`<div class="card"><div class="row"><b>${esc(s.name)}</b><span>${esc(s.username)}</span></div><p>${esc(s.phone)}${s.active?'':' | الحساب معطّل'}</p>
-<button class="${s.active?'d':'o'}" onclick="tgl('stores','${s.id}')">${s.active?'تعطيل':'تفعيل'}</button></div>`).join(''),
- settings:()=>`<div class="card f">${[['storeCommission','عمولة المتجر لكل طلب (دينار)'],['driverPct','نسبة عمولة السائق من الكروة %'],['debtLimit','حد دين السائق (دينار)'],['batchMinutes','مهلة تجميع الطلبات (دقيقة)'],['batchDiscount','خصم الطلب الثاني على الكروة %']].map(([k,t])=>`<label>${t}<input id="s_${k}" type="number" value="${ST[k]}"></label>`).join('')}<button onclick="saveS()">حفظ الإعدادات</button></div>`
-};
+    <!-- شاشة لوحة التحكم عند الدخول -->
+    <div id="dashboardSection" class="card dashboard">
+        <h2>مرحباً بك في لوحة التحكم 👋</h2>
+        <p>تم تسجيل الدخول بنجاح كـ مدير للنظام.</p>
+        <button onclick="logout()">تسجيل الخروج</button>
+    </div>
 
-async function addArea(){const n=$('#an').value.trim(),p=+$('#ap').value;if(!n||!p)return alert('اكتب الاسم والكروة');await db.collection('areas').add({name:n,price:p,active:true});log('add_area',n,p);render(true)}
-async function setPrice(id){const a=D.areas.find(x=>x.id==id),v=prompt('الكروة الجديدة',a.price);if(v&&!isNaN(v)){await db.collection('areas').doc(id).update({price:+v});log('area_price',id,a.price+' → '+v)}}
-async function tgl(c,id){const x=D[c].find(y=>y.id==id);await db.collection(c).doc(id).update({active:!x.active});if(c!='areas')await db.collection('users').doc(id).update({active:!x.active});log('toggle_'+c,id,!x.active)}
-async function editFee(id){const o=D.orders.find(x=>x.id==id),v=prompt('الكروة الجديدة',o.fee);if(v===null||v===''||isNaN(v))return;const nf=+v;
- await db.collection('orders').doc(id).update({fee:nf});
- if(o.status=='delivered'&&o.driverId){const df=Math.round((nf-o.fee)*ST.driverPct/100);if(df)await db.collection('drivers').doc(o.driverId).update({balance:TS.increment(df)})}
- log('edit_fee',id,o.fee+' → '+nf)}
-async function cancelO(id){const r=prompt('سبب الإلغاء');if(!r)return;await db.collection('orders').doc(id).update({status:'cancelled',cancelReason:r});log('cancel',id,r)}
-async function settle(id){const d=D.drivers.find(x=>x.id==id),v=prompt('المبلغ المسدّد',d.balance||0);if(!v||isNaN(v)||+v<=0)return;
- await db.collection('drivers').doc(id).update({balance:TS.increment(-(+v))});await db.collection('payments').add({driverId:id,amount:+v,by:auth.currentUser.email,at:TS.serverTimestamp()});log('settle',id,v)}
-async function addAcct(col){const g=k=>$('#'+col+k).value.trim(),f={name:g('n'),username:g('u'),phone:g('t')},pw=$('#'+col+'p').value;
- if(!f.name||!f.username||pw.length<6)return alert('اكتب الاسم واليوزر ورمز من 6 خانات على الأقل');
- try{
-  const cur=auth.currentUser;
-  const cred=await auth.createUserWithEmailAndPassword(mail(f.username),pw);
-  const id=cred.user.uid;
-  await db.collection('users').doc(id).set({role:col=='drivers'?'driver':'store',name:f.name,username:f.username,active:true});
-  await db.collection(col).doc(id).set({...f,active:true,...(col=='drivers'?{balance:0}:{})});
-  await auth.signOut();
-  if(cur) await auth.signInWithEmailAndPassword(cur.email, prompt('أعد إدخال رمز حساب المدير الحالي لتأكيد جلستك:'));
-  log('add_'+col,id,f.name);render(true);
-  alert('تم إنشاء الحساب بنجاح');
- }catch(e){alert('خطأ: '+e.message)}}
-async function saveS(){const o={};for(const k of Object.keys(ST))o[k]=+$('#s_'+k).value;await db.collection('settings').doc('main').set(o);alert('تم الحفظ')}
-</script>
+    <script>
+        // إعدادات Firebase الحقيقية لمشروعك
+        const firebaseConfig = {
+            apiKey: "AIzaSyDvPf59NY7BOnakIMFCcI1fexpdWooF_vY",
+            authDomain: "baqubah-delivery.firebaseapp.com",
+            projectId: "baqubah-delivery",
+            storageBucket: "baqubah-delivery.appspot.com",
+            messagingSenderId: "607200279395",
+            appId: "1:607200279395:web:859d9c7fb693a1b0b6d56"
+        };
+
+        // تهيئة Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // مراقبة حالة التسجيل
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('dashboardSection').style.display = 'block';
+            } else {
+                document.getElementById('loginSection').style.display = 'block';
+                document.getElementById('dashboardSection').style.display = 'none';
+            }
+        });
+
+        // دالة تسجيل الدخول مع المعالجة التلقائية لصلاحيات المدير
+        async function login() {
+            const userInput = document.getElementById('username').value.trim();
+            const passInput = document.getElementById('password').value;
+            const errorEl = document.getElementById('loginError');
+            errorEl.style.display = 'none';
+
+            if (!userInput || !passInput) {
+                errorEl.textContent = 'يرجى إدخال اليوزر وكلمة المرور';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            // تحويل اليوزر إلى بريد إلكتروني تلقائياً
+            const email = userInput.includes('@') ? userInput : `${userInput}@baqubah.app`;
+
+            try {
+                const userCredential = await auth.signInWithEmailAndPassword(email, passInput);
+                const user = userCredential.user;
+
+                // التحقق من وجود مستند الصلاحيات أو إنشاؤه تلقائياً في Firestore
+                const userDocRef = db.collection('users').doc(user.uid);
+                const doc = await userDocRef.get();
+
+                if (!doc.exists) {
+                    await userDocRef.set({
+                        role: 'admin',
+                        name: 'المدير',
+                        username: 'admin',
+                        active: true
+                    });
+                }
+            } catch (error) {
+                console.error(error);
+                errorEl.textContent = 'اليوزر أو الرمز غير صحيح';
+                errorEl.style.display = 'block';
+            }
+        }
+
+        // دالة تسجيل الخروج
+        function logout() {
+            auth.signOut();
+        }
+    </script>
 </body>
 </html>
