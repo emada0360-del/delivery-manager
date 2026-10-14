@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة التحكم - تطبيق التوصيل</title>
-    <!-- Firebase SDKs (Compat Version) -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -25,7 +25,7 @@
 
     <!-- شاشة تسجيل الدخول -->
     <div id="loginSection" class="card">
-        <h2>دخول المدير</h2>
+        <h2>دخول المدير (محدث)</h2>
         <input type="text" id="username" placeholder="اليوزر أو البريد" value="admin@baqubah.app">
         <input type="password" id="password" placeholder="كلمة المرور" value="199766">
         <button id="loginBtn" onclick="login()">دخول</button>
@@ -40,9 +40,9 @@
     </div>
 
     <script>
-        // إعدادات Firebase الصحيحة والمحدثة
+        // إعدادات Firebase المحدثة بدقة
         const firebaseConfig = {
-            apiKey: "AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M",
+            apiKey: "AIzaSyDvPf59YMY7BonaRIBFCcilfEXpdMo0F_M",
             authDomain: "baqubah-delivery.firebaseapp.com",
             projectId: "baqubah-delivery",
             storageBucket: "baqubah-delivery.firebasestorage.app",
@@ -92,7 +92,6 @@
                 const userCredential = await auth.signInWithEmailAndPassword(email, passInput);
                 const user = userCredential.user;
 
-                // التحقق من إنشاء مستند الصلاحيات في Firestore تلقائياً
                 const userDocRef = db.collection('users').doc(user.uid);
                 const doc = await userDocRef.get();
 
@@ -113,7 +112,6 @@
             }
         }
 
-        // دالة تسجيل الخروج
         function logout() {
             auth.signOut();
         }
