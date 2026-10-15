@@ -45,6 +45,7 @@ const cfg={apiKey:"AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M",authDomain:"baqubah-
 firebase.initializeApp(cfg);
 const sec=firebase.initializeApp(cfg,'sec');
 const auth=firebase.auth(),db=firebase.firestore(),$=s=>document.querySelector(s),TS=firebase.firestore.FieldValue;
+db.settings({experimentalForceLongPolling:true,merge:true});
 const D={orders:[],areas:[],drivers:[],stores:[]};
 const ST={storeCommission:500,driverPct:10,debtLimit:15000,batchMinutes:15,batchDiscount:30};
 const SL={new:'جديد',accepted:'مقبول',picked:'مستلم من المتجر',delivered:'مسلّم',returned:'مرتجع',cancelled:'ملغي'};
