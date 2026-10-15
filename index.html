@@ -108,19 +108,32 @@ auth.onAuthStateChanged(async u => {
   start();
 });
 
+async function loadDataOnce() {
+  try {
+    for(const k of Object.keys(D)){
+      const snap = await db.collection(k).get();
+      D[k] = snap.docs.map(x => ({id:x.id, ...x.data()}));
+    }
+    const settingsSnap = await db.collection('settings').doc('main').get();
+    if(settingsSnap.exists) Object.assign(ST, settingsSnap.data());
+    render(true);
+  } catch(e) {
+    console.log(e);
+  }
+}
+
 function start(){
   show('app');
-  render(true);
+  loadDataOnce();
   if(on) return;
   on = true;
+  
+  // تحديث حي دائم
   for(const k of Object.keys(D)){
     db.collection(k).onSnapshot(s => { 
       D[k] = s.docs.map(x => ({id:x.id, ...x.data()})); 
       render(); 
-    }, err => {
-      console.log(err);
-      render();
-    });
+    }, err => console.log(err));
   }
   db.collection('settings').doc('main').onSnapshot(s => { 
     if(s.exists) Object.assign(ST, s.data()); 
