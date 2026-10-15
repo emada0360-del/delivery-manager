@@ -105,18 +105,27 @@ window.tryLogin = tryLogin;
 
 auth.onAuthStateChanged(async u => {
   if(!u){ show('login'); $('#err').textContent = ''; return; }
-  // السماح بالدخول مباشرة فور نجاح المصادقة لتجاوز تعليق الـ offline
   start();
 });
 
 function start(){
   show('app');
+  render(true);
   if(on) return;
   on = true;
   for(const k of Object.keys(D)){
-    db.collection(k).onSnapshot(s => { D[k] = s.docs.map(x => ({id:x.id, ...x.data()})); render(); }, err => console.log(err));
+    db.collection(k).onSnapshot(s => { 
+      D[k] = s.docs.map(x => ({id:x.id, ...x.data()})); 
+      render(); 
+    }, err => {
+      console.log(err);
+      render();
+    });
   }
-  db.collection('settings').doc('main').onSnapshot(s => { if(s.exists) Object.assign(ST, s.data()); render(); });
+  db.collection('settings').doc('main').onSnapshot(s => { 
+    if(s.exists) Object.assign(ST, s.data()); 
+    render(); 
+  }, err => console.log(err));
 }
 
 function go(k){ tab = k; render(true); }
@@ -124,8 +133,12 @@ window.go = go;
 
 function render(f){
   if(!f && document.activeElement && document.activeElement.tagName == 'INPUT') return;
-  $('#nav').innerHTML = TABS.map(([k,t]) => `<button class="${k==tab?'on':''}" onclick="go('${k}')">${t}</button>`).join('');
-  $('#main').innerHTML = V[tab]();
+  const navEl = $('#nav');
+  const mainEl = $('#main');
+  if(!navEl || !mainEl) return;
+  
+  navEl.innerHTML = TABS.map(([k,t]) => `<button class="${k==tab?'on':''}" onclick="go('${k}')">${t}</button>`).join('');
+  mainEl.innerHTML = V[tab] ? V[tab]() : '';
 }
 
 const form = (col, btn) => `<div class="card f"><input id="${col}n" placeholder="الاسم"><input id="${col}u" placeholder="اليوزر نيم (إنجليزي)" autocapitalize="none"><input id="${col}p" placeholder="الرمز (6 خانات على الأقل)"><input id="${col}t" placeholder="رقم الهاتف" inputmode="tel"><button onclick="addAcct('${col}')">${btn}</button></div>`;
@@ -139,7 +152,7 @@ const V = {
 <div class="row"><button class="o" onclick="editFee('${x.id}')">تعديل الكروة</button>${x.status!='cancelled'?`<button class="d" onclick="cancelO('${x.id}')">إلغاء الطلب</button>`:''}</div></div>`).join('') : '<p class="empty">ما كو طلبات لحد الآن. تظهر هنا لما يرفعها المتجر.</p>';
   },
   areas: () => `<div class="card f"><input id="an" placeholder="اسم المنطقة"><input id="ap" type="number" placeholder="الكروة بالدينار"><button onclick="addArea()">إضافة منطقة</button></div>` +
-    [...D.areas].sort((a,b)=>a.price-b.price).map(a => `<div class="card"><div class="row"><b>${esc(a.name)}</b><span>${N(a.price)} د.ع</span></div><div class="row"><button class="o" onclick="setPrice('${a.id}')">تعديل السعر</button><button class="${a.active?'d':'o'}" onclick="tgl('areas','${a.id}')">${a.active?'إيقاف':'تفعيل'}</button></div>${a.active?'':'<p>موقوفة: ما تظهر للمتاجر</p>'}</div>`).join(''),
+    ([.‘] && D.areas.length ? [...D.areas].sort((a,b)=>a.price-b.price).map(a => `<div class="card"><div class="row"><b>${esc(a.name)}</b><span>${N(a.price)} د.ع</span></div><div class="row"><button class="o" onclick="setPrice('${a.id}')">تعديل السعر</button><button class="${a.active?'d':'o'}" onclick="tgl('areas','${a.id}')">${a.active?'إيقاف':' تفعيل'}</button></div>${a.active?'':'<p>موقوفة: ما تظهر للمتاجر</p>'}</div>`).join('') : '<p class="empty">ماكو مناطق مضافة. أضف منطقة جديدة بالأعلى.</p>'),
   drivers: () => form('drivers','إضافة سائق') + D.drivers.map(d => {
     const full = (d.balance||0) >= ST.debtLimit;
     return `<div class="card"><div class="row"><b>${esc(d.name)}</b><span>${esc(d.username)}</span></div>
@@ -151,8 +164,23 @@ const V = {
   settings: () => `<div class="card f">${[['storeCommission','عمولة المتجر لكل طلب (دينار)'],['driverPct','نسبة عمولة السائق من الكروة %'],['debtLimit','حد دين السائق (دينار)'],['batchMinutes','مهلة تجميع الطلبات (دقيقة)'],['batchDiscount','خصم الطلب الثاني على الكروة %']].map(([k,t])=>`<label>${t}<input id="s_${k}" type="number" value="${ST[k]}"></label>`).join('')}<button onclick="saveS()">حفظ الإعدادات</button></div>`
 };
 
-async function addArea(){ const n=$('#an').value.trim(), p=+$('#ap').value; if(!n||!p)return alert('اكتب الاسم والكروة'); await db.collection('areas').add({name:n,price:p,active:true}); log('add_area',n,p); render(true); }
+async function addArea(){ 
+  const n = $('#an').value.trim(); 
+  const p = +$('#ap').value; 
+  if(!n || !p) return alert('اكتب الاسم والكروة'); 
+  try {
+    const docRef = await db.collection('areas').add({name: n, price: p, active: true});
+    D.areas.push({id: docRef.id, name: n, price: p, active: true});
+    $('#an').value = '';
+    $('#ap').value = '';
+    render(true);
+    log('add_area', n, p);
+  } catch(e) {
+    alert('خطأ أثناء إضافة المنطقة: ' + e.message);
+  }
+}
 window.addArea = addArea;
+
 async function setPrice(id){ const a=D.areas.find(x=>x.id==id), v=prompt('الكروة الجديدة',a.price); if(v&&!isNaN(v)){ await db.collection('areas').doc(id).update({price:+v}); log('area_price',id,a.price+' → '+v); } }
 window.setPrice = setPrice;
 async function tgl(c,id){ const x=D[c].find(y=>y.id==id); await db.collection(c).doc(id).update({active:!x.active}); if(c!='areas') await db.collection('users').doc(id).update({active:!x.active}); log('toggle_'+c,id,!x.active); }
@@ -181,5 +209,7 @@ ld('firebase-app-compat.js').then(()=>ld('firebase-auth-compat.js')).then(()=>ld
   if(x) x.textContent='تعذّر تحميل مكتبات Firebase.';
 });
 </script>
+</body>
+</html>
 </body>
 </html>
