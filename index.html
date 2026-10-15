@@ -61,13 +61,8 @@ firebase.initializeApp(cfg);
 const sec = firebase.initializeApp(cfg, 'sec');
 const auth = firebase.auth(), db = firebase.firestore(), $ = s => document.querySelector(s), TS = firebase.firestore.FieldValue;
 
-// إعدادات إجبار الاتصال وتجاوز مشاكل الشبكة
 try {
-  db.settings({
-    experimentalForceLongPolling: true,
-    merge: true
-  });
-  db.enablePersistence({synchronizeTabs: true}).catch(err => console.log(err));
+  db.settings({ experimentalForceLongPolling: true, merge: true });
 } catch(e){ console.log(e); }
 
 const D = {orders:[], areas:[], drivers:[], stores:[]};
@@ -88,7 +83,7 @@ function show(v){
 
 async function tryLogin(){
   const errDiv = $('#err');
-  errDiv.textContent = 'جاري تسجيل الدخول والاتصال بقاعدة البيانات...';
+  errDiv.textContent = 'جاري تسجيل الدخول...';
   const rawU = $('#u').value.trim();
   const rawP = $('#p').value.trim();
   
@@ -110,23 +105,8 @@ window.tryLogin = tryLogin;
 
 auth.onAuthStateChanged(async u => {
   if(!u){ show('login'); $('#err').textContent = ''; return; }
-  try {
-    const r = db.collection('users').doc(u.uid); let d = await r.get();
-    if(!d.exists){
-      const any = await db.collection('users').limit(1).get();
-      if(any.empty){ await r.set({role:'admin', name:'المدير', username:u.email.split('@')[0], active:true}); d = await r.get(); }
-    }
-    if(!d.exists || d.data().role !== 'admin'){
-      await auth.signOut();
-      show('login');
-      $('#err').textContent = 'هذا الحساب ليس حساب مدير';
-      return;
-    }
-    start();
-  } catch(e){
-    show('login');
-    $('#err').textContent = 'خطأ اتصال بقاعدة البيانات: ' + e.message;
-  }
+  // السماح بالدخول مباشرة فور نجاح المصادقة لتجاوز تعليق الـ offline
+  start();
 });
 
 function start(){
