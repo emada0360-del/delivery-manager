@@ -38,11 +38,12 @@ button.o{background:none;color:var(--t)}
 <div id="app" style="display:none"><header><b>لوحة المدير</b><button onclick="auth.signOut()">خروج</button></header>
 <div id="nav"></div><div id="main"></div></div>
 <script type="text/plain" id="appjs">
+window.addEventListener('error',e=>{const x=document.getElementById('err');if(x&&!window.__e){window.__e=1;x.textContent='خطأ تشغيل: '+e.message}});
 const cfg={apiKey:"AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M",authDomain:"baqubah-delivery.firebaseapp.com",projectId:"baqubah-delivery",storageBucket:"baqubah-delivery.firebasestorage.app",messagingSenderId:"607280279395",appId:"1:607280279395:web:859d9c7fb693a1b0b66d56"};
 firebase.initializeApp(cfg);
 const sec=firebase.initializeApp(cfg,'sec');
 const auth=firebase.auth(),db=firebase.firestore(),$=s=>document.querySelector(s),TS=firebase.firestore.FieldValue;
-db.settings({experimentalForceLongPolling:true,merge:true});
+try{db.settings({experimentalForceLongPolling:true})}catch(e){console.log(e)}
 const D={orders:[],areas:[],drivers:[],stores:[]};
 const ST={storeCommission:500,driverPct:10,debtLimit:15000,batchMinutes:15,batchDiscount:30};
 const SL={new:'جديد',accepted:'مقبول',picked:'مستلم من المتجر',delivered:'مسلّم',returned:'مرتجع',cancelled:'ملغي'};
@@ -50,10 +51,10 @@ const TABS=[['orders','الطلبات'],['areas','المناطق'],['drivers','�
 let tab='orders',on=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const N=n=>Number(n||0).toLocaleString('en-US');
-const mail=u=>u.trim().toLowerCase()+'@baqubah.app';
+function mail(u){return u.trim().toLowerCase()+'@baqubah.app'}
 const nm=(c,id)=>(D[c].find(x=>x.id==id)||{}).name||'—';
 const log=(a,id,n)=>db.collection('logs').add({action:a,ref:id,note:String(n),by:auth.currentUser.email,at:TS.serverTimestamp()});
-const show=v=>{$('#login').style.display=v=='login'?'block':'none';$('#app').style.display=v=='app'?'block':'none'};
+function show(v){document.getElementById('login').style.display=v=='login'?'block':'none';document.getElementById('app').style.display=v=='app'?'block':'none'}
 
 async function login(){$('#err').textContent='';
  const u=$('#u').value.trim().replace(/@.*$/,''),p=$('#p').value.trim().replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
