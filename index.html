@@ -152,7 +152,7 @@ const V = {
 <div class="row"><button class="o" onclick="editFee('${x.id}')">تعديل الكروة</button>${x.status!='cancelled'?`<button class="d" onclick="cancelO('${x.id}')">إلغاء الطلب</button>`:''}</div></div>`).join('') : '<p class="empty">ما كو طلبات لحد الآن. تظهر هنا لما يرفعها المتجر.</p>';
   },
   areas: () => `<div class="card f"><input id="an" placeholder="اسم المنطقة"><input id="ap" type="number" placeholder="الكروة بالدينار"><button onclick="addArea()">إضافة منطقة</button></div>` +
-    ([.‘] && D.areas.length ? [...D.areas].sort((a,b)=>a.price-b.price).map(a => `<div class="card"><div class="row"><b>${esc(a.name)}</b><span>${N(a.price)} د.ع</span></div><div class="row"><button class="o" onclick="setPrice('${a.id}')">تعديل السعر</button><button class="${a.active?'d':'o'}" onclick="tgl('areas','${a.id}')">${a.active?'إيقاف':' تفعيل'}</button></div>${a.active?'':'<p>موقوفة: ما تظهر للمتاجر</p>'}</div>`).join('') : '<p class="empty">ماكو مناطق مضافة. أضف منطقة جديدة بالأعلى.</p>'),
+    (D.areas.length ? [...D.areas].sort((a,b)=>a.price-b.price).map(a => `<div class="card"><div class="row"><b>${esc(a.name)}</b><span>${N(a.price)} د.ع</span></div><div class="row"><button class="o" onclick="setPrice('${a.id}')">تعديل السعر</button><button class="${a.active?'d':'o'}" onclick="tgl('areas','${a.id}')">${a.active?'إيقاف':'تفعيل'}</button></div>${a.active?'':'<p>موقوفة: ما تظهر للمتاجر</p>'}</div>`).join('') : '<p class="empty">ماكو مناطق مضافة. أضف منطقة جديدة بالأعلى.</p>'),
   drivers: () => form('drivers','إضافة سائق') + D.drivers.map(d => {
     const full = (d.balance||0) >= ST.debtLimit;
     return `<div class="card"><div class="row"><b>${esc(d.name)}</b><span>${esc(d.username)}</span></div>
@@ -209,7 +209,5 @@ ld('firebase-app-compat.js').then(()=>ld('firebase-auth-compat.js')).then(()=>ld
   if(x) x.textContent='تعذّر تحميل مكتبات Firebase.';
 });
 </script>
-</body>
-</html>
 </body>
 </html>
