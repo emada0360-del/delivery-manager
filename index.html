@@ -32,15 +32,12 @@ button.o{background:none;color:var(--t)}
 </style>
 </head>
 <body>
-<div id="login" style="display:none"><div class="card f"><h2 style="margin:0">دخول المدير</h2>
+<div id="login"><div class="card f"><h2 style="margin:0">دخول المدير</h2>
 <input id="u" placeholder="اليوزر نيم" autocapitalize="none"><input id="p" type="password" placeholder="الرمز">
-<div id="err"></div><button onclick="login()">دخول</button></div></div>
+<div id="err">جاري التحميل...</div><button onclick="window.login&&login()">دخول</button></div></div>
 <div id="app" style="display:none"><header><b>لوحة المدير</b><button onclick="auth.signOut()">خروج</button></header>
 <div id="nav"></div><div id="main"></div></div>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-firestore-compat.js"></script>
-<script>
+<script type="text/plain" id="appjs">
 const cfg={apiKey:"AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M",authDomain:"baqubah-delivery.firebaseapp.com",projectId:"baqubah-delivery",storageBucket:"baqubah-delivery.firebasestorage.app",messagingSenderId:"607280279395",appId:"1:607280279395:web:859d9c7fb693a1b0b66d56"};
 firebase.initializeApp(cfg);
 const sec=firebase.initializeApp(cfg,'sec');
@@ -62,7 +59,7 @@ async function login(){$('#err').textContent='';
  const u=$('#u').value.trim().replace(/@.*$/,''),p=$('#p').value.trim().replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
  try{await auth.signInWithEmailAndPassword(mail(u),p)}catch(e){$('#err').textContent='تعذّر الدخول ('+(e.code||e.message)+')'}}
 auth.onAuthStateChanged(async u=>{
- if(!u){show('login');return}
+ if(!u){show('login');$('#err').textContent='';return}
  try{
   const r=db.collection('users').doc(u.uid);let d=await r.get();
   if(!d.exists){const any=await db.collection('users').limit(1).get();
@@ -114,6 +111,11 @@ async function addAcct(col){const g=k=>$('#'+col+k).value.trim(),f={name:g('n'),
   await db.collection(col).doc(id).set({...f,active:true,...(col=='drivers'?{balance:0}:{})});
   log('add_'+col,id,f.name);render(true)}catch(e){alert(e.code=='auth/email-already-in-use'?'اليوزر مستخدم من قبل':e.message)}}
 async function saveS(){const o={};for(const k of Object.keys(ST))o[k]=+$('#s_'+k).value;await db.collection('settings').doc('main').set(o);alert('تم الحفظ')}
+</script>
+<script>
+const B=['https://www.gstatic.com/firebasejs/10.12.2/','https://cdn.jsdelivr.net/npm/firebase@10.12.2/'];
+function ld(n,b=0){return new Promise((ok,no)=>{const t=document.createElement('script');t.src=B[b]+n;t.onload=ok;t.onerror=()=>b+1<B.length?ld(n,b+1).then(ok,no):no();document.head.appendChild(t)})}
+ld('firebase-app-compat.js').then(()=>ld('firebase-auth-compat.js')).then(()=>ld('firebase-firestore-compat.js')).then(()=>{const t=document.createElement('script');t.text=document.getElementById('appjs').textContent;document.body.appendChild(t)}).catch(()=>{document.getElementById('err').textContent='تعذّر تحميل Firebase. غيّر الشبكة (واي فاي أو بيانات) وحدّث الصفحة.'});
 </script>
 </body>
 </html>
