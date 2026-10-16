@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>لوحة المدير المتكاملة</title>
+<title>لوحة المدير السريعة</title>
 <style>
 :root{--bg:#eef1f4;--c:#fff;--t:#1b2a41;--m:#667085;--a:#f2a900;--g:#15803d;--r:#b91c1c;--b:#d9dee5}
 @media(prefers-color-scheme:dark){:root{--bg:#12161c;--c:#1c222b;--t:#e8ecf1;--m:#98a2b3;--b:#2b3340}}
@@ -42,7 +42,7 @@ button.o{background:none;color:var(--t)}
 </div>
 
 <div id="app" style="display:none">
-  <header><b>لوحة المدير المتكاملة</b><button onclick="auth.signOut()">خروج</button></header>
+  <header><b>لوحة المدير السريعة</b><button onclick="auth.signOut()">خروج</button></header>
   <div id="nav"></div>
   <div id="main"></div>
 </div>
@@ -64,7 +64,7 @@ const D = {orders:[], areas:[], drivers:[], stores:[]};
 const ST = {storeCommission:500, driverPct:10, debtLimit:15000};
 const SL = {new:'بانتظار سائق', accepted:'مقبول', picked:'تم الاستلام', delivered:'تم التسليم', cancelled:'ملغي'};
 const TABS = [['orders','الطلبات'],['areas','المناطق'],['drivers','السواق'],['stores','المتاجر'],['settings','الإعدادات']];
-let tab = 'orders', started = false;
+let tab = 'orders';
 
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const N = n => Number(n||0).toLocaleString('en-US');
@@ -74,7 +74,7 @@ function show(v){ $('#login').style.display = v=='login' ? 'block' : 'none'; $('
 
 async function tryLogin(){
   const errDiv = $('#err'); errDiv.textContent = 'جاري التسجيل...';
-  const u = $('#u').value.trim(), p = $('#p'].value.trim();
+  const u = $('#u').value.trim(), p = $('#p').value.trim();
   if(!u || !p) return errDiv.textContent = 'أدخل البيانات كاملاً';
   try { await auth.signInWithEmailAndPassword(mail(u), p); } catch(e) { errDiv.textContent = 'خطأ في الدخول'; }
 }
@@ -82,47 +82,28 @@ window.tryLogin = tryLogin;
 
 auth.onAuthStateChanged(u => { if(!u) { show('login'); return; } start(); });
 
-async function start(){
+function start(){
   show('app');
-  
-  // جلب البيانات الأساسية مباشرة من السيرفر السحابي لضمان مزامنتها في أي متصفح
-  await fetchCloudData();
-  render(true);
+  render();
 
-  if(started) return; started = true;
-
-  // الاستماع المباشر للتغيرات الحية من السيرفر لجميع الأطراف
-  Object.keys(D).forEach(k => {
-    db.collection(k).onSnapshot(s => { 
-      D[k] = s.docs.map(x => ({id:x.id, ...x.data()})); 
-      render(); 
-    }, e => console.log(e));
+  // جلب البيانات مرة واحدة بخفة تامة بدون تعليق
+  ['orders', 'areas', 'drivers', 'stores'].forEach(k => {
+    db.collection(k).get().then(snap => {
+      D[k] = snap.docs.map(x => ({id:x.id, ...x.data()}));
+      render();
+    }).catch(e => console.log(e));
   });
 
-  db.collection('settings').doc('main').onSnapshot(s => { 
-    if(s.exists) Object.assign(ST, s.data()); 
-    render(); 
-  }, e => console.log(e));
+  db.collection('settings').doc('main').get().then(s => {
+    if(s.exists) Object.assign(ST, s.data());
+    render();
+  }).catch(e => console.log(e));
 }
 
-async function fetchCloudData() {
-  try {
-    for(const k of Object.keys(D)){
-      const snap = await db.collection(k).get();
-      D[k] = snap.docs.map(x => ({id:x.id, ...x.data()}));
-    }
-    const sSnap = await db.collection('settings').doc('main').get();
-    if(sSnap.exists) Object.assign(ST, sSnap.data());
-  } catch(e) {
-    console.log(e);
-  }
-}
-
-function go(k){ tab = k; render(true); }
+function go(k){ tab = k; render(); }
 window.go = go;
 
-function render(f){
-  if(!f && document.activeElement && document.activeElement.tagName == 'INPUT') return;
+function render(){
   $('#nav').innerHTML = TABS.map(([k,t]) => `<button class="${k==tab?'on':''}" onclick="go('${k}')">${t}</button>`).join('');
   $('#main').innerHTML = V[tab] ? V[tab]() : '';
 }
@@ -152,14 +133,13 @@ async function addArea(){
   const n = $('#an').value.trim(), p = +$('#ap').value;
   if(!n || !p) return alert('أدخل الاسم والسعر');
   try {
-    // الحفظ المباشر بالسيرفر السحابي أولاً لضمان مزامنتها بكل المتصفحات
     const ref = await db.collection('areas').add({name:n, price:p, active:true});
     D.areas.push({id: ref.id, name: n, price: p, active: true});
     $('#an').value = ''; $('#ap').value = '';
-    render(true);
-    alert('تم حفظ المنطقة في السيرفر بنجاح وتظهر في كل المتصفحات!');
+    render();
+    alert('تم حفظ المنطقة بنجاح!');
   } catch(e) {
-    alert('خطأ في الاتصال: ' + e.message);
+    alert('خطأ: ' + e.message);
   }
 }
 
@@ -169,16 +149,16 @@ async function editAreaPrice(id){
   const v = prompt('أدخل السعر الجديد للمنطقة:', a.price);
   if(v && !isNaN(v)){
     a.price = +v;
-    render(true);
-    await db.collection('areas').doc(id).update({price: +v}).catch(e=>console.log(e));
+    render();
+    await db.collection('areas').doc(id).update({price: +v});
   }
 }
 
 async function deleteArea(id){
   if(confirm('هل أنت متأكد من حذف هذه المنطقة؟')){
     D.areas = D.areas.filter(x => x.id != id);
-    render(true);
-    await db.collection('areas').doc(id).delete().catch(e=>console.log(e));
+    render();
+    await db.collection('areas').doc(id).delete();
   }
 }
 
@@ -187,16 +167,16 @@ async function addMoney(id){
   if(!amt || isNaN(amt)) return;
   const d = D.drivers.find(x => x.id == id);
   if(d) d.balance = (d.balance||0) - (+amt);
-  render(true);
-  await db.collection('drivers').doc(id).update({ balance: TS.increment(-(+amt)) }).catch(e=>console.log(e));
+  render();
+  await db.collection('drivers').doc(id).update({ balance: TS.increment(-(+amt)) });
 }
 
 async function zeroBalance(id){ 
   if(confirm('تصفير محفظة السائق؟')){
     const d = D.drivers.find(x => x.id == id);
     if(d) d.balance = 0;
-    render(true);
-    await db.collection('drivers').doc(id).update({balance:0}).catch(e=>console.log(e));
+    render();
+    await db.collection('drivers').doc(id).update({balance:0});
   }
 }
 
@@ -204,15 +184,15 @@ async function tgl(c,id){
   const x = D[c].find(y => y.id == id);
   if(!x) return;
   x.active = !x.active;
-  render(true);
-  await db.collection(c).doc(id).update({active: x.active}).catch(e=>console.log(e));
+  render();
+  await db.collection(c).doc(id).update({active: x.active});
 }
 
 async function saveS(){ 
   const settingsData = {driverPct:+$('#s_driverPct').value, storeCommission:+$('#s_storeCommission').value, debtLimit:+$('#s_debtLimit').value};
   Object.assign(ST, settingsData);
   alert('تم الحفظ بنجاح');
-  await db.collection('settings').doc('main').set(settingsData).catch(e=>console.log(e)); 
+  await db.collection('settings').doc('main').set(settingsData); 
 }
 
 async function addAcct(col){
@@ -223,7 +203,7 @@ async function addAcct(col){
     await sec.auth().signOut();
     await db.collection(col).doc(c.user.uid).set({...f, active:true, balance:0, online:false});
     alert('تمت الإضافة بنجاح');
-    render(true);
+    start();
   } catch(e) {
     alert('خطأ: ' + e.message);
   }
@@ -231,5 +211,7 @@ async function addAcct(col){
 
 window.addArea=addArea; window.editAreaPrice=editAreaPrice; window.deleteArea=deleteArea; window.addMoney=addMoney; window.zeroBalance=zeroBalance; window.tgl=tgl; window.saveS=saveS; window.addAcct=addAcct;
 </script>
+</body>
+</html>
 </body>
 </html>
