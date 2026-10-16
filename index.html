@@ -49,7 +49,7 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
 
   <div v-else>
     <header>
-      <b>لوحة المدير الحديثة (Vue.js)</b>
+      <b>لوحة المدير السريعة</b>
       <button @click="logout">خروج</button>
     </header>
 
@@ -143,7 +143,10 @@ firebase.initializeApp(cfg);
 const sec = firebase.initializeApp(cfg, 'sec');
 const auth = firebase.auth(), db = firebase.firestore();
 
-try { db.settings({ experimentalForceLongPolling: true, merge: true }); db.enablePersistence().catch(()=>{}); } catch(e){}
+// إجبار النظام على تفعيل الاتصال المباشر وتجاوز مشاكل الـ 4G بالعراق
+try {
+  db.settings({ experimentalForceLongPolling: true, merge: true });
+} catch(e){}
 
 const { createApp, ref, reactive, onMounted } = Vue;
 
@@ -166,10 +169,10 @@ createApp({
     const SL = {new:'بانتظار سائق', accepted:'مقبول', picked:'تم الاستلام', delivered:'تم التسليم', cancelled:'ملغي'};
     const ST = reactive({storeCommission:500, driverPct:10, debtLimit:15000});
 
-    const orders = ref([]);
-    const areas = ref([]);
-    const drivers = ref([]);
-    const stores = ref([]);
+    const orders = ref(JSON.parse(localStorage.getItem('bq_orders') || '[]'));
+    const areas = ref(JSON.parse(localStorage.getItem('bq_areas') || '[]'));
+    const drivers = ref(JSON.parse(localStorage.getItem('bq_drivers') || '[]'));
+    const stores = ref(JSON.parse(localStorage.getItem('bq_stores') || '[]'));
 
     const newArea = reactive({ name: '', price: null });
     const newAcct = reactive({ name: '', username: '', password: '', phone: '' });
@@ -185,7 +188,7 @@ createApp({
     onMounted(() => {
       auth.onAuthStateChanged(u => {
         user.value = u;
-        if(u) initDataSync();
+        if(u) syncCloudData();
       });
     });
 
@@ -200,53 +203,66 @@ createApp({
 
     const logout = () => auth.signOut();
 
-    const initDataSync = () => {
-      db.collection('orders').onSnapshot(s => orders.value = s.docs.map(d=>({id:d.id, ...d.data()})), e=>console.log(e));
-      db.collection('areas').onSnapshot(s => areas.value = s.docs.map(d=>({id:d.id, ...d.data()})), e=>console.log(e));
-      db.collection('drivers').onSnapshot(s => drivers.value = s.docs.map(d=>({id:d.id, ...d.data()})), e=>console.log(e));
-      db.collection('stores').onSnapshot(s => stores.value = s.docs.map(d=>({id:d.id, ...d.data()})), e=>console.log(e));
-      db.collection('settings').doc('main').onSnapshot(s => { if(s.exists) Object.assign(ST, s.data()); });
+    const syncCloudData = () => {
+      ['orders', 'areas', 'drivers', 'stores'].forEach(k => {
+        db.collection(k).onSnapshot(s => {
+          const data = s.docs.map(d => ({id: d.id, ...d.data()}));
+          if(k === 'orders') { orders.value = data; localStorage.setItem('bq_orders', JSON.stringify(data)); }
+          if(k === 'areas') { areas.value = data; localStorage.setItem('bq_areas', JSON.stringify(data)); }
+          if(k === 'drivers') { drivers.value = data; localStorage.setItem('bq_drivers', JSON.stringify(data)); }
+          if(k === 'stores') { stores.value = data; localStorage.setItem('bq_stores', JSON.stringify(data)); }
+        }, err => console.log(err));
+      });
+
+      db.collection('settings').doc('main').onSnapshot(s => { 
+        if(s.exists) Object.assign(ST, s.data()); 
+      }, err => console.log(err));
     };
 
-    // **إضافة فورية صاروخية بدون أي تعليق للزر**
+    // إضافة فورية بدون انتصارات تعليق
     const addArea = () => {
       if(!newArea.name || !newArea.price) return alert('أدخل اسم المنطقة والسعر');
-      const name = newArea.name;
+      const name = newArea.name.trim();
       const price = Number(newArea.price);
       
-      // تفريغ الحقول فوراً
       newArea.name = ''; 
       newArea.price = null;
 
-      // الإرسال للسيرفر بالخلفية بصمت تام
-      db.collection('areas').add({ name, price, active: true }).catch(e => console.log(e));
+      db.collection('areas').add({ name, price, active: true }).catch(e => alert('فشل الحفظ في السيرفر: ' + e.message));
     };
 
-    const editAreaPrice = async (a) => {
+    const editAreaPrice = (a) => {
       const v = prompt('أدخل السعر الجديد:', a.price);
-      if(v && !isNaN(v)) await db.collection('areas').doc(a.id).update({ price: Number(v) });
+      if(v && !isNaN(v)) {
+        db.collection('areas').doc(a.id).update({ price: Number(v) });
+      }
     };
 
-    const deleteArea = async (id) => {
-      if(confirm('هل أنت متأكد من حذف هذه المنطقة؟')) await db.collection('areas').doc(id).delete();
+    const deleteArea = (id) => {
+      if(confirm('هل أنت متأكد من حذف هذه المنطقة؟')) {
+        db.collection('areas').doc(id).delete();
+      }
     };
 
-    const addMoney = async (d) => {
+    const addMoney = (d) => {
       const amt = prompt('أدخل المبلغ (موجب للخصم، سالب للزيادة):');
-      if(amt && !isNaN(amt)) await db.collection('drivers').doc(d.id).update({ balance: firebase.firestore.FieldValue.increment(-Number(amt)) });
+      if(amt && !isNaN(amt)) {
+        db.collection('drivers').doc(d.id).update({ balance: firebase.firestore.FieldValue.increment(-Number(amt)) });
+      }
     };
 
-    const zeroBalance = async (d) => {
-      if(confirm('تصفير محفظة السائق؟')) await db.collection('drivers').doc(d.id).update({ balance: 0 });
+    const zeroBalance = (d) => {
+      if(confirm('تصفير محفظة السائق؟')) {
+        db.collection('drivers').doc(d.id).update({ balance: 0 });
+      }
     };
 
-    const toggleStatus = async (col, item) => {
-      await db.collection(col).doc(item.id).update({ active: !item.active });
+    const toggleStatus = (col, item) => {
+      db.collection(col).doc(item.id).update({ active: !item.active });
     };
 
-    const saveSettings = async () => {
-      await db.collection('settings').doc('main').set({ ...ST });
-      alert('تم حفظ الإعدادات بنجاح');
+    const saveSettings = () => {
+      db.collection('settings').doc('main').set({ ...ST }).then(() => alert('تم حفظ الإعدادات بنجاح'));
     };
 
     const addAcct = async (col) => {
