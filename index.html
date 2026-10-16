@@ -8,12 +8,12 @@
 :root{--bg:#eef1f4;--c:#fff;--t:#1b2a41;--m:#667085;--a:#f2a900;--g:#15803d;--r:#b91c1c;--b:#d9dee5}
 @media(prefers-color-scheme:dark){:root{--bg:#12161c;--c:#1c222b;--t:#e8ecf1;--m:#98a2b3;--b:#2b3340}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--t);font:15px/1.6 "Noto Sans Arabic",sans-serif}
+body{margin:0;background:var(--bg);color:var(--t);font:15px/1.6 "Noto Sans Arabic",Tahoma,sans-serif}
 header{background:#1b2a41;color:#fff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:2}
 header b{font-size:17px;border-bottom:3px solid var(--a)}
-header button{background:none;border:1px solid #5b6b85;color:#fff;padding:4px 10px;border-radius:6px}
+header button{background:none;border:1px solid #5b6b85;color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer}
 #nav{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;background:var(--c);border-bottom:1px solid var(--b)}
-#nav button{flex:none;padding:7px 14px;border:1px solid var(--b);background:none;color:var(--t);border-radius:20px;font:inherit}
+#nav button{flex:none;padding:7px 14px;border:1px solid var(--b);background:none;color:var(--t);border-radius:20px;font:inherit;cursor:pointer}
 #nav button.on{background:var(--a);border-color:var(--a);color:#1b2a41;font-weight:700}
 #main,#login{max-width:640px;margin:0 auto;padding:12px}
 .card{background:var(--c);border:1px solid var(--b);border-radius:10px;padding:12px;margin-bottom:10px}
@@ -58,6 +58,8 @@ firebase.initializeApp(cfg);
 const sec = firebase.initializeApp(cfg, 'sec');
 const auth = firebase.auth(), db = firebase.firestore(), $ = s => document.querySelector(s), TS = firebase.firestore.FieldValue;
 
+// تفعيل التخزين المحلي السريع جداً لتجاوز بطء الشبكة
+db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 try { db.settings({ experimentalForceLongPolling: true, merge: true }); } catch(e){}
 
 const D = {orders:[], areas:[], drivers:[], stores:[]};
@@ -82,32 +84,23 @@ window.tryLogin = tryLogin;
 
 auth.onAuthStateChanged(u => { if(!u) { show('login'); return; } start(); });
 
-async function start(){
+function start(){
   show('app');
-  await fetchAllData(); // جلب البيانات أولاً لضمان توفر المناطق فور فتح اللوحة
   render(true);
   if(started) return; started = true;
 
-  // جلب الطلبات والسواق والمتاجر بالخلفية
-  ['orders', 'drivers', 'stores'].forEach(k => {
+  // الاستماع المباشر الفوري مع التخزين المحلي
+  Object.keys(D).forEach(k => {
     db.collection(k).onSnapshot(s => { 
       D[k] = s.docs.map(x => ({id:x.id, ...x.data()})); 
       render(); 
-    });
+    }, e => console.log(e));
   });
+
   db.collection('settings').doc('main').onSnapshot(s => { 
     if(s.exists) Object.assign(ST, s.data()); 
     render(); 
-  });
-}
-
-async function fetchAllData() {
-  try {
-    for(const k of Object.keys(D)){
-      const snap = await db.collection(k).get();
-      D[k] = snap.docs.map(x => ({id:x.id, ...x.data()}));
-    }
-  } catch(e) { console.log(e); }
+  }, e => console.log(e));
 }
 
 function go(k){ tab = k; render(true); }
@@ -143,48 +136,72 @@ const V = {
 async function addArea(){
   const n = $('#an').value.trim(), p = +$('#ap').value;
   if(!n || !p) return alert('أدخل الاسم والسعر');
+  
+  // إضافة فورية للواجهة بدون انتظار السيرفر لمنع أي بطء
+  const tempId = 'temp_' + Date.now();
+  const newObj = {id: tempId, name: n, price: p, active: true};
+  D.areas.push(newObj);
+  $('#an').value = ''; $('#ap').value = '';
+  render(true);
+
   try {
     const ref = await db.collection('areas').add({name:n, price:p, active:true});
-    D.areas.push({id: ref.id, name: n, price: p, active: true});
-    $('#an').value = ''; $('#ap').value = '';
-    render(true);
-    alert('تم حفظ المنطقة بنجاح!');
+    newObj.id = ref.id;
   } catch(e) {
-    alert('خطأ: ' + e.message);
+    alert('حدث خطأ في حفظ السيرفر: ' + e.message);
   }
 }
 
 async function editAreaPrice(id){
   const a = D.areas.find(x => x.id == id);
+  if(!a) return;
   const v = prompt('أدخل السعر الجديد للمنطقة:', a.price);
   if(v && !isNaN(v)){
-    await db.collection('areas').doc(id).update({price: +v});
     a.price = +v;
     render(true);
+    await db.collection('areas').doc(id).update({price: +v}).catch(e=>console.log(e));
   }
 }
 
 async function deleteArea(id){
   if(confirm('هل أنت متأكد من حذف هذه المنطقة؟')){
-    await db.collection('areas').doc(id).delete();
     D.areas = D.areas.filter(x => x.id != id);
     render(true);
+    await db.collection('areas').doc(id).delete().catch(e=>console.log(e));
   }
 }
 
 async function addMoney(id){
   const amt = prompt('أدخل المبلغ (رقم موجب للخصم/الدين، سالب للزيادة):');
   if(!amt || isNaN(amt)) return;
-  await db.collection('drivers').doc(id).update({ balance: TS.increment(-(+amt)) });
+  const d = D.drivers.find(x => x.id == id);
+  if(d) d.balance = (d.balance||0) - (+amt);
+  render(true);
+  await db.collection('drivers').doc(id).update({ balance: TS.increment(-(+amt)) }).catch(e=>console.log(e));
 }
 
-async function zeroBalance(id){ if(confirm('تصفير محفظة السائق؟')) await db.collection('drivers').doc(id).update({balance:0}); }
-async function tgl(c,id){ const x=D[c].find(y=>y.id==id); await db.collection(c).doc(id).update({active:!x.active}); }
+async function zeroBalance(id){ 
+  if(confirm('تصفير محفظة السائق؟')){
+    const d = D.drivers.find(x => x.id == id);
+    if(d) d.balance = 0;
+    render(true);
+    await db.collection('drivers').doc(id).update({balance:0}).catch(e=>console.log(e));
+  }
+}
+
+async function tgl(c,id){ 
+  const x = D[c].find(y => y.id == id);
+  if(!x) return;
+  x.active = !x.active;
+  render(true);
+  await db.collection(c).doc(id).update({active: x.active}).catch(e=>console.log(e));
+}
+
 async function saveS(){ 
   const settingsData = {driverPct:+$('#s_driverPct').value, storeCommission:+$('#s_storeCommission').value, debtLimit:+$('#s_debtLimit').value};
-  await db.collection('settings').doc('main').set(settingsData); 
   Object.assign(ST, settingsData);
-  alert('تم الحفظ'); 
+  alert('تم الحفظ بنجاح');
+  await db.collection('settings').doc('main').set(settingsData).catch(e=>console.log(e)); 
 }
 
 async function addAcct(col){
