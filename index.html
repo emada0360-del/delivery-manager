@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة المدير السحابية (Baqubah Delivery)</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-4">
@@ -27,51 +28,63 @@
         </div>
     </div>
 
-    <script>
-        const PROJECT_ID = "baqubah-delivery";
-        const API_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/areas`;
+    <!-- سكربت الفايربيس الرسمي -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            onSnapshot, 
+            addDoc, 
+            deleteDoc, 
+            doc 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M",
+            authDomain: "baqubah-delivery.firebaseapp.com",
+            projectId: "baqubah-delivery",
+            storageBucket: "baqubah-delivery.firebasestorage.app",
+            messagingSenderId: "607280279395",
+            appId: "1:607280279395:web:859d9c7fb693a1b0b66d56"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
         const statusMsg = document.getElementById("status-message");
         const areasContainer = document.getElementById("areas-container");
         const addBtn = document.getElementById("add-area-btn");
 
-        // دالة جلب المناطق عبر REST API المباشر
-        async function fetchAreas() {
-            try {
-                const response = await fetch(API_URL);
-                if (!response.ok) throw new Error("فشل الاتصال بالسيرفر");
-                const data = await response.json();
-                
-                areasContainer.innerHTML = "";
-                if (!data.documents || data.documents.length === 0) {
-                    statusMsg.textContent = "لا توجد مناطق مضافة بالسيرفر حتى الآن";
-                    return;
-                }
-
-                statusMsg.textContent = "";
-                data.documents.forEach((doc) => {
-                    const fields = doc.fields;
-                    const docId = doc.name.split("/").pop();
-                    const name = fields.name ? fields.name.stringValue : "بدون اسم";
-                    const price = fields.price ? (fields.price.integerValue || fields.price.doubleValue) : 0;
-
-                    const card = document.createElement("div");
-                    card.className = "bg-slate-700 p-3 rounded flex justify-between items-center border border-slate-600";
-                    card.innerHTML = `
-                        <div>
-                            <h3 class="font-bold text-lg">${name}</h3>
-                            <p class="text-amber-400">${price} د.ع</p>
-                        </div>
-                        <button onclick="deleteArea('${docId}')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm text-white transition">حذف</button>
-                    `;
-                    areasContainer.appendChild(card);
-                });
-            } catch (e) {
-                statusMsg.textContent = "خطأ في الجلب: " + e.message;
+        // جلب واستماع حي للمناطق
+        onSnapshot(collection(db, "areas"), (snapshot) => {
+            areasContainer.innerHTML = "";
+            if (snapshot.empty) {
+                statusMsg.textContent = "لا توجد مناطق مضافة بالسيرفر حتى الآن";
+                return;
             }
-        }
+            statusMsg.textContent = "";
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const areaId = docSnap.id;
 
-        // دالة الإضافة المباشرة عبر HTTP POST
+                const card = document.createElement("div");
+                card.className = "bg-slate-700 p-3 rounded flex justify-between items-center border border-slate-600";
+                card.innerHTML = `
+                    <div>
+                        <h3 class="font-bold text-lg">${data.name}</h3>
+                        <p class="text-amber-400">${data.price} د.ع</p>
+                    </div>
+                    <button onclick="deleteArea('${areaId}')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm text-white transition">حذف</button>
+                `;
+                areasContainer.appendChild(card);
+            });
+        }, (error) => {
+            console.error("خطأ:", error);
+            statusMsg.textContent = "خطأ في الاتصال: " + error.message;
+        });
+
+        // إضافة منطقة جديدة
         addBtn.addEventListener("click", async () => {
             const nameInput = document.getElementById("area-name");
             const priceInput = document.getElementById("area-price");
@@ -87,56 +100,33 @@
             addBtn.disabled = true;
             addBtn.textContent = "جاري الحفظ في السيرفر...";
 
-            const payload = {
-                fields: {
-                    name: { stringValue: name },
-                    price: { integerValue: price },
-                    createdAt: { stringValue: new Date().toISOString() }
-                }
-            };
-
             try {
-                const res = await fetch(API_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
+                await addDoc(collection(db, "areas"), {
+                    name: name,
+                    price: price,
+                    createdAt: new Date().toISOString()
                 });
-
-                if (res.ok) {
-                    nameInput.value = "";
-                    priceInput.value = "";
-                    alert("تم الحفظ في السيرفر بنجاح 100%!");
-                    fetchAreas(); // إعادة جلب القائمة مباشرة
-                } else {
-                    const errData = await res.json();
-                    alert("خطأ من السيرفر: " + (errData.error?.message || "فشل الإرسال"));
-                }
+                nameInput.value = "";
+                priceInput.value = "";
             } catch (e) {
-                alert("خطأ شبكة: " + e.message);
+                console.error("خطأ بالحفظ:", e);
+                alert("فشل الحفظ: " + e.message);
             } finally {
                 addBtn.disabled = false;
                 addBtn.textContent = "إضافة منطقة";
             }
         });
 
-        // دالة الحذف عبر DELETE HTTP
-        window.deleteArea = async function(docId) {
+        // حذف منطقة
+        window.deleteArea = async function(id) {
             if (confirm("هل أنت متأكد من حذف هذه المنطقة؟")) {
                 try {
-                    const res = await fetch(`${API_URL}/${docId}`, { method: "DELETE" });
-                    if (res.ok) {
-                        fetchAreas();
-                    } else {
-                        alert("فشل الحذف من السيرفر");
-                    }
+                    await deleteDoc(doc(db, "areas", id));
                 } catch (e) {
-                    alert("خطأ في الحذف: " + e.message);
+                    alert("خطأ أثناء الحذف: " + e.message);
                 }
             }
-        };
-
-        // تشغيل الجلب عند فتح الصفحة
-        fetchAreas();
+        }
     </script>
 </body>
 </html>
