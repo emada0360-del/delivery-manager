@@ -32,7 +32,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
-            initializeFirestore, 
+            getFirestore, 
             collection, 
             onSnapshot, 
             addDoc, 
@@ -40,7 +40,7 @@
             doc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // إعدادات مشروعك الحقيقية والمطوحة من الفايربيس
+        // إعدادات مشروعك الحقيقية
         const firebaseConfig = {
             apiKey: "AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M",
             authDomain: "baqubah-delivery.firebaseapp.com",
@@ -50,11 +50,9 @@
             appId: "1:607280279395:web:859d9c7fb693a1b0b66d56"
         };
 
-        // تهيئة الفايربيس مع فرض الاتصال لتجنب أي تعليق في الشبكات
+        // تهيئة التطبيق والقاعدة مع إجبار ربط القاعدة الافتراضية
         const app = initializeApp(firebaseConfig);
-        const db = initializeFirestore(app, {
-            experimentalForceLongPolling: true
-        });
+        const db = getFirestore(app, "(default)");
 
         const statusMsg = document.getElementById("status-message");
         const areasContainer = document.getElementById("areas-container");
@@ -85,10 +83,10 @@
             });
         }, (error) => {
             console.error("خطأ في جلب البيانات:", error);
-            statusMsg.textContent = "حدث خطأ في الاتصال بالسيرفر";
+            statusMsg.textContent = "حدث خطأ: " + error.message;
         });
 
-        // زر الإضافة الحقيقي
+        // زر الإضافة مع إظهار الخطأ المباشر إن وجد
         addBtn.addEventListener("click", async () => {
             const nameInput = document.getElementById("area-name");
             const priceInput = document.getElementById("area-price");
@@ -108,13 +106,14 @@
                 await addDoc(collection(db, "areas"), {
                     name: name,
                     price: price,
-                    createdAt: Date.now()
+                    createdAt: new Date().toISOString()
                 });
                 nameInput.value = "";
                 priceInput.value = "";
+                alert("تم الحفظ بنجاح!");
             } catch (e) {
                 console.error("خطأ أثناء الحفظ: ", e);
-                alert("فشل الحفظ: " + e.message);
+                alert("سبب عدم الحفظ: " + e.message);
             } finally {
                 addBtn.disabled = false;
                 addBtn.textContent = "إضافة منطقة";
