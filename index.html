@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>لوحة المدير السريعة</title>
+<title>لوحة المدير المتكاملة</title>
 <style>
 :root{--bg:#eef1f4;--c:#fff;--t:#1b2a41;--m:#667085;--a:#f2a900;--g:#15803d;--r:#b91c1c;--b:#d9dee5}
 @media(prefers-color-scheme:dark){:root{--bg:#12161c;--c:#1c222b;--t:#e8ecf1;--m:#98a2b3;--b:#2b3340}}
@@ -42,7 +42,7 @@ button.o{background:none;color:var(--t)}
 </div>
 
 <div id="app" style="display:none">
-  <header><b>لوحة المدير السريعة</b><button onclick="auth.signOut()">خروج</button></header>
+  <header><b>لوحة المدير المتكاملة</b><button onclick="auth.signOut()">خروج</button></header>
   <div id="nav"></div>
   <div id="main"></div>
 </div>
@@ -58,8 +58,6 @@ firebase.initializeApp(cfg);
 const sec = firebase.initializeApp(cfg, 'sec');
 const auth = firebase.auth(), db = firebase.firestore(), $ = s => document.querySelector(s), TS = firebase.firestore.FieldValue;
 
-// تفعيل التخزين المحلي السريع جداً لتجاوز بطء الشبكة
-db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 try { db.settings({ experimentalForceLongPolling: true, merge: true }); } catch(e){}
 
 const D = {orders:[], areas:[], drivers:[], stores:[]};
@@ -76,7 +74,7 @@ function show(v){ $('#login').style.display = v=='login' ? 'block' : 'none'; $('
 
 async function tryLogin(){
   const errDiv = $('#err'); errDiv.textContent = 'جاري التسجيل...';
-  const u = $('#u').value.trim(), p = $('#p').value.trim();
+  const u = $('#u').value.trim(), p = $('#p'].value.trim();
   if(!u || !p) return errDiv.textContent = 'أدخل البيانات كاملاً';
   try { await auth.signInWithEmailAndPassword(mail(u), p); } catch(e) { errDiv.textContent = 'خطأ في الدخول'; }
 }
@@ -84,12 +82,16 @@ window.tryLogin = tryLogin;
 
 auth.onAuthStateChanged(u => { if(!u) { show('login'); return; } start(); });
 
-function start(){
+async function start(){
   show('app');
+  
+  // جلب البيانات الأساسية مباشرة من السيرفر السحابي لضمان مزامنتها في أي متصفح
+  await fetchCloudData();
   render(true);
+
   if(started) return; started = true;
 
-  // الاستماع المباشر الفوري مع التخزين المحلي
+  // الاستماع المباشر للتغيرات الحية من السيرفر لجميع الأطراف
   Object.keys(D).forEach(k => {
     db.collection(k).onSnapshot(s => { 
       D[k] = s.docs.map(x => ({id:x.id, ...x.data()})); 
@@ -101,6 +103,19 @@ function start(){
     if(s.exists) Object.assign(ST, s.data()); 
     render(); 
   }, e => console.log(e));
+}
+
+async function fetchCloudData() {
+  try {
+    for(const k of Object.keys(D)){
+      const snap = await db.collection(k).get();
+      D[k] = snap.docs.map(x => ({id:x.id, ...x.data()}));
+    }
+    const sSnap = await db.collection('settings').doc('main').get();
+    if(sSnap.exists) Object.assign(ST, sSnap.data());
+  } catch(e) {
+    console.log(e);
+  }
 }
 
 function go(k){ tab = k; render(true); }
@@ -136,19 +151,15 @@ const V = {
 async function addArea(){
   const n = $('#an').value.trim(), p = +$('#ap').value;
   if(!n || !p) return alert('أدخل الاسم والسعر');
-  
-  // إضافة فورية للواجهة بدون انتظار السيرفر لمنع أي بطء
-  const tempId = 'temp_' + Date.now();
-  const newObj = {id: tempId, name: n, price: p, active: true};
-  D.areas.push(newObj);
-  $('#an').value = ''; $('#ap').value = '';
-  render(true);
-
   try {
+    // الحفظ المباشر بالسيرفر السحابي أولاً لضمان مزامنتها بكل المتصفحات
     const ref = await db.collection('areas').add({name:n, price:p, active:true});
-    newObj.id = ref.id;
+    D.areas.push({id: ref.id, name: n, price: p, active: true});
+    $('#an').value = ''; $('#ap').value = '';
+    render(true);
+    alert('تم حفظ المنطقة في السيرفر بنجاح وتظهر في كل المتصفحات!');
   } catch(e) {
-    alert('حدث خطأ في حفظ السيرفر: ' + e.message);
+    alert('خطأ في الاتصال: ' + e.message);
   }
 }
 
