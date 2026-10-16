@@ -82,22 +82,32 @@ window.tryLogin = tryLogin;
 
 auth.onAuthStateChanged(u => { if(!u) { show('login'); return; } start(); });
 
-function start(){
+async function start(){
   show('app');
-  render(true); // تفتح اللوحة فوراً في أجزاء من الثانية
+  await fetchAllData(); // جلب البيانات أولاً لضمان توفر المناطق فور فتح اللوحة
+  render(true);
   if(started) return; started = true;
 
-  // جلب البيانات بالخلفية بدون إبطاء فتح اللوحة
-  for(const k of Object.keys(D)){
+  // جلب الطلبات والسواق والمتاجر بالخلفية
+  ['orders', 'drivers', 'stores'].forEach(k => {
     db.collection(k).onSnapshot(s => { 
       D[k] = s.docs.map(x => ({id:x.id, ...x.data()})); 
       render(); 
-    }, e => console.log(e));
-  }
+    });
+  });
   db.collection('settings').doc('main').onSnapshot(s => { 
     if(s.exists) Object.assign(ST, s.data()); 
     render(); 
-  }, e => console.log(e));
+  });
+}
+
+async function fetchAllData() {
+  try {
+    for(const k of Object.keys(D)){
+      const snap = await db.collection(k).get();
+      D[k] = snap.docs.map(x => ({id:x.id, ...x.data()}));
+    }
+  } catch(e) { console.log(e); }
 }
 
 function go(k){ tab = k; render(true); }
@@ -138,6 +148,7 @@ async function addArea(){
     D.areas.push({id: ref.id, name: n, price: p, active: true});
     $('#an').value = ''; $('#ap').value = '';
     render(true);
+    alert('تم حفظ المنطقة بنجاح!');
   } catch(e) {
     alert('خطأ: ' + e.message);
   }
