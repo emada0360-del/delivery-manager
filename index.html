@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة المدير السحابية (Baqubah Delivery)</title>
-    <!-- Tailwind CSS للتصميم السريع -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-4">
@@ -32,7 +32,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
-            getFirestore, 
+            initializeFirestore, 
             collection, 
             onSnapshot, 
             addDoc, 
@@ -40,7 +40,7 @@
             doc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // إعدادات مشروعك الصحيحة
+        // إعدادات مشروعك
         const firebaseConfig = {
             apiKey: "AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M",
             authDomain: "baqubah-delivery.firebaseapp.com",
@@ -50,15 +50,17 @@
             appId: "1:607280279395:web:859d9c7fb693a1b0b66d56"
         };
 
-        // تهيئة الفايربيس
+        // تهيئة الفايربيس مع إجبار الاتصال عبر Long Polling لتجاوز حجب الشبكات في العراق
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const db = initializeFirestore(app, {
+            experimentalForceLongPolling: true
+        });
 
         const statusMsg = document.getElementById("status-message");
         const areasContainer = document.getElementById("areas-container");
         const addBtn = document.getElementById("add-area-btn");
 
-        // جلب الاستماع المباشر للمناطق
+        // الاستماع المباشر للمناطق
         onSnapshot(collection(db, "areas"), (snapshot) => {
             areasContainer.innerHTML = "";
             if (snapshot.empty) {
@@ -86,7 +88,7 @@
             statusMsg.textContent = "حدث خطأ في الاتصال بالسيرفر";
         });
 
-        // زر الإضافة مع معالجة حاسمة لعدم التعليق
+        // زر الإضافة
         addBtn.addEventListener("click", async () => {
             const nameInput = document.getElementById("area-name");
             const priceInput = document.getElementById("area-price");
@@ -112,14 +114,14 @@
                 priceInput.value = "";
             } catch (e) {
                 console.error("خطأ أثناء الحفظ: ", e);
-                alert("فشل الحفظ، تأكد من الاتصال بالإنترنت");
+                alert("فشل الحفظ: " + e.message);
             } finally {
                 addBtn.disabled = false;
                 addBtn.textContent = "إضافة منطقة";
             }
         });
 
-        // دالة الحذف العامة
+        // دالة الحذف
         window.deleteArea = async function(id) {
             if (confirm("هل أنت متأكد من حذف هذه المنطقة؟")) {
                 try {
@@ -130,7 +132,5 @@
             }
         }
     </script>
-</body>
-</html>
 </body>
 </html>
