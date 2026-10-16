@@ -28,14 +28,12 @@ label{display:flex;flex-direction:column;gap:4px;color:var(--m);font-size:13px}
 input{padding:11px;border:1px solid var(--b);border-radius:8px;background:var(--bg);color:var(--t);font:inherit;width:100%;outline:none}
 input:focus{border-color:var(--a)}
 button.btn-main{font:inherit;padding:10px 16px;border-radius:8px;border:none;background:var(--a);color:#0f172a;font-weight:bold;cursor:pointer;transition:0.2s}
-button.btn-main:disabled{opacity:0.6;cursor:not-allowed}
 button.d{background:none;color:var(--r);border:1px solid var(--r);padding:6px 12px;border-radius:6px;cursor:pointer}
 button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12px;border-radius:6px;cursor:pointer}
 .tag{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--b);font-weight:bold}
 .bad{color:var(--r);font-weight:bold}.empty{text-align:center;color:var(--m);padding:32px;font-size:15px}
 .login-box{max-width:380px;margin:12vh auto;padding:20px}
 .err{color:var(--r);margin-top:8px;font-weight:bold;font-size:13px}
-.succ{color:var(--g);font-weight:bold;font-size:13px;text-align:center}
 </style>
 </head>
 <body>
@@ -78,12 +76,10 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
         <div class="card f">
           <input v-model="newArea.name" placeholder="اسم المنطقة">
           <input v-model.number="newArea.price" type="number" placeholder="الكروة (السعر)">
-          <button class="btn-main" :disabled="saving" @click="addArea">
-            {{ saving ? 'جاري الحفظ المؤكد بالسيرفر...' : 'إضافة منطقة' }}
-          </button>
-          <div v-if="saveMsg" class="succ">{{ saveMsg }}</div>
+          <button class="btn-main" @click="addArea">إضافة منطقة</button>
         </div>
-        <div v-if="!areas.length" class="empty">جاري جلب المناطق المضافة من السيرفر...</div>
+        <div v-if="loadingAreas" class="empty">جاري جلب المناطق المضافة من السيرفر...</div>
+        <div v-else-if="!areas.length" class="empty">لا توجد مناطق مضافة بالسيرفر حتى الآن</div>
         <div v-for="a in areas" :key="a.id" class="card">
           <div class="row">
             <b>{{ a.name }}</b>
@@ -166,8 +162,7 @@ createApp({
   setup() {
     const user = ref(null);
     const loading = ref(false);
-    const saving = ref(false);
-    const saveMsg = ref('');
+    const loadingAreas = ref(true);
     const loginErr = ref('');
     const loginForm = reactive({ u: '', p: '' });
     const tab = ref('orders');
@@ -219,7 +214,12 @@ createApp({
 
     const initCloudSync = () => {
       db.collection('orders').onSnapshot(s => orders.value = s.docs.map(d => ({id: d.id, ...d.data()})), e => {});
-      db.collection('areas').onSnapshot(s => areas.value = s.docs.map(d => ({id: d.id, ...d.data()})), e => {});
+      
+      db.collection('areas').onSnapshot(s => {
+        areas.value = s.docs.map(d => ({id: d.id, ...d.data()}));
+        loadingAreas.value = false;
+      }, e => { loadingAreas.value = false; });
+
       db.collection('drivers').onSnapshot(s => drivers.value = s.docs.map(d => ({id: d.id, ...d.data()})), e => {});
       db.collection('stores').onSnapshot(s => stores.value = s.docs.map(d => ({id: d.id, ...d.data()})), e => {});
 
@@ -228,60 +228,52 @@ createApp({
       }, e => {});
     };
 
-    const addArea = async () => {
+    // إرسال فوري فائق السرعة مع تفريغ الحقول لحل مشكلة تعليق الشبكة
+    const addArea = () => {
       if(!newArea.name || !newArea.price) return alert('أدخل اسم المنطقة والسعر');
-      saving.value = true;
-      saveMsg.value = '';
-      try {
-        await db.collection('areas').add({ 
-          name: newArea.name.trim(), 
-          price: Number(newArea.price), 
-          active: true 
-        });
-        saveMsg.value = 'تم حفظ المنطقة في السيرفر بنجاح ✅';
-        newArea.name = ''; 
-        newArea.price = null;
-        setTimeout(() => saveMsg.value = '', 3000);
-      } catch(e) {
-        alert('فشل الحفظ: ' + e.message);
-      } finally {
-        saving.value = false;
-      }
+      const name = newArea.name.trim();
+      const price = Number(newArea.price);
+
+      newArea.name = '';
+      newArea.price = null;
+
+      db.collection('areas').add({ name, price, active: true }).catch(e => {
+        alert('خطأ في الاتصال بالسيرفر: ' + e.message);
+      });
     };
 
-    const editAreaPrice = async (a) => {
+    const editAreaPrice = (a) => {
       const v = prompt('أدخل السعر الجديد:', a.price);
       if(v && !isNaN(v)) {
-        await db.collection('areas').doc(a.id).update({ price: Number(v) });
+        db.collection('areas').doc(a.id).update({ price: Number(v) });
       }
     };
 
-    const deleteArea = async (id) => {
+    const deleteArea = (id) => {
       if(confirm('هل أنت متأكد من حذف هذه المنطقة؟')) {
-        await db.collection('areas').doc(id).delete();
+        db.collection('areas').doc(id).delete();
       }
     };
 
-    const addMoney = async (d) => {
+    const addMoney = (d) => {
       const amt = prompt('أدخل المبلغ (موجب للخصم، سالب للزيادة):');
       if(amt && !isNaN(amt)) {
-        await db.collection('drivers').doc(d.id).update({ balance: firebase.firestore.FieldValue.increment(-Number(amt)) });
+        db.collection('drivers').doc(d.id).update({ balance: firebase.firestore.FieldValue.increment(-Number(amt)) });
       }
     };
 
-    const zeroBalance = async (d) => {
+    const zeroBalance = (d) => {
       if(confirm('تصفير محفظة السائق؟')) {
-        await db.collection('drivers').doc(d.id).update({ balance: 0 });
+        db.collection('drivers').doc(d.id).update({ balance: 0 });
       }
     };
 
-    const toggleStatus = async (col, item) => {
-      await db.collection(col).doc(item.id).update({ active: !item.active });
+    const toggleStatus = (col, item) => {
+      db.collection(col).doc(item.id).update({ active: !item.active });
     };
 
-    const saveSettings = async () => {
-      await db.collection('settings').doc('main').set({ ...ST });
-      alert('تم حفظ الإعدادات');
+    const saveSettings = () => {
+      db.collection('settings').doc('main').set({ ...ST }).then(() => alert('تم حفظ الإعدادات'));
     };
 
     const addAcct = async (col) => {
@@ -298,12 +290,14 @@ createApp({
     };
 
     return {
-      user, loading, saving, saveMsg, loginErr, loginForm, tab, tabs, SL, ST, orders, areas, drivers, stores,
+      user, loading, loadingAreas, loginErr, loginForm, tab, tabs, SL, ST, orders, areas, drivers, stores,
       newArea, newAcct, tryLogin, logout, getName, N, addArea, editAreaPrice,
       deleteArea, addMoney, zeroBalance, toggleStatus, saveSettings, addAcct
     };
   }
 }).mount('#app');
 </script>
+</body>
+</html>
 </body>
 </html>
