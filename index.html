@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>لوحة المدير المتكاملة</title>
+<title>لوحة المدير السريعة</title>
 <style>
 :root{--bg:#eef1f4;--c:#fff;--t:#1b2a41;--m:#667085;--a:#f2a900;--g:#15803d;--r:#b91c1c;--b:#d9dee5}
 @media(prefers-color-scheme:dark){:root{--bg:#12161c;--c:#1c222b;--t:#e8ecf1;--m:#98a2b3;--b:#2b3340}}
@@ -42,7 +42,7 @@ button.o{background:none;color:var(--t)}
 </div>
 
 <div id="app" style="display:none">
-  <header><b>لوحة المدير الشاملة</b><button onclick="auth.signOut()">خروج</button></header>
+  <header><b>لوحة المدير السريعة</b><button onclick="auth.signOut()">خروج</button></header>
   <div id="nav"></div>
   <div id="main"></div>
 </div>
@@ -82,38 +82,22 @@ window.tryLogin = tryLogin;
 
 auth.onAuthStateChanged(u => { if(!u) { show('login'); return; } start(); });
 
-async function start(){
+function start(){
   show('app');
+  render(true); // تفتح اللوحة فوراً في أجزاء من الثانية
   if(started) return; started = true;
-  
-  // جتحميل البيانات أولاً بشكل مباشر لضمان ثباتها وعدم ضياعها نهائياً
-  await loadAllData();
-  render(true);
 
-  // تفعيل المزامنة الفورية في الخلفية
+  // جلب البيانات بالخلفية بدون إبطاء فتح اللوحة
   for(const k of Object.keys(D)){
     db.collection(k).onSnapshot(s => { 
       D[k] = s.docs.map(x => ({id:x.id, ...x.data()})); 
       render(); 
-    });
+    }, e => console.log(e));
   }
   db.collection('settings').doc('main').onSnapshot(s => { 
     if(s.exists) Object.assign(ST, s.data()); 
     render(); 
-  });
-}
-
-async function loadAllData() {
-  try {
-    for(const k of Object.keys(D)){
-      const snap = await db.collection(k).get();
-      D[k] = snap.docs.map(x => ({id:x.id, ...x.data()}));
-    }
-    const sSnap = await db.collection('settings').doc('main').get();
-    if(sSnap.exists) Object.assign(ST, sSnap.data());
-  } catch(e) {
-    console.log(e);
-  }
+  }, e => console.log(e));
 }
 
 function go(k){ tab = k; render(true); }
@@ -131,9 +115,9 @@ const V = {
   orders: () => D.orders.length ? D.orders.map(x => `<div class="card"><div class="row"><b>${esc(x.item||'طلب')}</b><span class="tag">${SL[x.status]||x.status}</span></div><p>المتجر: ${esc(nm('stores',x.storeId))} ← المنطقة: ${esc(nm('areas',x.areaId))}</p><p>السائق: ${esc(nm('drivers',x.driverId))} | الزبون: ${esc(x.phone)} | الكروة: ${N(x.fee)} د.ع</p></div>`).join('') : '<p class="empty">لا توجد طلبات حالية</p>',
   
   areas: () => `<div class="card f"><input id="an" placeholder="اسم المنطقة"><input id="ap" type="number" placeholder="الكروة (السعر)"><button onclick="addArea()">إضافة منطقة</button></div>` + 
-    (D.areas.length ? D.areas.map(a => `<div class="card"><div class="row"><b>${esc(a.name)}</b><span>${N(a.price)} د.ع</span></div><div class="row"><button class="o" onclick="editAreaPrice('${a.id}')">تعديل السعر</button><button class="d" onclick="deleteArea('${a.id}')">حذف</button></div></div>`).join('') : '<p class="empty">لا توجد مناطق مضافة حالياً</p>'),
+    (D.areas.length ? D.areas.map(a => `<div class="card"><div class="row"><b>${esc(a.name)}</b><span>${N(a.price)} د.ع</span></div><div class="row"><button class="o" onclick="editAreaPrice('${a.id}')">تعديل</button><button class="d" onclick="deleteArea('${a.id}')">حذف</button></div></div>`).join('') : '<p class="empty">لا توجد مناطق مضافة حالياً</p>'),
     
-  drivers: () => form('drivers','إضافة سائق') + (D.drivers.length ? D.drivers.map(d => `<div class="card"><div class="row"><b>${esc(d.name)} (${d.online?'متصل🟢':'อفلاين🔴'})</b></div>
+  drivers: () => form('drivers','إضافة سائق') + (D.drivers.length ? D.drivers.map(d => `<div class="card"><div class="row"><b>${esc(d.name)} (${d.online?'متصل🟢':'أوفلاين🔴'})</b></div>
 <p class="${(d.balance||0)>=ST.debtLimit?'bad':''}">رصيد الحساب / الدين: <b>${N(d.balance||0)} د.ع</b></p>
 <div class="row">
   <button onclick="addMoney('${d.id}')">إضافة / خصم مبلغ</button>
@@ -154,7 +138,6 @@ async function addArea(){
     D.areas.push({id: ref.id, name: n, price: p, active: true});
     $('#an').value = ''; $('#ap').value = '';
     render(true);
-    alert('تمت إضافة المنطقة بنجاح وثبتت في القائمة!');
   } catch(e) {
     alert('خطأ: ' + e.message);
   }
@@ -179,10 +162,9 @@ async function deleteArea(id){
 }
 
 async function addMoney(id){
-  const amt = prompt('أدخل المبلغ المراد خصمه أو إضافته لدين السائق (أدخل رقم موجب لخصم الدين أو جعل الرصيد بالسالب):');
+  const amt = prompt('أدخل المبلغ (رقم موجب للخصم/الدين، سالب للزيادة):');
   if(!amt || isNaN(amt)) return;
   await db.collection('drivers').doc(id).update({ balance: TS.increment(-(+amt)) });
-  alert('تم تحديث محفظة السائق بنجاح');
 }
 
 async function zeroBalance(id){ if(confirm('تصفير محفظة السائق؟')) await db.collection('drivers').doc(id).update({balance:0}); }
@@ -191,17 +173,17 @@ async function saveS(){
   const settingsData = {driverPct:+$('#s_driverPct').value, storeCommission:+$('#s_storeCommission').value, debtLimit:+$('#s_debtLimit').value};
   await db.collection('settings').doc('main').set(settingsData); 
   Object.assign(ST, settingsData);
-  alert('تم حفظ الإعدادات بنجاح'); 
+  alert('تم الحفظ'); 
 }
 
 async function addAcct(col){
   const f={name:$('#'+col+'n').value, username:$('#'+col+'u').value, phone:$('#'+col+'t').value}, pw=$('#'+col+'p').value;
-  if(!f.name || !f.username || pw.length < 6) return alert('يرجى كتابة الاسم واليوزر ورمز من 6 خانات على الأقل');
+  if(!f.name || !f.username || pw.length < 6) return alert('أدخل الاسم واليوزر ورمز من 6 خانات');
   try {
     const c = await sec.auth().createUserWithEmailAndPassword(mail(f.username), pw);
     await sec.auth().signOut();
     await db.collection(col).doc(c.user.uid).set({...f, active:true, balance:0, online:false});
-    alert('تمت إضافة الحساب بنجاح');
+    alert('تمت الإضافة بنجاح');
     render(true);
   } catch(e) {
     alert('خطأ: ' + e.message);
