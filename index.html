@@ -86,7 +86,7 @@
             statusMsg.textContent = "حدث خطأ في الاتصال بالسيرفر";
         });
 
-        // زر الإضافة
+        // زر الإضافة مع معالجة حاسمة لعدم التعليق
         addBtn.addEventListener("click", async () => {
             const nameInput = document.getElementById("area-name");
             const priceInput = document.getElementById("area-price");
@@ -99,19 +99,22 @@
                 return;
             }
 
+            addBtn.disabled = true;
+            addBtn.textContent = "جاري الحفظ في السيرفر...";
+
             try {
-                addBtn.textContent = "جاري الحفظ في السيرفر...";
                 await addDoc(collection(db, "areas"), {
                     name: name,
                     price: price,
-                    createdAt: new Date()
+                    createdAt: Date.now()
                 });
                 nameInput.value = "";
                 priceInput.value = "";
-                addBtn.textContent = "إضافة منطقة";
             } catch (e) {
                 console.error("خطأ أثناء الحفظ: ", e);
-                alert("فشل الحفظ، تأكد من الاتصال");
+                alert("فشل الحفظ، تأكد من الاتصال بالإنترنت");
+            } finally {
+                addBtn.disabled = false;
                 addBtn.textContent = "إضافة منطقة";
             }
         });
@@ -127,5 +130,7 @@
             }
         }
     </script>
+</body>
+</html>
 </body>
 </html>
