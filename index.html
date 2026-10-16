@@ -4,9 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>لوحة إدارة التوصيل - Baqubah Delivery</title>
-<!-- استدعاء مكتبة Vue.js الحديثة -->
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<!-- مكتبات Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -30,7 +28,6 @@ label{display:flex;flex-direction:column;gap:4px;color:var(--m);font-size:13px}
 input{padding:11px;border:1px solid var(--b);border-radius:8px;background:var(--bg);color:var(--t);font:inherit;width:100%;outline:none}
 input:focus{border-color:var(--a)}
 button.btn-main{font:inherit;padding:10px 16px;border-radius:8px;border:none;background:var(--a);color:#0f172a;font-weight:bold;cursor:pointer;transition:0.2s}
-button.btn-main:disabled{opacity:0.6;cursor:not-allowed}
 button.d{background:none;color:var(--r);border:1px solid var(--r);padding:6px 12px;border-radius:6px;cursor:pointer}
 button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12px;border-radius:6px;cursor:pointer}
 .tag{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--b);font-weight:bold}
@@ -42,7 +39,6 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
 <body>
 
 <div id="app">
-  <!-- صفحة تسجيل الدخول -->
   <div v-if="!user" class="login-box card f">
     <h2 style="margin:0 0 10px 0;text-align:center">دخول المدير</h2>
     <input v-model="loginForm.u" placeholder="اليوزر نيم" autocapitalize="none">
@@ -51,7 +47,6 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
     <div v-if="loginErr" class="err">{{ loginErr }}</div>
   </div>
 
-  <!-- لوحة التحكم الرئيسية -->
   <div v-else>
     <header>
       <b>لوحة المدير الحديثة (Vue.js)</b>
@@ -65,7 +60,6 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
     </div>
 
     <div class="main-container">
-      <!-- تبويب الطلبات -->
       <div v-if="tab === 'orders'">
         <div v-if="!orders.length" class="empty">لا توجد طلبات حالياً</div>
         <div v-for="x in orders" :key="x.id" class="card">
@@ -78,14 +72,11 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
         </div>
       </div>
 
-      <!-- تبويب المناطق -->
       <div v-if="tab === 'areas'">
         <div class="card f">
           <input v-model="newArea.name" placeholder="اسم المنطقة">
           <input v-model.number="newArea.price" type="number" placeholder="الكروة (السعر)">
-          <button class="btn-main" :disabled="savingArea" @click="addArea">
-            {{ savingArea ? 'جاري الحفظ...' : 'إضافة منطقة' }}
-          </button>
+          <button class="btn-main" @click="addArea">إضافة منطقة</button>
         </div>
         <div v-if="!areas.length" class="empty">لا توجد مناطق مضافة</div>
         <div v-for="a in areas" :key="a.id" class="card">
@@ -100,7 +91,6 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
         </div>
       </div>
 
-      <!-- تبويب السواق -->
       <div v-if="tab === 'drivers'">
         <div class="card f">
           <input v-model="newAcct.name" placeholder="اسم السائق">
@@ -121,7 +111,6 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
         </div>
       </div>
 
-      <!-- تبويب المتاجر -->
       <div v-if="tab === 'stores'">
         <div class="card f">
           <input v-model="newAcct.name" placeholder="اسم المتجر">
@@ -137,7 +126,6 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
         </div>
       </div>
 
-      <!-- تبويب الإعدادات -->
       <div v-if="tab === 'settings'" class="card f">
         <label>نسبة عمولة السائق %<input v-model.number="ST.driverPct" type="number"></label>
         <label>عمولة المتجر الثابتة<input v-model.number="ST.storeCommission" type="number"></label>
@@ -166,7 +154,6 @@ createApp({
     const loginErr = ref('');
     const loginForm = reactive({ u: '', p: '' });
     const tab = ref('orders');
-    const savingArea = ref(false);
 
     const tabs = [
       {id:'orders', name:'الطلبات'},
@@ -213,7 +200,6 @@ createApp({
 
     const logout = () => auth.signOut();
 
-    // مزامنة لحظية حقيقية بدون تجميد أو تعليق الواجهة
     const initDataSync = () => {
       db.collection('orders').onSnapshot(s => orders.value = s.docs.map(d=>({id:d.id, ...d.data()})), e=>console.log(e));
       db.collection('areas').onSnapshot(s => areas.value = s.docs.map(d=>({id:d.id, ...d.data()})), e=>console.log(e));
@@ -222,14 +208,18 @@ createApp({
       db.collection('settings').doc('main').onSnapshot(s => { if(s.exists) Object.assign(ST, s.data()); });
     };
 
-    const addArea = async () => {
+    // **إضافة فورية صاروخية بدون أي تعليق للزر**
+    const addArea = () => {
       if(!newArea.name || !newArea.price) return alert('أدخل اسم المنطقة والسعر');
-      savingArea.value = true;
-      try {
-        await db.collection('areas').add({ name: newArea.name, price: Number(newArea.price), active: true });
-        newArea.name = ''; newArea.price = null;
-      } catch(e) { alert('خطأ في الحفظ: ' + e.message); }
-      finally { savingArea.value = false; }
+      const name = newArea.name;
+      const price = Number(newArea.price);
+      
+      // تفريغ الحقول فوراً
+      newArea.name = ''; 
+      newArea.price = null;
+
+      // الإرسال للسيرفر بالخلفية بصمت تام
+      db.collection('areas').add({ name, price, active: true }).catch(e => console.log(e));
     };
 
     const editAreaPrice = async (a) => {
@@ -260,7 +250,7 @@ createApp({
     };
 
     const addAcct = async (col) => {
-      if(!newAcct.name || !newAcct.username || newAcct.password.length < 6) return alert('يرجى ملء كافة البيانات بشفير صحيح');
+      if(!newAcct.name || !newAcct.username || newAcct.password.length < 6) return alert('يرجى ملء كافة البيانات بشكل صحيح');
       try {
         const c = await sec.auth().createUserWithEmailAndPassword(mail(newAcct.username), newAcct.password);
         await sec.auth().signOut();
@@ -274,7 +264,7 @@ createApp({
 
     return {
       user, loading, loginErr, loginForm, tab, tabs, SL, ST, orders, areas, drivers, stores,
-      newArea, newAcct, savingArea, tryLogin, logout, getName, N, addArea, editAreaPrice,
+      newArea, newAcct, tryLogin, logout, getName, N, addArea, editAreaPrice,
       deleteArea, addMoney, zeroBalance, toggleStatus, saveSettings, addAcct
     };
   }
