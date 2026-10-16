@@ -40,7 +40,6 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
 <body>
 
 <div id="app">
-  <!-- شاشة الدخول -->
   <div v-if="!user" class="login-box card f">
     <h2 style="margin:0 0 10px 0;text-align:center">دخول المدير</h2>
     <input v-model="loginForm.u" placeholder="اليوزر نيم" autocapitalize="none">
@@ -49,7 +48,6 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
     <div v-if="loginErr" class="err">{{ loginErr }}</div>
   </div>
 
-  <!-- لوحة التحكم الرئيسية -->
   <div v-else>
     <header>
       <b>لوحة المدير السحابية (Baqubah Delivery)</b>
@@ -63,9 +61,8 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
     </div>
 
     <div class="main-container">
-      <!-- تبويب الطلبات -->
       <div v-if="tab === 'orders'">
-        <div v-if="!orders.length" class="empty">لا توجد طلبات حالياً بانتظار المتاجر</div>
+        <div v-if="!orders.length" class="empty">لا توجد طلبات حالياً</div>
         <div v-for="x in orders" :key="x.id" class="card">
           <div class="row">
             <b>{{ x.item || 'طلب توصيل' }}</b>
@@ -76,14 +73,11 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
         </div>
       </div>
 
-      <!-- تبويب المناطق -->
       <div v-if="tab === 'areas'">
         <div class="card f">
           <input v-model="newArea.name" placeholder="اسم المنطقة">
           <input v-model.number="newArea.price" type="number" placeholder="الكروة (السعر)">
-          <button class="btn-main" :disabled="saving" @click="addArea">
-            {{ saving ? 'جاري الحفظ في السيرفر...' : 'إضافة منطقة' }}
-          </button>
+          <button class="btn-main" @click="addArea">إضافة منطقة</button>
         </div>
         <div v-if="!areas.length" class="empty">لا توجد مناطق مضافة بالسيرفر</div>
         <div v-for="a in areas" :key="a.id" class="card">
@@ -98,18 +92,15 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
         </div>
       </div>
 
-      <!-- تبويب السواق -->
       <div v-if="tab === 'drivers'">
         <div class="card f">
           <input v-model="newAcct.name" placeholder="اسم السائق">
           <input v-model="newAcct.username" placeholder="اليوزر (إنجليزي)">
           <input v-model="newAcct.password" placeholder="الرمز (6 خانات)">
           <input v-model="newAcct.phone" placeholder="الهاتف">
-          <button class="btn-main" :disabled="savingAcct" @click="addAcct('drivers')">
-            {{ savingAcct ? 'جاري إنشاء الحساب...' : 'إضافة سائق' }}
-          </button>
+          <button class="btn-main" @click="addAcct('drivers')">إضافة سائق</button>
         </div>
-        <div v-if="!drivers.length" class="empty">لا يوجد سواق مسجلين بالسيرفر</div>
+        <div v-if="!drivers.length" class="empty">لا يوجد سواق مسجلين</div>
         <div v-for="d in drivers" :key="d.id" class="card">
           <div class="row"><b>{{ d.name }} ({{ d.online ? 'متصل🟢' : 'أوفلاين🔴' }})</b></div>
           <p :class="{bad: (d.balance||0) >= ST.debtLimit}">رصيد الحساب / الدين: <b>{{ N(d.balance||0) }} د.ع</b></p>
@@ -121,25 +112,21 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
         </div>
       </div>
 
-      <!-- تبويب المتاجر -->
       <div v-if="tab === 'stores'">
         <div class="card f">
           <input v-model="newAcct.name" placeholder="اسم المتجر">
           <input v-model="newAcct.username" placeholder="اليوزر (إنجليزي)">
           <input v-model="newAcct.password" placeholder="الرمز (6 خانات)">
           <input v-model="newAcct.phone" placeholder="الهاتف">
-          <button class="btn-main" :disabled="savingAcct" @click="addAcct('stores')">
-            {{ savingAcct ? 'جاري إنشاء الحساب...' : 'إضافة متجر' }}
-          </button>
+          <button class="btn-main" @click="addAcct('stores')">إضافة متجر</button>
         </div>
-        <div v-if="!stores.length" class="empty">لا توجد متاجر مسجلة بالسيرفر</div>
+        <div v-if="!stores.length" class="empty">لا توجد متاجر مسجلة</div>
         <div v-for="s in stores" :key="s.id" class="card">
           <div class="row"><b>{{ s.name }} ({{ s.online ? 'مفتوح🟢' : 'مغلق🔴' }})</b></div>
           <button :class="s.active ? 'd' : 'o'" style="margin-top:8px" @click="toggleStatus('stores', s)">{{ s.active ? 'تعطيل' : 'تفعيل' }}</button>
         </div>
       </div>
 
-      <!-- تبويب الإعدادات -->
       <div v-if="tab === 'settings'" class="card f">
         <label>نسبة عمولة السائق %<input v-model.number="ST.driverPct" type="number"></label>
         <label>عمولة المتجر الثابتة<input v-model.number="ST.storeCommission" type="number"></label>
@@ -165,10 +152,8 @@ firebase.initializeApp(cfg);
 const sec = firebase.initializeApp(cfg, 'sec');
 const auth = firebase.auth(), db = firebase.firestore();
 
-// حل مشكلة بطء وحظر الـ 4G بالعراق برمجياً
 try {
   db.settings({ experimentalForceLongPolling: true, merge: true });
-  db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
 } catch(e){}
 
 const { createApp, ref, reactive, onMounted } = Vue;
@@ -177,8 +162,6 @@ createApp({
   setup() {
     const user = ref(null);
     const loading = ref(false);
-    const saving = ref(false);
-    const savingAcct = ref(false);
     const loginErr = ref('');
     const loginForm = reactive({ u: '', p: '' });
     const tab = ref('orders');
@@ -213,14 +196,7 @@ createApp({
     onMounted(() => {
       auth.onAuthStateChanged(u => {
         user.value = u;
-        if (u) {
-          initCloudSync();
-        } else {
-          orders.value = [];
-          areas.value = [];
-          drivers.value = [];
-          stores.value = [];
-        }
+        if (u) initCloudSync();
       });
     });
 
@@ -235,74 +211,67 @@ createApp({
 
     const logout = () => auth.signOut();
 
-    // جلب مباشر وسريع من Firestore دون تعليق
     const initCloudSync = () => {
-      db.collection('orders').onSnapshot(s => orders.value = s.docs.map(d => ({id: d.id, ...d.data()})), e => console.error(e));
-      db.collection('areas').onSnapshot(s => areas.value = s.docs.map(d => ({id: d.id, ...d.data()})), e => console.error(e));
-      db.collection('drivers').onSnapshot(s => drivers.value = s.docs.map(d => ({id: d.id, ...d.data()})), e => console.error(e));
-      db.collection('stores').onSnapshot(s => stores.value = s.docs.map(d => ({id: d.id, ...d.data()})), e => console.error(e));
+      db.collection('orders').onSnapshot(s => orders.value = s.docs.map(d => ({id: d.id, ...d.data()})), e => {});
+      db.collection('areas').onSnapshot(s => areas.value = s.docs.map(d => ({id: d.id, ...d.data()})), e => {});
+      db.collection('drivers').onSnapshot(s => drivers.value = s.docs.map(d => ({id: d.id, ...d.data()})), e => {});
+      db.collection('stores').onSnapshot(s => stores.value = s.docs.map(d => ({id: d.id, ...d.data()})), e => {});
 
       db.collection('settings').doc('main').onSnapshot(s => { 
         if(s.exists) Object.assign(ST, s.data()); 
-      }, e => console.error(e));
+      }, e => {});
     };
 
-    const addArea = async () => {
+    // إضافة سحابية فورية بدون أي تعليق أو انتظار لرد السيرفر بالواجهة
+    const addArea = () => {
       if(!newArea.name || !newArea.price) return alert('أدخل اسم المنطقة والسعر');
-      saving.value = true;
-      try {
-        await db.collection('areas').add({ 
-          name: newArea.name.trim(), 
-          price: Number(newArea.price), 
-          active: true 
-        });
-        newArea.name = ''; 
-        newArea.price = null;
-      } catch(e) {
-        alert('خطأ في الحفظ السحابي: ' + e.message);
-      } finally {
-        saving.value = false;
-      }
+      const name = newArea.name.trim();
+      const price = Number(newArea.price);
+      
+      // تفريغ الحقول والعودة للحالة الطبيعية فوراً
+      newArea.name = ''; 
+      newArea.price = null;
+
+      // الإرسال للسيرفر السحابي بالخلفية بصمت تام
+      db.collection('areas').add({ name, price, active: true }).catch(e => alert('خطأ في الحفظ: ' + e.message));
     };
 
-    const editAreaPrice = async (a) => {
+    const editAreaPrice = (a) => {
       const v = prompt('أدخل السعر الجديد:', a.price);
       if(v && !isNaN(v)) {
-        await db.collection('areas').doc(a.id).update({ price: Number(v) });
+        db.collection('areas').doc(a.id).update({ price: Number(v) });
       }
     };
 
-    const deleteArea = async (id) => {
+    const deleteArea = (id) => {
       if(confirm('هل أنت متأكد من حذف هذه المنطقة؟')) {
-        await db.collection('areas').doc(id).delete();
+        db.collection('areas').doc(id).delete();
       }
     };
 
-    const addMoney = async (d) => {
+    const addMoney = (d) => {
       const amt = prompt('أدخل المبلغ (موجب للخصم، سالب للزيادة):');
       if(amt && !isNaN(amt)) {
-        await db.collection('drivers').doc(d.id).update({ balance: firebase.firestore.FieldValue.increment(-Number(amt)) });
+        db.collection('drivers').doc(d.id).update({ balance: firebase.firestore.FieldValue.increment(-Number(amt)) });
       }
     };
 
-    const zeroBalance = async (d) => {
+    const zeroBalance = (d) => {
       if(confirm('تصفير محفظة السائق؟')) {
-        await db.collection('drivers').doc(d.id).update({ balance: 0 });
+        db.collection('drivers').doc(d.id).update({ balance: 0 });
       }
     };
 
-    const toggleStatus = async (col, item) => {
-      await db.collection(col).doc(item.id).update({ active: !item.active });
+    const toggleStatus = (col, item) => {
+      db.collection(col).doc(item.id).update({ active: !item.active });
     };
 
-    const saveSettings = async () => {
-      await db.collection('settings').doc('main').set({ ...ST });
-      alert('تم حفظ الإعدادات بنجاح');
+    const saveSettings = () => {
+      db.collection('settings').doc('main').set({ ...ST }).then(() => alert('تم حفظ الإعدادات'));
     };
 
     const addAcct = async (col) => {
       if(!newAcct.name || !newAcct.username || newAcct.password.length < 6) return alert('يرجى ملء كافة البيانات بشكل صحيح');
-      savingAcct.value = true;
       try {
         const c = await sec.auth().createUserWithEmailAndPassword(mail(newAcct.username), newAcct.password);
         await sec.auth().signOut();
@@ -311,15 +280,11 @@ createApp({
         });
         alert('تمت الإضافة بنجاح');
         newAcct.name = ''; newAcct.username = ''; newAcct.password = ''; newAcct.phone = '';
-      } catch(e) { 
-        alert('خطأ في إنشاء الحساب: ' + e.message); 
-      } finally {
-        savingAcct.value = false;
-      }
+      } catch(e) { alert('خطأ: ' + e.message); }
     };
 
     return {
-      user, loading, saving, savingAcct, loginErr, loginForm, tab, tabs, SL, ST, orders, areas, drivers, stores,
+      user, loading, loginErr, loginForm, tab, tabs, SL, ST, orders, areas, drivers, stores,
       newArea, newAcct, tryLogin, logout, getName, N, addArea, editAreaPrice,
       deleteArea, addMoney, zeroBalance, toggleStatus, saveSettings, addAcct
     };
