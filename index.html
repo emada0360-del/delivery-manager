@@ -34,6 +34,7 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
 .bad{color:var(--r);font-weight:bold}.empty{text-align:center;color:var(--m);padding:32px;font-size:15px}
 .login-box{max-width:380px;margin:12vh auto;padding:20px}
 .err{color:var(--r);margin-top:8px;font-weight:bold;font-size:13px}
+.succ{color:var(--g);font-weight:bold;font-size:13px;text-align:center}
 </style>
 </head>
 <body>
@@ -76,7 +77,10 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
         <div class="card f">
           <input v-model="newArea.name" placeholder="اسم المنطقة">
           <input v-model.number="newArea.price" type="number" placeholder="الكروة (السعر)">
-          <button class="btn-main" @click="addArea">إضافة منطقة</button>
+          <button class="btn-main" :disabled="saving" @click="addArea">
+            {{ saving ? 'جاري الحفظ في السيرفر...' : 'إضافة منطقة' }}
+          </button>
+          <div v-if="saveMsg" class="succ">{{ saveMsg }}</div>
         </div>
         <div v-if="loadingAreas" class="empty">جاري جلب المناطق المضافة من السيرفر...</div>
         <div v-else-if="!areas.length" class="empty">لا توجد مناطق مضافة بالسيرفر حتى الآن</div>
@@ -150,11 +154,13 @@ const cfg = {
 
 firebase.initializeApp(cfg);
 const sec = firebase.initializeApp(cfg, 'sec');
-const auth = firebase.auth(), db = firebase.firestore();
+const auth = firebase.auth();
+const db = firebase.firestore();
 
+// تفعيل إجبار الاتصال الطويل لتجاوز مشاكل شبكات 4G في العراق بشكل مؤكد
 try {
-  db.settings({ experimentalForceLongPolling: true, merge: true });
-} catch(e){}
+  db.settings({ experimentalForceLongPolling: true });
+} catch(e) {}
 
 const { createApp, ref, reactive, onMounted } = Vue;
 
@@ -162,7 +168,9 @@ createApp({
   setup() {
     const user = ref(null);
     const loading = ref(false);
+    const saving = ref(false);
     const loadingAreas = ref(true);
+    const saveMsg = ref('');
     const loginErr = ref('');
     const loginForm = reactive({ u: '', p: '' });
     const tab = ref('orders');
@@ -228,52 +236,61 @@ createApp({
       }, e => {});
     };
 
-    // إرسال فوري فائق السرعة مع تفريغ الحقول لحل مشكلة تعليق الشبكة
-    const addArea = () => {
+    // إضافة مؤكدة مع إظهار حالة الحفظ لضمان استلام السيرفر للبيانات
+    const addArea = async () => {
       if(!newArea.name || !newArea.price) return alert('أدخل اسم المنطقة والسعر');
-      const name = newArea.name.trim();
-      const price = Number(newArea.price);
-
-      newArea.name = '';
-      newArea.price = null;
-
-      db.collection('areas').add({ name, price, active: true }).catch(e => {
-        alert('خطأ في الاتصال بالسيرفر: ' + e.message);
-      });
+      saving.value = true;
+      saveMsg.value = '';
+      try {
+        await db.collection('areas').add({ 
+          name: newArea.name.trim(), 
+          price: Number(newArea.price), 
+          active: true 
+        });
+        saveMsg.value = 'تم حفظ المنطقة سحابياً بنجاح ✅';
+        newArea.name = ''; 
+        newArea.price = null;
+        setTimeout(() => saveMsg.value = '', 4000);
+      } catch(e) {
+        alert('فشل الحفظ في السيرفر: ' + e.message);
+      } finally {
+        saving.value = false;
+      }
     };
 
-    const editAreaPrice = (a) => {
+    const editAreaPrice = async (a) => {
       const v = prompt('أدخل السعر الجديد:', a.price);
       if(v && !isNaN(v)) {
-        db.collection('areas').doc(a.id).update({ price: Number(v) });
+        await db.collection('areas').doc(a.id).update({ price: Number(v) });
       }
     };
 
-    const deleteArea = (id) => {
+    const deleteArea = async (id) => {
       if(confirm('هل أنت متأكد من حذف هذه المنطقة؟')) {
-        db.collection('areas').doc(id).delete();
+        await db.collection('areas').doc(id).delete();
       }
     };
 
-    const addMoney = (d) => {
+    const addMoney = async (d) => {
       const amt = prompt('أدخل المبلغ (موجب للخصم، سالب للزيادة):');
       if(amt && !isNaN(amt)) {
-        db.collection('drivers').doc(d.id).update({ balance: firebase.firestore.FieldValue.increment(-Number(amt)) });
+        await db.collection('drivers').doc(d.id).update({ balance: firebase.firestore.FieldValue.increment(-Number(amt)) });
       }
     };
 
-    const zeroBalance = (d) => {
+    const zeroBalance = async (d) => {
       if(confirm('تصفير محفظة السائق؟')) {
-        db.collection('drivers').doc(d.id).update({ balance: 0 });
+        await db.collection('drivers').doc(d.id).update({ balance: 0 });
       }
     };
 
-    const toggleStatus = (col, item) => {
-      db.collection(col).doc(item.id).update({ active: !item.active });
+    const toggleStatus = async (col, item) => {
+      await db.collection(col).doc(item.id).update({ active: !item.active });
     };
 
-    const saveSettings = () => {
-      db.collection('settings').doc('main').set({ ...ST }).then(() => alert('تم حفظ الإعدادات'));
+    const saveSettings = async () => {
+      await db.collection('settings').doc('main').set({ ...ST });
+      alert('تم حفظ الإعدادات');
     };
 
     const addAcct = async (col) => {
@@ -290,14 +307,12 @@ createApp({
     };
 
     return {
-      user, loading, loadingAreas, loginErr, loginForm, tab, tabs, SL, ST, orders, areas, drivers, stores,
+      user, loading, saving, loadingAreas, saveMsg, loginErr, loginForm, tab, tabs, SL, ST, orders, areas, drivers, stores,
       newArea, newAcct, tryLogin, logout, getName, N, addArea, editAreaPrice,
       deleteArea, addMoney, zeroBalance, toggleStatus, saveSettings, addAcct
     };
   }
 }).mount('#app');
 </script>
-</body>
-</html>
 </body>
 </html>
