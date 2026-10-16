@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>لوحة المدير السريعة</title>
+<title>لوحة المدير</title>
 <style>
 :root{--bg:#eef1f4;--c:#fff;--t:#1b2a41;--m:#667085;--a:#f2a900;--g:#15803d;--r:#b91c1c;--b:#d9dee5}
 @media(prefers-color-scheme:dark){:root{--bg:#12161c;--c:#1c222b;--t:#e8ecf1;--m:#98a2b3;--b:#2b3340}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--t);font:15px/1.6 "Noto Sans Arabic",Tahoma,sans-serif}
+body{margin:0;background:var(--bg);color:var(--t);font:15px/1.6 "Noto Sans Arabic",sans-serif}
 header{background:#1b2a41;color:#fff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:2}
 header b{font-size:17px;border-bottom:3px solid var(--a)}
 header button{background:none;border:1px solid #5b6b85;color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer}
@@ -42,7 +42,7 @@ button.o{background:none;color:var(--t)}
 </div>
 
 <div id="app" style="display:none">
-  <header><b>لوحة المدير السريعة</b><button onclick="auth.signOut()">خروج</button></header>
+  <header><b>لوحة المدير</b><button onclick="auth.signOut()">خروج</button></header>
   <div id="nav"></div>
   <div id="main"></div>
 </div>
@@ -57,8 +57,6 @@ const cfg = {apiKey:"AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M", authDomain:"baqub
 firebase.initializeApp(cfg);
 const sec = firebase.initializeApp(cfg, 'sec');
 const auth = firebase.auth(), db = firebase.firestore(), $ = s => document.querySelector(s), TS = firebase.firestore.FieldValue;
-
-try { db.settings({ experimentalForceLongPolling: true, merge: true }); } catch(e){}
 
 const D = {orders:[], areas:[], drivers:[], stores:[]};
 const ST = {storeCommission:500, driverPct:10, debtLimit:15000};
@@ -80,24 +78,23 @@ async function tryLogin(){
 }
 window.tryLogin = tryLogin;
 
-auth.onAuthStateChanged(u => { if(!u) { show('login'); return; } start(); });
+auth.onAuthStateChanged(u => { if(!u) { show('login'); return; } loadData(); });
 
-function start(){
+async function loadData(){
   show('app');
+  $('#main').innerHTML = '<p class="empty">جاري تحميل البيانات...</p>';
+  try {
+    const collections = ['orders', 'areas', 'drivers', 'stores'];
+    for(const col of collections){
+      const snap = await db.collection(col).get();
+      D[col] = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    }
+    const sSnap = await db.collection('settings').doc('main').get();
+    if(sSnap.exists) Object.assign(ST, sSnap.data());
+  } catch(e) {
+    console.error(e);
+  }
   render();
-
-  // جلب البيانات مرة واحدة بخفة
-  ['orders', 'areas', 'drivers', 'stores'].forEach(k => {
-    db.collection(k).get().then(snap => {
-      D[k] = snap.docs.map(x => ({id:x.id, ...x.data()}));
-      render();
-    }).catch(e => console.log(e));
-  });
-
-  db.collection('settings').doc('main').get().then(s => {
-    if(s.exists) Object.assign(ST, s.data());
-    render();
-  }).catch(e => console.log(e));
 }
 
 function go(k){ tab = k; render(); }
@@ -113,7 +110,7 @@ const form = (col, btn) => `<div class="card f"><input id="${col}n" placeholder=
 const V = {
   orders: () => D.orders.length ? D.orders.map(x => `<div class="card"><div class="row"><b>${esc(x.item||'طلب')}</b><span class="tag">${SL[x.status]||x.status}</span></div><p>المتجر: ${esc(nm('stores',x.storeId))} ← المنطقة: ${esc(nm('areas',x.areaId))}</p><p>السائق: ${esc(nm('drivers',x.driverId))} | الزبون: ${esc(x.phone)} | الكروة: ${N(x.fee)} د.ع</p></div>`).join('') : '<p class="empty">لا توجد طلبات حالية</p>',
   
-  areas: () => `<div class="card f"><input id="an" placeholder="اسم المنطقة"><input id="ap" type="number" placeholder="الكروة (السعر)"><button onclick="addArea()">إضافة منطقة</button></div>` + 
+  areas: () => `<div class="card f"><input id="an" placeholder="اسم المنطقة"><input id="ap" type="number" placeholder="الكروة (السعر)"><button id="btnArea" onclick="addArea()">إضافة منطقة</button></div>` + 
     (D.areas.length ? D.areas.map(a => `<div class="card"><div class="row"><b>${esc(a.name)}</b><span>${N(a.price)} د.ع</span></div><div class="row"><button class="o" onclick="editAreaPrice('${a.id}')">تعديل</button><button class="d" onclick="deleteArea('${a.id}')">حذف</button></div></div>`).join('') : '<p class="empty">لا توجد مناطق مضافة حالياً</p>'),
     
   drivers: () => form('drivers','إضافة سائق') + (D.drivers.length ? D.drivers.map(d => `<div class="card"><div class="row"><b>${esc(d.name)} (${d.online?'متصل🟢':'أوفلاين🔴'})</b></div>
@@ -129,22 +126,27 @@ const V = {
   settings: () => `<div class="card f"><label>نسبة عمولة السائق %<input id="s_driverPct" type="number" value="${ST.driverPct}"></label><label>عمولة المتجر الثابتة<input id="s_storeCommission" type="number" value="${ST.storeCommission}"></label><label>حد الدين المسموح للسائق<input id="s_debtLimit" type="number" value="${ST.debtLimit}"></label><button onclick="saveS()">حفظ الإعدادات</button></div>`
 };
 
-// **إضافة فورية (تظهر وتتخزن بنفس الملي ثانية دون انتظار السيرفر)**
-function addArea(){
+async function addArea(){
   const n = $('#an').value.trim(), p = +$('#ap').value;
   if(!n || !p) return alert('أدخل الاسم والسعر');
+  
+  const btn = $('#btnArea');
+  btn.disabled = true;
+  btn.innerText = 'جاري الإضافة إلى السيرفر...';
 
-  const tempId = 'local_' + Date.now();
-  // إظهار المنطقة فوراً على الشاشة
-  D.areas.push({id: tempId, name: n, price: p, active: true});
-  $('#an').value = ''; $('#ap').value = '';
-  render();
-
-  // الحفظ في السيرفر بالخلفية بصمت تام
-  db.collection('areas').add({name: n, price: p, active: true}).then(ref => {
-    const item = D.areas.find(x => x.id === tempId);
-    if(item) item.id = ref.id; // تحديث الـ ID بالـ ID الحقيقي من السيرفر
-  }).catch(e => console.log(e));
+  try {
+    const docRef = await db.collection('areas').add({ name: n, price: p, active: true });
+    D.areas.push({ id: docRef.id, name: n, price: p, active: true });
+    $('#an').value = ''; 
+    $('#ap').value = '';
+    render();
+    alert('تم إضافة الحفظ وتثبيت المنطقة في السيرفر بنجاح!');
+  } catch(e) {
+    alert('فشل الحفظ، تأكد من الاتصال بالإنترنت: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'إضافة منطقة';
+  }
 }
 
 async function editAreaPrice(id){
@@ -152,51 +154,51 @@ async function editAreaPrice(id){
   if(!a) return;
   const v = prompt('أدخل السعر الجديد للمنطقة:', a.price);
   if(v && !isNaN(v)){
+    await db.collection('areas').doc(id).update({price: +v});
     a.price = +v;
     render();
-    db.collection('areas').doc(id).update({price: +v}).catch(e=>console.log(e));
   }
 }
 
 async function deleteArea(id){
   if(confirm('هل أنت متأكد من حذف هذه المنطقة؟')){
+    await db.collection('areas').doc(id).delete();
     D.areas = D.areas.filter(x => x.id != id);
     render();
-    db.collection('areas').doc(id).delete().catch(e=>console.log(e));
   }
 }
 
 async function addMoney(id){
   const amt = prompt('أدخل المبلغ (رقم موجب للخصم/الدين، سالب للزيادة):');
   if(!amt || isNaN(amt)) return;
+  await db.collection('drivers').doc(id).update({ balance: TS.increment(-(+amt)) });
   const d = D.drivers.find(x => x.id == id);
   if(d) d.balance = (d.balance||0) - (+amt);
   render();
-  db.collection('drivers').doc(id).update({ balance: TS.increment(-(+amt)) }).catch(e=>console.log(e));
 }
 
 async function zeroBalance(id){ 
   if(confirm('تصفير محفظة السائق؟')){
+    await db.collection('drivers').doc(id).update({balance:0});
     const d = D.drivers.find(x => x.id == id);
     if(d) d.balance = 0;
     render();
-    db.collection('drivers').doc(id).update({balance:0}).catch(e=>console.log(e));
   }
 }
 
 async function tgl(c,id){ 
   const x = D[c].find(y => y.id == id);
   if(!x) return;
+  await db.collection(c).doc(id).update({active: !x.active});
   x.active = !x.active;
   render();
-  db.collection(c).doc(id).update({active: x.active}).catch(e=>console.log(e));
 }
 
 async function saveS(){ 
   const settingsData = {driverPct:+$('#s_driverPct').value, storeCommission:+$('#s_storeCommission').value, debtLimit:+$('#s_debtLimit').value};
+  await db.collection('settings').doc('main').set(settingsData); 
   Object.assign(ST, settingsData);
-  alert('تم الحفظ بنجاح');
-  db.collection('settings').doc('main').set(settingsData).catch(e=>console.log(e)); 
+  alert('تم حفظ الإعدادات بنجاح');
 }
 
 async function addAcct(col){
@@ -205,9 +207,9 @@ async function addAcct(col){
   try {
     const c = await sec.auth().createUserWithEmailAndPassword(mail(f.username), pw);
     await sec.auth().signOut();
-    db.collection(col).doc(c.user.uid).set({...f, active:true, balance:0, online:false});
+    await db.collection(col).doc(c.user.uid).set({...f, active:true, balance:0, online:false});
     alert('تمت الإضافة بنجاح');
-    start();
+    loadData();
   } catch(e) {
     alert('خطأ: ' + e.message);
   }
@@ -215,7 +217,5 @@ async function addAcct(col){
 
 window.addArea=addArea; window.editAreaPrice=editAreaPrice; window.deleteArea=deleteArea; window.addMoney=addMoney; window.zeroBalance=zeroBalance; window.tgl=tgl; window.saveS=saveS; window.addAcct=addAcct;
 </script>
-</body>
-</html>
 </body>
 </html>
