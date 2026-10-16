@@ -40,7 +40,7 @@
             doc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // إعدادات مشروعك
+        // إعدادات مشروعك الحقيقية والمطوحة من الفايربيس
         const firebaseConfig = {
             apiKey: "AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M",
             authDomain: "baqubah-delivery.firebaseapp.com",
@@ -50,7 +50,7 @@
             appId: "1:607280279395:web:859d9c7fb693a1b0b66d56"
         };
 
-        // تهيئة الفايربيس مع إجبار الاتصال عبر Long Polling لتجاوز حجب الشبكات في العراق
+        // تهيئة الفايربيس مع فرض الاتصال لتجنب أي تعليق في الشبكات
         const app = initializeApp(firebaseConfig);
         const db = initializeFirestore(app, {
             experimentalForceLongPolling: true
@@ -60,7 +60,7 @@
         const areasContainer = document.getElementById("areas-container");
         const addBtn = document.getElementById("add-area-btn");
 
-        // الاستماع المباشر للمناطق
+        // جلب الاستماع المباشر للمناطق
         onSnapshot(collection(db, "areas"), (snapshot) => {
             areasContainer.innerHTML = "";
             if (snapshot.empty) {
@@ -88,7 +88,7 @@
             statusMsg.textContent = "حدث خطأ في الاتصال بالسيرفر";
         });
 
-        // زر الإضافة
+        // زر الإضافة الحقيقي
         addBtn.addEventListener("click", async () => {
             const nameInput = document.getElementById("area-name");
             const priceInput = document.getElementById("area-price");
