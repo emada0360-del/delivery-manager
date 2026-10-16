@@ -51,16 +51,17 @@
 
         const app = initializeApp(firebaseConfig);
 
-        // هنا السحر: إجبار الاتصال المباشر بالسيرفر بدون تخزين مؤقت وهمي
+        // إجبار الفايربيس على الاتصال المباشر بالإنترنت وإلغاء التخزين المؤقت الوهمي
         const db = initializeFirestore(app, {
-            experimentalForceLongPolling: true
+            experimentalForceLongPolling: true,
+            localCache: undefined
         });
 
         const statusMsg = document.getElementById("status-message");
         const areasContainer = document.getElementById("areas-container");
         const addBtn = document.getElementById("add-area-btn");
 
-        // جلب الاستماع المباشر
+        // جلب المناطق من السيرفر مباشرة
         onSnapshot(collection(db, "areas"), (snapshot) => {
             areasContainer.innerHTML = "";
             if (snapshot.empty) {
@@ -84,11 +85,11 @@
                 areasContainer.appendChild(card);
             });
         }, (error) => {
-            console.error("خطأ في جلب البيانات:", error);
-            statusMsg.textContent = "حدث خطأ: " + error.message;
+            console.error("خطأ في الاتصال:", error);
+            statusMsg.textContent = "خطأ في الاتصال بالسيرفر: " + error.message;
         });
 
-        // زر الإضافة
+        // عملية الإضافة المباشرة مع إظهار النتيجة بالتفصيل
         addBtn.addEventListener("click", async () => {
             const nameInput = document.getElementById("area-name");
             const priceInput = document.getElementById("area-price");
@@ -112,10 +113,10 @@
                 });
                 nameInput.value = "";
                 priceInput.value = "";
-                alert("تم الحفظ الفعلي بالسيرفر بنجاح!");
+                alert("تم الحفظ في السيرفر بنجاح 100%!");
             } catch (e) {
-                console.error("خطأ أثناء الحفظ: ", e);
-                alert("فشل الحفظ في السيرفر: " + e.message);
+                console.error("تفاصيل الخطأ:", e);
+                alert("فشل الحفظ في السيرفر. السبب: " + e.message);
             } finally {
                 addBtn.disabled = false;
                 addBtn.textContent = "إضافة منطقة";
@@ -128,7 +129,7 @@
                 try {
                     await deleteDoc(doc(db, "areas", id));
                 } catch (e) {
-                    console.error("خطأ أثناء الحذف: ", e);
+                    alert("خطأ أثناء الحذف: " + e.message);
                 }
             }
         }
