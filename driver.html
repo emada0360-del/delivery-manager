@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تطبيق السائق - بعقوبة دليفري</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+            padding-bottom: 30px;
+        }
+        .card-custom {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+        }
+        .btn-amber {
+            background-color: #f59e0b;
+            color: #000;
+            font-weight: bold;
+        }
+        .btn-amber:hover {
+            background-color: #d97706;
+            color: #000;
+        }
+        .badge-pending {
+            background-color: #ef4444;
+            color: #fff;
+        }
+        .badge-accepted {
+            background-color: #3b82f6;
+            color: #fff;
+        }
+        .badge-delivered {
+            background-color: #10b981;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- الهيدر -->
+    <nav class="navbar navbar-dark bg-dark px-3 mb-4 border-bottom border-secondary">
+        <span class="navbar-brand mb-0 h1 text-warning">
+            <i class="fa-solid fa-motorcycle me-2"></i>تطبيق السائق - بعقوبة دليفري
+        </span>
+        <button class="btn btn-sm btn-outline-warning" onclick="fetchOrders()">
+            <i class="fa-solid fa-rotate-right me-1"></i> تحديث
+        </button>
+    </nav>
+
+    <div class="container" style="max-width: 600px;">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="text-warning mb-0"><i class="fa-solid fa-list-check me-2"></i>الطلبات المتاحة</h5>
+            <span id="orderCount" class="badge bg-secondary">0 طلب</span>
+        </div>
+
+        <!-- قائمة الطلبات -->
+        <div id="ordersList">
+            <div class="text-center text-muted my-5">
+                <i class="fa-solid fa-spinner fa-spin display-4 mb-3"></i>
+                <p>جاري تحميل الطلبات...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const rtdbUrl = "https://baqubah-delivery-default-rtdb.asia-southeast1.firebasedatabase.app";
+        const driverName = "سائق 1"; // اسم السائق للاختبار
+
+        async function fetchOrders() {
+            const listDiv = document.getElementById('ordersList');
+            try {
+                const res = await fetch(`${rtdbUrl}/orders.json`);
+                const data = await res.json();
+
+                if (!data) {
+                    listDiv.innerHTML = `
+                        <div class="card card-custom p-4 text-center text-muted">
+                            <i class="fa-solid fa-box-open display-4 mb-2"></i>
+                            <p class="mb-0">لا توجد طلبات حالياً</p>
+                        </div>`;
+                    document.getElementById('orderCount').innerText = "0 طلب";
+                    return;
+                }
+
+                let html = '';
+                let count = 0;
+
+                // تحويل الكائنات إلى مصفوفة وترتيبها من الأحدث للأقدم
+                const keys = Object.keys(data).reverse();
+                count = keys.length;
+                document.getElementById('orderCount').innerText = `${count} طلب`;
+
+                keys.forEach(key => {
+                    const order = data[key];
+                    let statusBadge = '';
+                    let actionButtons = '';
+
+                    if (order.status === 'pending') {
+                        statusBadge = '<span class="badge badge-pending">جديد (بانتظار سائق)</span>';
+                        actionButtons = `
+                            <button class="btn btn-amber btn-sm w-100 mt-2" onclick="updateOrderStatus('${key}', 'accepted')">
+                                <i class="fa-solid fa-hand-holding-hand me-1"></i> قبول واستلام الطلب
+                            </button>`;
+                    } else if (order.status === 'accepted') {
+                        statusBadge = `<span class="badge badge-accepted">قيد التوصيل (${order.driverName || 'سائق'})</span>`;
+                        actionButtons = `
+                            <div class="d-flex gap-2 mt-2">
+                                <button class="btn btn-success btn-sm w-100" onclick="updateOrderStatus('${key}', 'delivered')">
+                                    <i class="fa-solid fa-check-circle me-1"></i> تم التوصيل
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm w-100" onclick="updateOrderStatus('${key}', 'cancelled')">
+                                    <i class="fa-solid fa-xmark me-1"></i> إلغاء
+                                </button>
+                            </div>`;
+                    } else if (order.status === 'delivered') {
+                        statusBadge = '<span class="badge badge-delivered">تم التوصيل بنجاح</span>';
+                    } else {
+                        statusBadge = '<span class="badge bg-secondary">ملغي</span>';
+                    }
+
+                    html += `
+                        <div class="card card-custom p-3 mb-3 shadow-sm">
+                            <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-2 mb-2">
+                                <strong class="text-warning fs-6"><i class="fa-solid fa-store me-1"></i>${order.storeName || 'متجر'}</strong>
+                                ${statusBadge}
+                            </div>
+                            <div class="mb-1"><i class="fa-solid fa-location-dot text-danger me-2"></i><strong>المنطقة:</strong> ${order.areaName || '-'}</div>
+                            <div class="mb-1"><i class="fa-solid fa-map-pin text-info me-2"></i><strong>العنوان:</strong> ${order.address || '-'}</div>
+                            <div class="mb-1"><i class="fa-solid fa-phone text-success me-2"></i><strong>الهاتف:</strong> <a href="tel:${order.customerPhone}" class="text-warning text-decoration-none">${order.customerPhone || '-'}</a></div>
+                            <div class="mb-2"><i class="fa-solid fa-money-bill-wave text-warning me-2"></i><strong>كروة التوصيل:</strong> ${order.deliveryFee || 0} د.ع</div>
+                            ${order.notes ? `<div class="alert alert-dark p-2 small mb-2"><i class="fa-solid fa-note-sticky me-1"></i>${order.notes}</div>` : ''}
+                            ${actionButtons}
+                        </div>`;
+                });
+
+                listDiv.innerHTML = html;
+            } catch (err) {
+                listDiv.innerHTML = `<div class="alert alert-danger text-center">خطأ في جلب البيانات: ${err.message}</div>`;
+            }
+        }
+
+        async function updateOrderStatus(orderId, newStatus) {
+            try {
+                const updateData = {
+                    status: newStatus,
+                    driverName: driverName
+                };
+
+                const res = await fetch(`${rtdbUrl}/orders/${orderId}.json`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updateData)
+                });
+
+                if (res.ok) {
+                    fetchOrders();
+                } else {
+                    alert("فشل تحديث حالة الطلب");
+                }
+            } catch (err) {
+                alert("خطأ: " + err.message);
+            }
+        }
+
+        // جلب الطلبات عند فتح الصفحة
+        fetchOrders();
+        // تحديث تلقائي كل 5 ثوانٍ
+        setInterval(fetchOrders, 5000);
+    </script>
+</body>
+</html>
