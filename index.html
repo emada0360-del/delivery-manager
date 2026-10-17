@@ -90,7 +90,7 @@ createApp({
     const loadAll = async () => {
       loadingAreas.value = true;
       try {
-        const res = await fetch(`${BASE}/areas?pageSize=100&nocache=` + Date.now());
+        const res = await fetch(`${BASE}/areas?pageSize=100`);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || 'فشل الاتصال بـ Firestore');
         
