@@ -36,7 +36,7 @@ button.d{background:none;color:var(--r);border:1px solid var(--r);padding:6px 12
 
   <div class="main-container">
     <div v-if="banner" class="banner">{{ banner }}</div>
-    <div v-else class="ok">متصل بقاعدة البيانات السحابية بنجاح ✅</div>
+    <div v-else class="ok">متصل بقاعدة البيانات السريعة (Realtime DB) بنجاح ✅</div>
 
     <div class="card f">
       <h3 class="font-bold text-amber-400">إضافة منطقة جديدة</h3>
@@ -64,9 +64,8 @@ button.d{background:none;color:var(--r);border:1px solid var(--r);padding:6px 12
 </div>
 
 <script>
-const PROJ = "baqubah-delivery";
-const DBID = "(default)";
-const BASE = `https://firestore.googleapis.com/v1/projects/${PROJ}/databases/${DBID}/documents`;
+// رابط Realtime Database الخاص بمشروعك مباشرة
+const RTDB_URL = "https://baqubah-delivery-default-rtdb.asia-southeast1.firebasedatabase.app";
 
 const { createApp, ref, reactive, onMounted } = Vue;
 
@@ -79,29 +78,22 @@ createApp({
     const banner = ref('');
     const newArea = reactive({ name: '', price: null });
 
-    const decVal = f => {
-      if (!f) return '';
-      if (f.stringValue !== undefined) return f.stringValue;
-      if (f.integerValue !== undefined) return Number(f.integerValue);
-      if (f.doubleValue !== undefined) return Number(f.doubleValue);
-      return '';
-    };
-
     const loadAll = async () => {
       loadingAreas.value = true;
       try {
-        const res = await fetch(`${BASE}/areas?pageSize=100`);
+        const res = await fetch(`${RTDB_URL}/areas.json`);
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'فشل الاتصال بـ Firestore');
+        if (!res.ok) throw new Error('فشل جلب البيانات من السيرفر');
         
-        areas.value = (data.documents || []).map(doc => {
-          const fields = doc.fields || {};
-          return {
-            id: doc.name.split('/').pop(),
-            name: decVal(fields.name),
-            price: decVal(fields.price)
-          };
-        });
+        if (data) {
+          areas.value = Object.keys(data).map(key => ({
+            id: key,
+            name: data[key].name,
+            price: data[key].price
+          }));
+        } else {
+          areas.value = [];
+        }
         banner.value = '';
       } catch (e) {
         banner.value = 'تعذّر الاتصال بقاعدة البيانات: ' + e.message;
@@ -116,18 +108,15 @@ createApp({
       saveMsg.value = '';
       try {
         const payload = {
-          fields: {
-            name: { stringValue: newArea.name.trim() },
-            price: { integerValue: Number(newArea.price) }
-          }
+          name: newArea.name.trim(),
+          price: Number(newArea.price)
         };
-        const res = await fetch(`${BASE}/areas`, {
+        const res = await fetch(`${RTDB_URL}/areas.json`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error?.message || 'فشل الحفظ');
+        if (!res.ok) throw new Error('فشل الحفظ في السيرفر');
         
         newArea.name = '';
         newArea.price = null;
@@ -144,7 +133,7 @@ createApp({
     const deleteArea = async (id) => {
       if (!confirm('هل أنت متأكد من حذف هذه المنطقة؟')) return;
       try {
-        const res = await fetch(`${BASE}/areas/${id}`, { method: 'DELETE' });
+        const res = await fetch(`${RTDB_URL}/areas/${id}.json`, { method: 'DELETE' });
         if (!res.ok) throw new Error('فشل الحذف من السيرفر');
         await loadAll();
       } catch (e) {
