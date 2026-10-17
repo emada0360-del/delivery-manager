@@ -1,0 +1,314 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+void main() {
+  runApp(const StoreApp());
+}
+
+class StoreApp extends StatelessWidget {
+  const StoreApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'تطبيق المتجر - Baqubah Delivery',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.amber,
+        scaffoldBackgroundColor: const Color(0xFF0F172A),
+        brightness: Brightness.dark,
+      ),
+      home: const CreateOrderScreen(),
+    );
+  }
+}
+
+class CreateOrderScreen extends StatefulWidget {
+  const CreateOrderScreen({super.key});
+
+  @override
+  State<CreateOrderScreen> createState() => _CreateOrderScreenState();
+}
+
+class _CreateOrderScreenState extends State<CreateOrderScreen> {
+  final String rtdbUrl = "https://baqubah-delivery-default-rtdb.asia-southeast1.firebasedatabase.app";
+
+  // سنقوم بافتراض معرف متجر ثابت حالياً للاختبار (مثلاً store_1)
+  final String storeId = "store_1";
+  bool isStoreActive = true;
+  bool _isLoadingStore = true;
+
+  final TextEditingController _storeNameController = TextEditingController(text: "مطعم البركة");
+  final TextEditingController _customerPhoneController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+
+  Map<String, dynamic> _areas = {};
+  String? _selectedAreaId;
+  String? _selectedAreaName;
+  int _deliveryFee = 0;
+  bool _isLoadingAreas = true;
+  bool _isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkStoreStatusAndFetchData();
+  }
+
+  // فحص حالة المتجر وجلب المناطق دفعة واحدة
+  Future<void> _checkStoreStatusAndFetchData() async {
+    setState(() {
+      _isLoadingStore = true;
+      _isLoadingAreas = true;
+    });
+
+    try {
+      final response = await http.get(Uri.parse('$rtdbUrl/.json'));
+      if (response.statusCode == 200 && response.body != 'null') {
+        final Map<String, dynamic> data = json.decode(response.body);
+        
+        // 1. فحص حالة المتجر
+        if (data['stores'] != null && data['stores'][storeId] != null) {
+          final storeData = data['stores'][storeId];
+          isStoreActive = storeData['active'] ?? true;
+          _storeNameController.text = storeData['name'] ?? "مطعم البركة";
+        }
+
+        // 2. جلب المناطق
+        if (data['areas'] != null) {
+          _areas = data['areas'];
+        }
+      }
+    } catch (e) {
+      _showSnackBar("خطأ في الاتصال بالسيرفر: $e", Colors.red);
+    } finally {
+      setState(() {
+        _isLoadingStore = false;
+        _isLoadingAreas = false;
+      });
+    }
+  }
+
+  // إرسال الطلب
+  Future<void> _sendOrder() async {
+    if (!isStoreActive) {
+      _showSnackBar("عذراً، متجرك معطل حالياً من قِبل الإدارة", Colors.red);
+      return;
+    }
+    if (_selectedAreaId == null) {
+      _showSnackBar("يرجى اختيار المنطقة أولاً", Colors.orange);
+      return;
+    }
+    if (_customerPhoneController.text.trim().isEmpty) {
+      _showSnackBar("يرجى إدخال رقم هاتف الزبون", Colors.orange);
+      return;
+    }
+
+    setState(() => _isSending = true);
+
+    final newOrder = {
+      "storeName": _storeNameController.text.trim(),
+      "areaId": _selectedAreaId,
+      "areaName": _selectedAreaName,
+      "deliveryFee": _deliveryFee,
+      "customerPhone": _customerPhoneController.text.trim(),
+      "address": _addressController.text.trim(),
+      "notes": _notesController.text.trim(),
+      "status": "pending",
+      "timestamp": DateTime.now().millisecondsSinceEpoch,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse('$rtdbUrl/orders.json'),
+        body: json.encode(newOrder),
+      );
+
+      if (response.statusCode == 200) {
+        _showSnackBar("تم إرسال الطلب بنجاح! 🚀", Colors.green);
+        _customerPhoneController.clear();
+        _addressController.clear();
+        _notesController.clear();
+        setState(() {
+          _selectedAreaId = null;
+          _deliveryFee = 0;
+        });
+      } else {
+        _showSnackBar("فشل في إرسال الطلب", Colors.red);
+      }
+    } catch (e) {
+      _showSnackBar("حدث خطأ أثناء الإرسال: $e", Colors.red);
+    } finally {
+      setState(() => _isSending = false);
+    }
+  }
+
+  void _showSnackBar(String message, Color bg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: bg),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("تطبيق المتجر: ${_storeNameController.text}"),
+        backgroundColor: const Color(0xFF1E293B),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _checkStoreStatusAndFetchData,
+          )
+        ],
+      ),
+      body: _isLoadingStore
+          ? const Center(child: CircularProgressIndicator(color: Colors.amber))
+          : !isStoreActive
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.lock, size: 80, color: Colors.red),
+                        SizedBox(height: 16),
+                        Text(
+                          "متجرك معطل حالياً من قِبل الإدارة",
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          "لا يمكنك استقبال أو إرسال طلبات جديدة حتى يتم تفعيل المتجر من لوحة المدير.",
+                          style: TextStyle(color: Colors.slate),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // عرض حالة التفعيل الإيجابية
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          border: Border.all(color: Colors.green),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.check_circle, color: Colors.green),
+                            SizedBox(width: 8),
+                            Text("المتجر مفعل ويستقبل الطلبات بنجاح ✅", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+
+                      // قائمة المناطق
+                      const Text("اختر المنطقة المقصودة:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amber)),
+                      const SizedBox(height: 6),
+                      _isLoadingAreas
+                          ? const Center(child: CircularProgressIndicator())
+                          : Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E293B),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.shade700),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  isExpanded: true,
+                                  value: _selectedAreaId,
+                                  hint: const Text("اختر المنطقة من القائمة"),
+                                  dropdownColor: const Color(0xFF1E293B),
+                                  items: _areas.entries.map((entry) {
+                                    final areaData = entry.value as Map<String, dynamic>;
+                                    return DropdownMenuItem<String>(
+                                      value: entry.key,
+                                      child: Text("${areaData['name']} (${areaData['price']} د.ع)"),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _selectedAreaId = val;
+                                      _selectedAreaName = _areas[val]['name'];
+                                      _deliveryFee = _areas[val]['price'] ?? 0;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                      const SizedBox(height: 12),
+
+                      if (_deliveryFee > 0)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(0.1),
+                            border: Border.all(color: Colors.amber),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            "كلفة التوصيل لهذه المنطقة: $_deliveryFee د.ع",
+                            style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 16),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+
+                      _buildTextField("رقم هاتف الزبون", _customerPhoneController, Icons.phone, keyboardType: TextInputType.phone),
+                      const SizedBox(height: 12),
+                      _buildTextField("العنوان التفصيلي / ألمعالم القريبة", _addressController, Icons.location_on),
+                      const SizedBox(height: 12),
+                      _buildTextField("ملاحظات إضافية (اختياري)", _notesController, Icons.note, maxLines: 2),
+                      const SizedBox(height: 20),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: _isSending ? null : _sendOrder,
+                          child: _isSending
+                              ? const CircularProgressIndicator(color: Colors.black)
+                              : const Text(
+                                  "إرسال الطلب للكادر 🚀",
+                                  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller, IconData icon, {TextInputType keyboardType = TextInputType.text, int maxLines = 1}) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: Colors.amber),
+        filled: true,
+        fillColor: const Color(0xFF1E293B),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+}
