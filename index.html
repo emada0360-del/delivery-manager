@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>لوحة إدارة التوصيل - Baqubah Delivery</title>
+<title>لوحة المدير الشاملة - Baqubah Delivery</title>
 <script src="https://unpkg.com/vue@3.4.38/dist/vue.global.prod.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
@@ -11,141 +11,186 @@
 body{margin:0;background:var(--bg);color:var(--t);font:15px/1.6 system-ui,-apple-system,sans-serif}
 header{background:#0f172a;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--b)}
 header b{font-size:17px;color:var(--a)}
-header button{background:transparent;border:1px solid #475569;color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px}
-.main-container{max-width:680px;margin:0 auto;padding:14px}
+.main-container{max-width:900px;margin:0 auto;padding:14px}
 .card{background:var(--c);border:1px solid var(--b);border-radius:12px;padding:14px;margin-bottom:12px}
-.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.f{display:flex;flex-direction:column;gap:10px}
-input{padding:11px;border:1px solid var(--b);border-radius:8px;background:var(--bg);color:var(--t);font:inherit;width:100%;outline:none}
-input:focus{border-color:var(--a)}
-button.btn-main{font:inherit;padding:10px 16px;border-radius:8px;border:none;background:var(--a);color:#0f172a;font-weight:bold;cursor:pointer}
-button.d{background:none;color:var(--r);border:1px solid var(--r);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
-.succ{color:var(--g);font-weight:bold;font-size:13px;text-align:center}
-.ok{margin:12px;padding:8px 12px;border-radius:10px;background:#064e3b;color:#a7f3d0;font-size:13px;text-align:center}
-.banner{margin:12px;padding:12px;border-radius:10px;background:#7f1d1d;color:#fecaca;font-weight:bold;word-break:break-word}
-.empty{text-align:center;color:var(--m);padding:32px}
+.tab-btn{padding:8px 16px;border-radius:8px;background:var(--b);color:var(--t);cursor:pointer;font-weight:bold;border:none}
+.tab-btn.active{background:var(--a);color:#0f172a}
+input, select{padding:10px;border:1px solid var(--b);border-radius:8px;background:var(--bg);color:var(--t);width:100%;outline:none;margin-bottom:8px}
+button.btn-main{padding:10px 16px;border-radius:8px;border:none;background:var(--a);color:#0f172a;font-weight:bold;cursor:pointer;width:100%}
+.badge{padding:4px 8px;border-radius:6px;font-size:12px;font-weight:bold}
+.badge-green{background:#064e3b;color:#a7f3d0}
+.badge-red{background:#7f1d1d;color:#fecaca}
+.ok{margin-bottom:12px;padding:8px 12px;border-radius:10px;background:#064e3b;color:#a7f3d0;font-size:13px;text-align:center}
 </style>
 </head>
 <body>
 
 <div id="app">
   <header>
-    <b>لوحة المدير (Baqubah Delivery)</b>
-    <button @click="loadAll">تحديث البيانات 🔄</button>
+    <b>لوحة المدير الشاملة (Baqubah Delivery)</b>
+    <button class="bg-slate-700 px-3 py-1 rounded text-sm border border-slate-600 text-white cursor-pointer" @click="loadAll">تحديث 🔄</button>
   </header>
 
   <div class="main-container">
-    <div v-if="banner" class="banner">{{ banner }}</div>
-    <div v-else class="ok">متصل بقاعدة البيانات السريعة (Realtime DB) بنجاح ✅</div>
+    <div class="ok">متصل بقاعدة البيانات السريعة (Realtime DB) بنجاح ✅</div>
 
-    <div class="card f">
-      <h3 class="font-bold text-amber-400">إضافة منطقة جديدة</h3>
-      <input v-model="newArea.name" placeholder="اسم المنطقة (مثال: حي العبور)">
-      <input v-model.number="newArea.price" type="number" placeholder="الكروة (مثال: 3000)">
-      <button class="btn-main" :disabled="saving" @click="addArea">
-        {{ saving ? 'جاري الحفظ في السيرفر...' : 'حفظ المنطقة' }}
-      </button>
-      <div v-if="saveMsg" class="succ">{{ saveMsg }}</div>
+    <!-- التنقل بين الأقسام -->
+    <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+      <button class="tab-btn" :class="{active: activeTab==='areas'}" @click="activeTab='areas'">المناطق</button>
+      <button class="tab-btn" :class="{active: activeTab==='stores'}" @click="activeTab='stores'">المتاجر</button>
+      <button class="tab-btn" :class="{active: activeTab==='drivers'}" @click="activeTab='drivers'">السائقين</button>
+      <button class="tab-btn" :class="{active: activeTab==='orders'}" @click="activeTab='orders'">الطلبات الحية 📦</button>
     </div>
 
-    <div class="card">
-      <h3 class="font-bold mb-3 text-amber-400">المناطق المضافة بالسيرفر</h3>
-      <div v-if="loadingAreas" class="empty">جاري جلب البيانات من الفايربيس...</div>
-      <div v-else-if="!areas.length" class="empty">لا توجد مناطق مضافة حتى الآن</div>
-      <div v-for="a in areas" :key="a.id" class="p-3 mb-2 rounded bg-slate-800 border border-slate-700 row">
-        <div>
-          <b class="text-lg block">{{ a.name }}</b>
-          <span class="text-amber-400 font-semibold">{{ a.price }} د.ع</span>
+    <!-- قسم المناطق -->
+    <div v-if="activeTab==='areas'">
+      <div class="card">
+        <h3 class="font-bold text-amber-400 mb-2">إضافة منطقة جديدة</h3>
+        <input v-model="newArea.name" placeholder="اسم المنطقة (مثال: حي العبور)">
+        <input v-model.number="newArea.price" type="number" placeholder="سعر التوصيل (د.ع)">
+        <button class="btn-main" @click="addArea">حفظ المنطقة</button>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-3 text-amber-400">قائمة المناطق</h3>
+        <div v-if="!Object.keys(areas).length" class="text-center text-slate-400 py-4">لا توجد مناطق مضافة حالياً</div>
+        <div v-for="(a, id) in areas" :key="id" class="flex justify-between items-center p-3 mb-2 bg-slate-800 rounded border border-slate-700">
+          <div><b>{{ a.name }}</b> - <span class="text-amber-400">{{ a.price }} د.ع</span></div>
+          <button class="text-red-400 border border-red-400 px-3 py-1 rounded text-xs bg-transparent cursor-pointer" @click="deleteItem('areas', id)">حذف</button>
         </div>
-        <button class="d" @click="deleteArea(a.id)">حذف</button>
       </div>
     </div>
+
+    <!-- قسم المتاجر -->
+    <div v-if="activeTab==='stores'">
+      <div class="card">
+        <h3 class="font-bold text-amber-400 mb-2">إضافة متجر جديد</h3>
+        <input v-model="newStore.name" placeholder="اسم المتجر / المطعم">
+        <input v-model="newStore.phone" placeholder="رقم الهاتف">
+        <button class="btn-main" @click="addStore">إضافة المتجر</button>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-3 text-amber-400">المتاجر المسجلة</h3>
+        <div v-if="!Object.keys(stores).length" class="text-center text-slate-400 py-4">لا توجد متاجر مسجلة حالياً</div>
+        <div v-for="(s, id) in stores" :key="id" class="flex justify-between items-center p-3 mb-2 bg-slate-800 rounded border border-slate-700">
+          <div>
+            <b>{{ s.name }}</b> <span class="text-xs text-slate-400">({{ s.phone }})</span>
+            <span :class="s.active ? 'badge badge-green mr-2' : 'badge badge-red mr-2'">{{ s.active ? 'مفعل' : 'معطل' }}</span>
+          </div>
+          <div class="flex gap-2">
+            <button class="bg-slate-700 px-2 py-1 rounded text-xs text-white border border-slate-600 cursor-pointer" @click="toggleActive('stores', id, s.active)">تغيير الحالة</button>
+            <button class="text-red-400 border border-red-400 px-3 py-1 rounded text-xs bg-transparent cursor-pointer" @click="deleteItem('stores', id)">حذف</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- قسم السائقين -->
+    <div v-if="activeTab==='drivers'">
+      <div class="card">
+        <h3 class="font-bold text-amber-400 mb-2">إضافة سائق توصيل</h3>
+        <input v-model="newDriver.name" placeholder="اسم السائق">
+        <input v-model="newDriver.phone" placeholder="رقم الهاتف">
+        <input v-model="newDriver.vehicle" placeholder="نوع المركبة (بوكسر / ماكس)">
+        <button class="btn-main" @click="addDriver">إضافة السائق</button>
+      </div>
+      <div class="card">
+        <h3 class="font-bold mb-3 text-amber-400">كادر التوصيل</h3>
+        <div v-if="!Object.keys(drivers).length" class="text-center text-slate-400 py-4">لا توجد سائقين مسجلين حالياً</div>
+        <div v-for="(d, id) in drivers" :key="id" class="flex justify-between items-center p-3 mb-2 bg-slate-800 rounded border border-slate-700">
+          <div>
+            <b>{{ d.name }}</b> <span class="text-xs text-amber-400">({{ d.vehicle }})</span>
+            <span :class="d.active ? 'badge badge-green mr-2' : 'badge badge-red mr-2'">{{ d.active ? 'نشط' : 'متوقف' }}</span>
+          </div>
+          <div class="flex gap-2">
+            <button class="bg-slate-700 px-2 py-1 rounded text-xs text-white border border-slate-600 cursor-pointer" @click="toggleActive('drivers', id, d.active)">تغيير الحالة</button>
+            <button class="text-red-400 border border-red-400 px-3 py-1 rounded text-xs bg-transparent cursor-pointer" @click="deleteItem('drivers', id)">حذف</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- قسم متابعة الطلبات -->
+    <div v-if="activeTab==='orders'">
+      <div class="card">
+        <h3 class="font-bold mb-3 text-amber-400">الطلبات الحالية</h3>
+        <div v-if="!Object.keys(orders).length" class="text-center py-6 text-slate-400">لا توجد طلبات حية حالياً</div>
+        <div v-for="(o, id) in orders" :key="id" class="p-3 mb-2 bg-slate-800 rounded border border-slate-700">
+          <div class="flex justify-between border-b border-slate-700 pb-2 mb-2">
+            <b>{{ o.storeName || 'متجر' }} ⬅️ {{ o.areaName || 'منطقة' }}</b>
+            <span class="text-amber-400 font-bold">{{ o.deliveryFee || 0 }} د.ع</span>
+          </div>
+          <div class="text-sm text-slate-300 flex justify-between items-center">
+            <span>الحالة: <span class="text-amber-300 font-bold">{{ o.status || 'pending' }}</span></span>
+            <button class="text-red-400 border border-red-400 px-2 py-1 rounded text-xs bg-transparent cursor-pointer" @click="deleteItem('orders', id)">حذف الطلب</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
 <script>
-// رابط Realtime Database الخاص بمشروعك مباشرة
 const RTDB_URL = "https://baqubah-delivery-default-rtdb.asia-southeast1.firebasedatabase.app";
-
 const { createApp, ref, reactive, onMounted } = Vue;
 
 createApp({
   setup() {
-    const areas = ref([]);
-    const loadingAreas = ref(true);
-    const saving = ref(false);
-    const saveMsg = ref('');
-    const banner = ref('');
+    const activeTab = ref('areas');
+    const areas = ref({});
+    const stores = ref({});
+    const drivers = ref({});
+    const orders = ref({});
+
     const newArea = reactive({ name: '', price: null });
+    const newStore = reactive({ name: '', phone: '' });
+    const newDriver = reactive({ name: '', phone: '', vehicle: 'بوكسر' });
 
     const loadAll = async () => {
-      loadingAreas.value = true;
       try {
-        const res = await fetch(`${RTDB_URL}/areas.json`);
-        const data = await res.json();
-        if (!res.ok) throw new Error('فشل جلب البيانات من السيرفر');
-        
-        if (data) {
-          areas.value = Object.keys(data).map(key => ({
-            id: key,
-            name: data[key].name,
-            price: data[key].price
-          }));
-        } else {
-          areas.value = [];
-        }
-        banner.value = '';
+        const res = await fetch(`${RTDB_URL}/.json`);
+        const data = await res.json() || {};
+        areas.value = data.areas || {};
+        stores.value = data.stores || {};
+        drivers.value = data.drivers || {};
+        orders.value = data.orders || {};
       } catch (e) {
-        banner.value = 'تعذّر الاتصال بقاعدة البيانات: ' + e.message;
-      } finally {
-        loadingAreas.value = false;
+        console.error("خطأ في جلب البيانات", e);
       }
     };
 
     const addArea = async () => {
-      if (!newArea.name || !newArea.price) return alert('يرجى كتابة اسم المنطقة والسعر');
-      saving.value = true;
-      saveMsg.value = '';
-      try {
-        const payload = {
-          name: newArea.name.trim(),
-          price: Number(newArea.price)
-        };
-        const res = await fetch(`${RTDB_URL}/areas.json`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error('فشل الحفظ في السيرفر');
-        
-        newArea.name = '';
-        newArea.price = null;
-        saveMsg.value = 'تم حفظ المنطقة بالسيرفر بنجاح ✅';
-        await loadAll();
-        setTimeout(() => saveMsg.value = '', 3000);
-      } catch (e) {
-        alert('خطأ أثناء الحفظ: ' + e.message);
-      } finally {
-        saving.value = false;
-      }
+      if(!newArea.name || !newArea.price) return alert('يرجى ملء الحقول');
+      await fetch(`${RTDB_URL}/areas.json`, { method: 'POST', body: JSON.stringify({ name: newArea.name.trim(), price: Number(newArea.price) }) });
+      newArea.name = ''; newArea.price = null; loadAll();
     };
 
-    const deleteArea = async (id) => {
-      if (!confirm('هل أنت متأكد من حذف هذه المنطقة؟')) return;
-      try {
-        const res = await fetch(`${RTDB_URL}/areas/${id}.json`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('فشل الحذف من السيرفر');
-        await loadAll();
-      } catch (e) {
-        alert('خطأ أثناء الحذف: ' + e.message);
-      }
+    const addStore = async () => {
+      if(!newStore.name) return alert('يرجى كتابة اسم المتجر');
+      await fetch(`${RTDB_URL}/stores.json`, { method: 'POST', body: JSON.stringify({ name: newStore.name.trim(), phone: newStore.phone || '', active: true }) });
+      newStore.name = ''; newStore.phone = ''; loadAll();
     };
 
-    onMounted(() => {
+    const addDriver = async () => {
+      if(!newDriver.name) return alert('يرجى كتابة اسم السائق');
+      await fetch(`${RTDB_URL}/drivers.json`, { method: 'POST', body: JSON.stringify({ name: newDriver.name.trim(), phone: newDriver.phone || '', vehicle: newDriver.vehicle || 'بوكسر', active: true }) });
+      newDriver.name = ''; newDriver.phone = ''; loadAll();
+    };
+
+    const toggleActive = async (type, id, current) => {
+      await fetch(`${RTDB_URL}/${type}/${id}/active.json`, { method: 'PUT', body: JSON.stringify(!current) });
       loadAll();
-    });
+    };
 
-    return { areas, loadingAreas, saving, saveMsg, banner, newArea, loadAll, addArea, deleteArea };
+    const deleteItem = async (type, id) => {
+      if(confirm('هل أنت متأكد من الحذف؟')) {
+        await fetch(`${RTDB_URL}/${type}/${id}.json`, { method: 'DELETE' });
+        loadAll();
+      }
+    };
+
+    onMounted(loadAll);
+    return { activeTab, areas, stores, drivers, orders, newArea, newStore, newDriver, loadAll, addArea, addStore, addDriver, toggleActive, deleteItem };
   }
 }).mount('#app');
 </script>
