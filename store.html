@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تطبيق المتجر - بعقوبة دليفري</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+            padding-bottom: 30px;
+        }
+        .card-custom {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+        }
+        .form-control, .form-select {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #fff;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #0f172a;
+            color: #fff;
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 0.25rem rgba(245, 158, 11, 0.25);
+        }
+        .btn-amber {
+            background-color: #f59e0b;
+            color: #000;
+            font-weight: bold;
+        }
+        .btn-amber:hover {
+            background-color: #d97706;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- الهيدر -->
+    <nav class="navbar navbar-dark style-nav bg-dark px-3 mb-4 border-bottom border-secondary">
+        <span class="navbar-brand mb-0 h1 text-warning">
+            <i class="fa-solid fa-store me-2"></i>تطبيق المتجر - بعقوبة دليفري
+        </span>
+        <button class="btn btn-sm btn-outline-warning" onclick="checkStatusAndLoadData()">
+            <i class="fa-solid fa-rotate-right"></i>
+        </button>
+    </nav>
+
+    <div class="container" style="max-width: 500px;">
+
+        <!-- شاشة الحظر إذا كان المتجر معطل -->
+        <div id="disabledAlert" class="card card-custom p-4 text-center d-none border-danger mb-3">
+            <i class="fa-solid fa-lock text-danger display-3 mb-3"></i>
+            <h4 class="text-danger fw-bold">المتجر معطل حالياً</h4>
+            <p class="text-muted small">تم إيقاف حساب المتجر مؤقتاً من قِبل الإدارة. لا يمكنك إرسال طلبات جديدة في الوقت الحالي.</p>
+        </div>
+
+        <!-- نموذج إرسال الطلب -->
+        <div id="orderFormCard" class="card card-custom p-3 shadow">
+            <div class="alert alert-success d-flex align-items-center p-2 mb-3 small" role="alert">
+                <i class="fa-solid fa-circle-check me-2 fs-5"></i>
+                <div>المتجر مفعل ويستقبل الطلبات بنجاح</div>
+            </div>
+
+            <h5 class="text-warning mb-3"><i class="fa-solid fa-plus-circle me-2"></i>إنشاء طلب جديد</h5>
+
+            <form id="createOrderForm" onsubmit="sendOrder(event)">
+                <!-- اختيار المنطقة -->
+                <div class="mb-3">
+                    <label class="form-label text-warning small fw-bold">اختر المنطقة المقصودة:</label>
+                    <select id="areaSelect" class="form-select" onchange="updateFee()" required>
+                        <option value="">جاري تحميل المناطق...</option>
+                    </select>
+                </div>
+
+                <!-- عرض كروة التوصيل -->
+                <div id="feeBox" class="alert alert-warning text-center fw-bold d-none p-2 mb-3">
+                    كلفة التوصيل: <span id="feeAmount">0</span> د.ع
+                </div>
+
+                <!-- رقم هاتف الزبون -->
+                <div class="mb-3">
+                    <label class="form-label small">رقم هاتف الزبون:</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-warning"><i class="fa-solid fa-phone"></i></span>
+                        <input type="tel" id="customerPhone" class="form-control" placeholder="077XXXXXXXX" required>
+                    </div>
+                </div>
+
+                <!-- العنوان التفصيلي -->
+                <div class="mb-3">
+                    <label class="form-label small">العنوان التفصيلي / ألمعالم القريبة:</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-warning"><i class="fa-solid fa-location-dot"></i></span>
+                        <input type="text" id="customerAddress" class="form-control" placeholder="اسم الحي / الشارع / نقطة دالة" required>
+                    </div>
+                </div>
+
+                <!-- ملاحظات إضافية -->
+                <div class="mb-3">
+                    <label class="form-label small">ملاحظات الطلب (اختياري):</label>
+                    <textarea id="orderNotes" class="form-control" rows="2" placeholder="مثلاً: بدون بصل / توصيل سريع"></textarea>
+                </div>
+
+                <!-- زر الإرسال -->
+                <button type="submit" id="submitBtn" class="btn btn-amber w-100 py-2 mt-2">
+                    <i class="fa-solid fa-paper-plane me-2"></i>إرسال الطلب للكادر
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+    <script>
+        const rtdbUrl = "https://baqubah-delivery-default-rtdb.asia-southeast1.firebasedatabase.app";
+        const storeId = "store_1"; // المعرف الحالي للاختبار
+        let areasData = {};
+        let storeName = "مطعم البركة";
+
+        // فحص حالة المتجر وجلب المناطق
+        async function checkStatusAndLoadData() {
+            try {
+                const res = await fetch(`${rtdbUrl}/.json`);
+                const data = await res.json();
+
+                if (!data) return;
+
+                // 1. فحص تفعيل المتجر
+                if (data.stores && data.stores[storeId]) {
+                    const store = data.stores[storeId];
+                    storeName = store.name || storeName;
+                    if (store.active === false) {
+                        document.getElementById('disabledAlert').classList.remove('d-none');
+                        document.getElementById('orderFormCard').classList.add('d-none');
+                        return;
+                    } else {
+                        document.getElementById('disabledAlert').classList.add('d-none');
+                        document.getElementById('orderFormCard').classList.remove('d-none');
+                    }
+                }
+
+                // 2. تحميل المناطق
+                if (data.areas) {
+                    areasData = data.areas;
+                    const areaSelect = document.getElementById('areaSelect');
+                    areaSelect.innerHTML = '<option value="">اختر المنطقة من القائمة...</option>';
+                    
+                    for (let key in data.areas) {
+                        const area = data.areas[key];
+                        areaSelect.innerHTML += `<option value="${key}">${area.name} (${area.price} د.ع)</option>`;
+                    }
+                }
+            } catch (err) {
+                alert("حدث خطأ في الاتصال بالسيرفر: " + err.message);
+            }
+        }
+
+        // تحديث سعر التوصيل عند اختيار المنطقة
+        function updateFee() {
+            const selectedKey = document.getElementById('areaSelect').value;
+            const feeBox = document.getElementById('feeBox');
+            if (selectedKey && areasData[selectedKey]) {
+                document.getElementById('feeAmount').innerText = areasData[selectedKey].price;
+                feeBox.classList.remove('d-none');
+            } else {
+                feeBox.classList.add('d-none');
+            }
+        }
+
+        // إرسال الطلب
+        async function sendOrder(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const selectedAreaKey = document.getElementById('areaSelect').value;
+            
+            if (!selectedAreaKey) {
+                alert("يرجى اختيار المنطقة أولاً");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>جاري الإرسال...';
+
+            const selectedArea = areasData[selectedAreaKey];
+            const newOrder = {
+                storeName: storeName,
+                areaId: selectedAreaKey,
+                areaName: selectedArea.name,
+                deliveryFee: selectedArea.price,
+                customerPhone: document.getElementById('customerPhone').value.trim(),
+                address: document.getElementById('customerAddress').value.trim(),
+                notes: document.getElementById('orderNotes').value.trim(),
+                status: "pending",
+                timestamp: Date.now()
+            };
+
+            try {
+                const res = await fetch(`${rtdbUrl}/orders.json`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newOrder)
+                });
+
+                if (res.ok) {
+                    alert("تم إرسال الطلب بنجاح! 🚀");
+                    document.getElementById('createOrderForm').reset();
+                    document.getElementById('feeBox').classList.add('d-none');
+                } else {
+                    alert("فشل في إرسال الطلب");
+                }
+            } catch (err) {
+                alert("خطأ أثناء الاتصال: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i>إرسال الطلب للكادر';
+            }
+        }
+
+        // التشغيل عند فتح الصفحة
+        checkStatusAndLoadData();
+    </script>
+</body>
+</html>
