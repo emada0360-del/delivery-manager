@@ -8,15 +8,14 @@
 <script>window.Vue||document.write('<script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js"><\/script>')</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 :root{--bg:#f4f6f8;--c:#ffffff;--t:#111827;--m:#6b7280;--a:#f59e0b;--g:#10b981;--r:#ef4444;--b:#e5e7eb}
 @media(prefers-color-scheme:dark){:root{--bg:#0f172a;--c:#1e293b;--t:#f8fafc;--m:#94a3b8;--b:#334155}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--t);font:15px/1.6 system-ui,-apple-system,sans-serif}
-header{background:#0f172a;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
-header b{font-size:18px;color:var(--a)}
-header button{background:transparent;border:1px solid #475569;color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+header{background:#0f172a;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;gap:8px}
+header b{font-size:17px;color:var(--a)}
+header button{background:transparent;border:1px solid #475569;color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px;margin-inline-start:6px}
 #nav{display:flex;gap:8px;overflow-x:auto;padding:12px;background:var(--c);border-bottom:1px solid var(--b)}
 #nav button{flex:none;padding:8px 16px;border:1px solid var(--b);background:transparent;color:var(--t);border-radius:20px;font:inherit;cursor:pointer}
 #nav button.on{background:var(--a);border-color:var(--a);color:#0f172a;font-weight:bold}
@@ -33,12 +32,12 @@ button.btn-main:disabled{opacity:.6}
 button.d{background:none;color:var(--r);border:1px solid var(--r);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
 button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
 .tag{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--b);font-weight:bold}
-.warn{background:#fef3c7;color:#92400e}
 .bad{color:var(--r);font-weight:bold}.empty{text-align:center;color:var(--m);padding:32px}
 .login-box{max-width:380px;margin:12vh auto;padding:20px}
 .err{color:var(--r);margin-top:8px;font-weight:bold;font-size:13px}
 .succ{color:var(--g);font-weight:bold;font-size:13px;text-align:center}
-.banner{margin:12px;padding:12px;border-radius:10px;background:#fee2e2;color:#991b1b;font-weight:bold}
+.banner{margin:12px;padding:12px;border-radius:10px;background:#fee2e2;color:#991b1b;font-weight:bold;word-break:break-word}
+.ok{margin:12px;padding:6px 12px;border-radius:10px;background:#d1fae5;color:#065f46;font-size:12px;text-align:center}
 </style>
 </head>
 <body>
@@ -55,9 +54,10 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
   <div v-else>
     <header>
       <b>لوحة المدير (Baqubah Delivery)</b>
-      <button @click="logout">خروج</button>
+      <span><button @click="loadAll">تحديث</button><button @click="logout">خروج</button></span>
     </header>
     <div v-if="banner" class="banner">{{ banner }}</div>
+    <div v-else-if="serverOk" class="ok">متصل بالسيرفر ✅ (يتحدث تلقائياً كل 8 ثواني)</div>
 
     <div id="nav">
       <button v-for="t in tabs" :key="t.id" :class="{on: tab === t.id}" @click="tab = t.id">{{ t.name }}</button>
@@ -100,7 +100,6 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
             <b>{{ a.name }}</b>
             <span>{{ N(a.price) }} د.ع</span>
           </div>
-          <div v-if="a.pending" class="tag warn" style="margin-top:6px">⏳ لم يُحفظ بالسيرفر بعد</div>
           <div class="row" style="margin-top:10px">
             <button class="o" @click="editAreaPrice(a)">تعديل السعر</button>
             <button class="d" @click="deleteArea(a.id)">حذف</button>
@@ -120,11 +119,11 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
         <div v-for="d in drivers" :key="d.id" class="card">
           <div class="row"><b>{{ d.name }}</b><span>{{ d.username }}</span></div>
           <p :class="{bad: (d.balance||0) >= ST.debtLimit}">الدين: <b>{{ N(d.balance||0) }} د.ع</b> / الحد {{ N(ST.debtLimit) }}</p>
-          <p v-if="!d.active" class="bad">الحساب معطّل</p>
+          <p v-if="d.active === false" class="bad">الحساب معطّل</p>
           <div class="row">
             <button class="o" @click="addMoney(d)">تسديد</button>
             <button class="o" @click="zeroBalance(d)">تصفير</button>
-            <button :class="d.active ? 'd' : 'o'" @click="toggleStatus('drivers', d)">{{ d.active ? 'تعطيل' : 'تفعيل' }}</button>
+            <button :class="d.active === false ? 'o' : 'd'" @click="toggleStatus('drivers', d)">{{ d.active === false ? 'تفعيل' : 'تعطيل' }}</button>
           </div>
         </div>
       </div>
@@ -140,8 +139,8 @@ button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12
         <div v-if="!stores.length" class="empty">لا توجد متاجر مسجلة</div>
         <div v-for="s in stores" :key="s.id" class="card">
           <div class="row"><b>{{ s.name }}</b><span>{{ s.username }}</span></div>
-          <p v-if="!s.active" class="bad">الحساب معطّل</p>
-          <button :class="s.active ? 'd' : 'o'" style="margin-top:8px" @click="toggleStatus('stores', s)">{{ s.active ? 'تعطيل' : 'تفعيل' }}</button>
+          <p v-if="s.active === false" class="bad">الحساب معطّل</p>
+          <button :class="s.active === false ? 'o' : 'd'" style="margin-top:8px" @click="toggleStatus('stores', s)">{{ s.active === false ? 'تفعيل' : 'تعطيل' }}</button>
         </div>
       </div>
 
@@ -164,12 +163,75 @@ const cfg = {
   messagingSenderId: "607280279395",
   appId: "1:607280279395:web:859d9c7fb693a1b0b66d56"
 };
-
 firebase.initializeApp(cfg);
 const sec = firebase.initializeApp(cfg, 'sec');
 const auth = firebase.auth();
-const db = firebase.firestore();
-try { db.settings({ experimentalForceLongPolling: true }); } catch(e) {}
+
+/* ===== Firestore عبر REST (طلبات HTTPS عادية، بدون اتصال مستمر) ===== */
+const PROJ = cfg.projectId;
+let DBID = null;
+const BASE = 'https://firestore.googleapis.com/v1/projects/' + PROJ + '/databases/';
+const root = () => BASE + DBID + '/documents';
+const enc = v => {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (v instanceof Date) return { timestampValue: v.toISOString() };
+  return { stringValue: String(v) };
+};
+const dec = f => {
+  const k = Object.keys(f)[0], v = f[k];
+  if (k === 'integerValue') return Number(v);
+  if (k === 'nullValue') return null;
+  return v;
+};
+const encF = o => { const r = {}; for (const k in o) r[k] = enc(o[k]); return r; };
+const decDoc = d => {
+  const o = { id: d.name.split('/').pop(), createTime: d.createTime };
+  for (const k in (d.fields || {})) o[k] = dec(d.fields[k]);
+  return o;
+};
+async function api(path, method, body) {
+  const tk = await auth.currentUser.getIdToken();
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 20000);
+  try {
+    const r = await fetch(root() + path, {
+      method: method || 'GET',
+      headers: { 'Authorization': 'Bearer ' + tk, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: ctrl.signal
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error((j.error && j.error.message) || r.statusText), { status: r.status });
+    return j;
+  } finally { clearTimeout(t); }
+}
+async function pickDb() {
+  if (DBID) return;
+  const tk = await auth.currentUser.getIdToken();
+  for (const id of ['(default)', 'default']) {
+    const r = await fetch(BASE + id + '/documents/areas?pageSize=1', { headers: { Authorization: 'Bearer ' + tk } });
+    if (r.status !== 404) { DBID = id; return; }
+  }
+  throw Object.assign(new Error('قاعدة البيانات غير موجودة بالمشروع'), { status: 404 });
+}
+async function listCol(c) {
+  let out = [], pt = '';
+  do {
+    const j = await api('/' + c + '?pageSize=300' + (pt ? '&pageToken=' + encodeURIComponent(pt) : ''));
+    out = out.concat((j.documents || []).map(decDoc));
+    pt = j.nextPageToken || '';
+  } while (pt);
+  return out;
+}
+const addDoc = (c, o) => api('/' + c, 'POST', { fields: encF(o) });
+const setDoc = (c, id, o) => api('/' + c + '/' + id, 'PATCH', { fields: encF(o) });
+const updDoc = (c, id, o) => api('/' + c + '/' + id + '?' + Object.keys(o).map(k => 'updateMask.fieldPaths=' + encodeURIComponent(k)).join('&') + '&currentDocument.exists=true', 'PATCH', { fields: encF(o) });
+const delDoc = (c, id) => api('/' + c + '/' + id, 'DELETE');
+const incr = (c, id, field, n) => api(':commit', 'POST', { writes: [{ transform: {
+  document: 'projects/' + PROJ + '/databases/' + DBID + '/documents/' + c + '/' + id,
+  fieldTransforms: [{ fieldPath: field, increment: { integerValue: String(n) } }] } }] });
 
 const { createApp, ref, reactive, computed, onMounted } = Vue;
 
@@ -184,7 +246,6 @@ createApp({
     const loginForm = reactive({ u: '', p: '' });
     const tab = ref('orders');
     const serverOk = ref(false);
-    const waited = ref(false);
     const dbErr = ref('');
 
     const tabs = [
@@ -194,20 +255,14 @@ createApp({
       {id:'stores', name:'المتاجر'},
       {id:'settings', name:'الإعدادات'}
     ];
-
     const SL = {new:'بانتظار سائق', accepted:'مقبول', picked:'تم الاستلام', delivered:'تم التسليم', returned:'مرتجع', cancelled:'ملغي'};
     const ST = reactive({storeCommission:500, driverPct:10, debtLimit:15000});
-
-    const orders = ref([]);
-    const areas = ref([]);
-    const drivers = ref([]);
-    const stores = ref([]);
-
+    const orders = ref([]), areas = ref([]), drivers = ref([]), stores = ref([]);
     const newArea = reactive({ name: '', price: null });
     const newAcct = reactive({ name: '', username: '', password: '', phone: '' });
 
     const mail = u => u.trim().toLowerCase() + '@baqubah.app';
-    const N = n => Number(n||0).toLocaleString('en-US');
+    const N = n => Number(n || 0).toLocaleString('en-US');
     const getName = (col, id) => {
       const list = col === 'stores' ? stores.value : col === 'drivers' ? drivers.value : areas.value;
       const found = list.find(x => x.id === id);
@@ -215,27 +270,30 @@ createApp({
     };
     const count = s => orders.value.filter(x => x.status === s).length;
     const totalDebt = computed(() => drivers.value.reduce((a, d) => a + (d.balance || 0), 0));
-    const banner = computed(() => dbErr.value || ((!serverOk.value && waited.value)
-      ? '⚠️ لا يوجد اتصال بالسيرفر. أي شي تضيفه لن يُحفظ. غيّر الشبكة (واي فاي أو بيانات الموبايل) وحدّث الصفحة.' : ''));
+    const banner = computed(() => dbErr.value);
 
-    let started = false;
-    const initCloudSync = () => {
-      if (started) return;
-      started = true;
-      setTimeout(() => { waited.value = true; }, 12000);
-      const opts = { includeMetadataChanges: true };
-      const eh = e => { dbErr.value = 'تعذّر القراءة من السيرفر (' + (e.code || e.message) + ')'; };
-      const ok = s => { if (!s.metadata.fromCache) { serverOk.value = true; dbErr.value = ''; } };
-      const list = d => ({ id: d.id, ...d.data() });
-      db.collection('orders').onSnapshot(opts, s => { ok(s); orders.value = s.docs.map(list); }, eh);
-      db.collection('areas').onSnapshot(opts, s => {
-        ok(s);
-        areas.value = s.docs.map(d => ({ ...list(d), pending: d.metadata.hasPendingWrites }));
-        if (!s.metadata.fromCache) loadingAreas.value = false;
-      }, e => { loadingAreas.value = false; eh(e); });
-      db.collection('drivers').onSnapshot(opts, s => { ok(s); drivers.value = s.docs.map(list); }, eh);
-      db.collection('stores').onSnapshot(opts, s => { ok(s); stores.value = s.docs.map(list); }, eh);
-      db.collection('settings').doc('main').onSnapshot(s => { if (s.exists) Object.assign(ST, s.data()); }, eh);
+    let busy = false;
+    const byTime = (a, b) => (b.createTime || '').localeCompare(a.createTime || '');
+    const loadAll = async () => {
+      if (!auth.currentUser || busy) return;
+      busy = true;
+      try {
+        await pickDb();
+        const r = await Promise.all([listCol('orders'), listCol('areas'), listCol('drivers'), listCol('stores')]);
+        orders.value = r[0].sort(byTime); areas.value = r[1].sort(byTime); drivers.value = r[2]; stores.value = r[3];
+        try {
+          const m = decDoc(await api('/settings/main'));
+          for (const k of ['storeCommission', 'driverPct', 'debtLimit']) if (m[k] !== undefined) ST[k] = m[k];
+        } catch (e) { if (e.status !== 404) throw e; }
+        serverOk.value = true; dbErr.value = '';
+      } catch (e) {
+        serverOk.value = false;
+        dbErr.value = 'تعذّر الاتصال بقاعدة البيانات (' + (e.status || e.name) + '): ' + e.message;
+      } finally { loadingAreas.value = false; busy = false; }
+    };
+    const run = async fn => {
+      try { await fn(); } catch (e) { alert('فشلت العملية: ' + e.message); }
+      busy = false; await loadAll();
     };
 
     onMounted(() => {
@@ -246,8 +304,9 @@ createApp({
           return;
         }
         user.value = u;
-        if (u) initCloudSync();
+        if (u) loadAll();
       });
+      setInterval(() => { if (user.value) loadAll(); }, 8000);
     });
 
     const tryLogin = async () => {
@@ -255,89 +314,75 @@ createApp({
       const p = loginForm.p.trim().replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
       if (!u || !p) { loginErr.value = 'أدخل البيانات كاملاً'; return; }
       loading.value = true; loginErr.value = '';
-      try {
-        await auth.signInWithEmailAndPassword(mail(u), p);
-      } catch (e) { loginErr.value = 'تعذّر الدخول (' + (e.code || e.message) + ')'; }
+      try { await auth.signInWithEmailAndPassword(mail(u), p); }
+      catch (e) { loginErr.value = 'تعذّر الدخول (' + (e.code || e.message) + ')'; }
       finally { loading.value = false; }
     };
-
     const logout = () => auth.signOut();
-
-    const guard = () => {
-      if (!serverOk.value) { alert('لا يوجد اتصال بالسيرفر حالياً، لن يُحفظ شي. غيّر الشبكة وحاول مرة ثانية.'); return false; }
-      return true;
-    };
-    const timeout = ms => new Promise((_, no) => setTimeout(() => no(new Error('انتهت المهلة، الحفظ لم يصل للسيرفر')), ms));
 
     const addArea = async () => {
       if (!newArea.name || !newArea.price) return alert('أدخل اسم المنطقة والسعر');
-      if (!guard()) return;
       saving.value = true; saveMsg.value = '';
       try {
-        await Promise.race([db.collection('areas').add({ name: newArea.name.trim(), price: Number(newArea.price), active: true }), timeout(12000)]);
-        saveMsg.value = 'تم حفظ المنطقة بالسيرفر ✅';
+        await addDoc('areas', { name: newArea.name.trim(), price: Number(newArea.price), active: true });
         newArea.name = ''; newArea.price = null;
+        await loadAll();
+        saveMsg.value = 'تم حفظ المنطقة بالسيرفر ✅';
         setTimeout(() => saveMsg.value = '', 4000);
-      } catch (e) {
-        alert('فشل الحفظ: ' + (e.code || e.message));
-      } finally { saving.value = false; }
+      } catch (e) { alert('فشل الحفظ: ' + e.message); }
+      finally { saving.value = false; }
     };
-
-    const editAreaPrice = async a => {
+    const editAreaPrice = a => run(async () => {
       const v = prompt('أدخل السعر الجديد:', a.price);
-      if (v && !isNaN(v)) await db.collection('areas').doc(a.id).update({ price: Number(v) });
-    };
-    const deleteArea = async id => {
-      if (confirm('هل أنت متأكد من حذف هذه المنطقة؟')) await db.collection('areas').doc(id).delete();
-    };
-    const addMoney = async d => {
+      if (v && !isNaN(v)) await updDoc('areas', a.id, { price: Number(v) });
+    });
+    const deleteArea = id => run(async () => { if (confirm('هل أنت متأكد من حذف هذه المنطقة؟')) await delDoc('areas', id); });
+    const addMoney = d => run(async () => {
       const amt = prompt('المبلغ المسدّد من السائق:', d.balance || 0);
-      if (amt && !isNaN(amt) && Number(amt) > 0)
-        await db.collection('drivers').doc(d.id).update({ balance: firebase.firestore.FieldValue.increment(-Number(amt)) });
-    };
-    const zeroBalance = async d => {
-      if (confirm('تصفير دين السائق؟')) await db.collection('drivers').doc(d.id).update({ balance: 0 });
-    };
-    const toggleStatus = async (col, item) => {
-      await db.collection(col).doc(item.id).update({ active: !item.active });
-      await db.collection('users').doc(item.id).update({ active: !item.active }).catch(() => {});
-    };
-    const editFee = async x => {
+      if (amt && !isNaN(amt) && Number(amt) > 0) await incr('drivers', d.id, 'balance', -Math.round(Number(amt)));
+    });
+    const zeroBalance = d => run(async () => { if (confirm('تصفير دين السائق؟')) await updDoc('drivers', d.id, { balance: 0 }); });
+    const toggleStatus = (col, item) => run(async () => {
+      const v = item.active === false;
+      await updDoc(col, item.id, { active: v });
+      await updDoc('users', item.id, { active: v }).catch(() => {});
+    });
+    const editFee = x => run(async () => {
       const v = prompt('الكروة الجديدة:', x.fee);
       if (v === null || v === '' || isNaN(v)) return;
       const nf = Number(v);
-      await db.collection('orders').doc(x.id).update({ fee: nf });
+      await updDoc('orders', x.id, { fee: nf });
       if (x.status === 'delivered' && x.driverId) {
         const df = Math.round((nf - (x.fee || 0)) * ST.driverPct / 100);
-        if (df) await db.collection('drivers').doc(x.driverId).update({ balance: firebase.firestore.FieldValue.increment(df) });
+        if (df) await incr('drivers', x.driverId, 'balance', df);
       }
-    };
-    const cancelOrder = async x => {
+    });
+    const cancelOrder = x => run(async () => {
       const r = prompt('سبب الإلغاء:');
-      if (r) await db.collection('orders').doc(x.id).update({ status: 'cancelled', cancelReason: r });
-    };
-    const saveSettings = async () => {
-      await db.collection('settings').doc('main').set({ ...ST });
+      if (r) await updDoc('orders', x.id, { status: 'cancelled', cancelReason: r });
+    });
+    const saveSettings = () => run(async () => {
+      await setDoc('settings', 'main', { storeCommission: Number(ST.storeCommission), driverPct: Number(ST.driverPct), debtLimit: Number(ST.debtLimit) });
       alert('تم حفظ الإعدادات');
-    };
-
-    const addAcct = async col => {
+    });
+    const addAcct = col => run(async () => {
       if (!newAcct.name || !newAcct.username || newAcct.password.length < 6) return alert('يرجى ملء كافة البيانات بشكل صحيح (الرمز 6 خانات على الأقل)');
-      if (!guard()) return;
       try {
         const c = await sec.auth().createUserWithEmailAndPassword(mail(newAcct.username), newAcct.password);
         const uid = c.user.uid;
         await sec.auth().signOut();
-        await db.collection('users').doc(uid).set({ role: col === 'drivers' ? 'driver' : 'store', name: newAcct.name, username: newAcct.username, active: true });
-        await db.collection(col).doc(uid).set({ name: newAcct.name, username: newAcct.username, phone: newAcct.phone, active: true, balance: 0 });
+        await setDoc('users', uid, { role: col === 'drivers' ? 'driver' : 'store', name: newAcct.name, username: newAcct.username, active: true });
+        await setDoc(col, uid, { name: newAcct.name, username: newAcct.username, phone: newAcct.phone, active: true, balance: 0 });
         alert('تمت الإضافة بنجاح');
         newAcct.name = ''; newAcct.username = ''; newAcct.password = ''; newAcct.phone = '';
-      } catch (e) { alert(e.code === 'auth/email-already-in-use' ? 'اليوزر مستخدم من قبل' : 'خطأ: ' + (e.code || e.message)); }
-    };
+      } catch (e) {
+        if (e.code === 'auth/email-already-in-use') alert('اليوزر مستخدم من قبل'); else throw e;
+      }
+    });
 
     return {
       user, loading, saving, loadingAreas, saveMsg, loginErr, loginForm, tab, tabs, SL, ST, orders, areas, drivers, stores,
-      newArea, newAcct, banner, totalDebt, count, tryLogin, logout, getName, N, addArea, editAreaPrice,
+      newArea, newAcct, banner, serverOk, totalDebt, count, tryLogin, logout, loadAll, getName, N, addArea, editAreaPrice,
       deleteArea, addMoney, zeroBalance, toggleStatus, editFee, cancelOrder, saveSettings, addAcct
     };
   }
