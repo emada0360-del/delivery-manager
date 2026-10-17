@@ -3,130 +3,345 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>لوحة المدير</title>
+<title>لوحة إدارة التوصيل - Baqubah Delivery</title>
+<script src="https://unpkg.com/vue@3.4.38/dist/vue.global.prod.js"></script>
+<script>window.Vue||document.write('<script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js"><\/script>')</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
-:root{--bg:#eef1f4;--c:#fff;--t:#1b2a41;--m:#667085;--a:#f2a900;--g:#15803d;--r:#b91c1c;--b:#d9dee5}
-@media(prefers-color-scheme:dark){:root{--bg:#12161c;--c:#1c222b;--t:#e8ecf1;--m:#98a2b3;--b:#2b3340}}
+:root{--bg:#f4f6f8;--c:#ffffff;--t:#111827;--m:#6b7280;--a:#f59e0b;--g:#10b981;--r:#ef4444;--b:#e5e7eb}
+@media(prefers-color-scheme:dark){:root{--bg:#0f172a;--c:#1e293b;--t:#f8fafc;--m:#94a3b8;--b:#334155}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--t);font:15px/1.6 "Noto Sans Arabic",Tahoma,sans-serif}
-header{background:#1b2a41;color:#fff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:2}
-header b{font-size:17px;border-bottom:3px solid var(--a)}
-header button{background:none;border:1px solid #5b6b85;color:#fff;padding:4px 10px;border-radius:6px}
-#nav{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;background:var(--c);border-bottom:1px solid var(--b)}
-#nav button{flex:none;padding:7px 14px;border:1px solid var(--b);background:none;color:var(--t);border-radius:20px;font:inherit}
-#nav button.on{background:var(--a);border-color:var(--a);color:#1b2a41;font-weight:700}
-#main,#login{max-width:640px;margin:0 auto;padding:12px}
-.card{background:var(--c);border:1px solid var(--b);border-radius:10px;padding:12px;margin-bottom:10px}
+body{margin:0;background:var(--bg);color:var(--t);font:15px/1.6 system-ui,-apple-system,sans-serif}
+header{background:#0f172a;color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+header b{font-size:18px;color:var(--a)}
+header button{background:transparent;border:1px solid #475569;color:#fff;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px}
+#nav{display:flex;gap:8px;overflow-x:auto;padding:12px;background:var(--c);border-bottom:1px solid var(--b)}
+#nav button{flex:none;padding:8px 16px;border:1px solid var(--b);background:transparent;color:var(--t);border-radius:20px;font:inherit;cursor:pointer}
+#nav button.on{background:var(--a);border-color:var(--a);color:#0f172a;font-weight:bold}
+.main-container{max-width:680px;margin:0 auto;padding:14px}
+.card{background:var(--c);border:1px solid var(--b);border-radius:12px;padding:14px;margin-bottom:12px}
 .card p{margin:4px 0;color:var(--m)}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.f{display:flex;flex-direction:column;gap:8px}
-label{display:flex;flex-direction:column;gap:3px;color:var(--m);font-size:13px}
-input{padding:10px;border:1px solid var(--b);border-radius:8px;background:var(--bg);color:var(--t);font:inherit;width:100%}
-button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--t);background:var(--t);color:var(--bg);cursor:pointer}
-button.d{background:none;color:var(--r);border-color:var(--r)}
-button.o{background:none;color:var(--t)}
-.tag{font-size:12px;padding:2px 10px;border-radius:12px;background:var(--b)}
-.s-delivered{background:#dcfce7;color:#14532d}.s-cancelled,.s-returned{background:#fee2e2;color:#7f1d1d}
-.bad{color:var(--r);font-weight:700}h3{margin:14px 0 6px}.empty{text-align:center;color:var(--m);padding:24px}
-#login{margin-top:12vh}#err{color:var(--r);min-height:22px}
+.f{display:flex;flex-direction:column;gap:10px}
+label{display:flex;flex-direction:column;gap:4px;color:var(--m);font-size:13px}
+input{padding:11px;border:1px solid var(--b);border-radius:8px;background:var(--bg);color:var(--t);font:inherit;width:100%;outline:none}
+input:focus{border-color:var(--a)}
+button.btn-main{font:inherit;padding:10px 16px;border-radius:8px;border:none;background:var(--a);color:#0f172a;font-weight:bold;cursor:pointer}
+button.btn-main:disabled{opacity:.6}
+button.d{background:none;color:var(--r);border:1px solid var(--r);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
+button.o{background:none;color:var(--t);border:1px solid var(--b);padding:6px 12px;border-radius:6px;cursor:pointer;font:inherit}
+.tag{font-size:12px;padding:3px 10px;border-radius:12px;background:var(--b);font-weight:bold}
+.warn{background:#fef3c7;color:#92400e}
+.bad{color:var(--r);font-weight:bold}.empty{text-align:center;color:var(--m);padding:32px}
+.login-box{max-width:380px;margin:12vh auto;padding:20px}
+.err{color:var(--r);margin-top:8px;font-weight:bold;font-size:13px}
+.succ{color:var(--g);font-weight:bold;font-size:13px;text-align:center}
+.banner{margin:12px;padding:12px;border-radius:10px;background:#fee2e2;color:#991b1b;font-weight:bold}
 </style>
 </head>
 <body>
-<div id="login"><div class="card f"><h2 style="margin:0">دخول المدير</h2>
-<input id="u" placeholder="اليوزر نيم" autocapitalize="none"><input id="p" type="password" placeholder="الرمز">
-<div id="err">جاري التحميل...</div><button onclick="window.login&&login()">دخول</button></div></div>
-<div id="app" style="display:none"><header><b>لوحة المدير</b><button onclick="auth.signOut()">خروج</button></header>
-<div id="nav"></div><div id="main"></div></div>
-<script type="text/plain" id="appjs">
-window.addEventListener('unhandledrejection',e=>{const r=e.reason||{};alert('خطأ: '+(r.code||r.message||r))});
-window.addEventListener('error',e=>{const x=document.getElementById('err');if(x&&!window.__e){window.__e=1;x.textContent='خطأ تشغيل: '+e.message}});
-const cfg={apiKey:"AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M",authDomain:"baqubah-delivery.firebaseapp.com",projectId:"baqubah-delivery",storageBucket:"baqubah-delivery.firebasestorage.app",messagingSenderId:"607280279395",appId:"1:607280279395:web:859d9c7fb693a1b0b66d56"};
-firebase.initializeApp(cfg);
-const sec=firebase.initializeApp(cfg,'sec');
-const auth=firebase.auth(),db=firebase.firestore(),$=s=>document.querySelector(s),TS=firebase.firestore.FieldValue;
-try{db.settings({experimentalForceLongPolling:true})}catch(e){console.log(e)}
-const D={orders:[],areas:[],drivers:[],stores:[],logs:[],payments:[]};let ERR='';
-const AL={edit_fee:'تعديل كروة',cancel:'إلغاء طلب',area_price:'تعديل سعر منطقة',add_area:'إضافة منطقة',toggle_areas:'تفعيل/إيقاف منطقة',toggle_drivers:'تفعيل/تعطيل سائق',toggle_stores:'تفعيل/تعطيل متجر',settle:'تسديد سائق',add_drivers:'إضافة سائق',add_stores:'إضافة متجر',adj_balance:'تعديل رصيد'};
-const ST={storeCommission:500,driverPct:10,debtLimit:15000,batchMinutes:15,batchDiscount:30};
-const SL={new:'جديد',accepted:'مقبول',picked:'مستلم من المتجر',delivered:'مسلّم',returned:'مرتجع',cancelled:'ملغي'};
-const TABS=[['orders','الطلبات'],['areas','المناطق'],['drivers','السواق'],['stores','المتاجر'],['logs','السجل'],['settings','الإعدادات']];
-let tab='orders',on=false;
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const N=n=>Number(n||0).toLocaleString('en-US');
-function mail(u){return u.trim().toLowerCase()+'@baqubah.app'}
-const nm=(c,id)=>(D[c].find(x=>x.id==id)||{}).name||'—';
-const log=(a,id,n)=>db.collection('logs').add({action:a,ref:id,note:String(n),by:auth.currentUser.email,at:TS.serverTimestamp()});
-function show(v){document.getElementById('login').style.display=v=='login'?'block':'none';document.getElementById('app').style.display=v=='app'?'block':'none'}
 
-async function login(){$('#err').textContent='';
- const u=$('#u').value.trim().replace(/@.*$/,''),p=$('#p').value.trim().replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
- try{await auth.signInWithEmailAndPassword(mail(u),p)}catch(e){$('#err').textContent='تعذّر الدخول ('+(e.code||e.message)+')'}}
-auth.onAuthStateChanged(async u=>{
- if(!u){show('login');$('#err').textContent='';return}
- try{
-  const r=db.collection('users').doc(u.uid);let d=await r.get();
-  if(!d.exists){const any=await db.collection('users').limit(1).get();
-   if(any.empty){await r.set({role:'admin',name:'المدير',username:u.email.split('@')[0],active:true});d=await r.get()}}
-  if(!d.exists||d.data().role!=='admin'){await auth.signOut();show('login');$('#err').textContent='هذا الحساب ليس حساب مدير';return}
-  start()
- }catch(e){show('login');$('#err').textContent='خطأ: '+e.message}
-});
-function start(){show('app');if(on)return;on=true;
- const eh=e=>{ERR='تعذّر قراءة البيانات ('+(e.code||e.message)+')';render(true)};
- for(const k of Object.keys(D)){const q=(k=='logs'||k=='payments')?db.collection(k).orderBy('at','desc').limit(50):db.collection(k);
-  q.onSnapshot(x=>{ERR='';D[k]=x.docs.map(y=>({id:y.id,...y.data()}));render()},eh)}
- db.collection('settings').doc('main').onSnapshot(x=>{if(x.exists)Object.assign(ST,x.data());render()},eh)}
-function go(k){tab=k;render(true)}
-function render(f){
- if(!f&&document.activeElement&&document.activeElement.tagName=='INPUT')return;
- $('#nav').innerHTML=TABS.map(([k,t])=>`<button class="${k==tab?'on':''}" onclick="go('${k}')">${t}</button>`).join('');
- $('#main').innerHTML=(ERR?`<div class="card bad">${esc(ERR)}</div>`:'')+V[tab]()}
+<div id="app">
+  <div v-if="!user" class="login-box card f">
+    <h2 style="margin:0 0 10px 0;text-align:center">دخول المدير</h2>
+    <input v-model="loginForm.u" placeholder="اليوزر نيم" autocapitalize="none">
+    <input v-model="loginForm.p" type="password" placeholder="الرمز">
+    <button class="btn-main" :disabled="loading" @click="tryLogin">{{ loading ? 'جاري الدخول...' : 'تسجيل الدخول' }}</button>
+    <div v-if="loginErr" class="err">{{ loginErr }}</div>
+  </div>
 
-const form=(col,btn)=>`<div class="card f"><input id="${col}n" placeholder="الاسم"><input id="${col}u" placeholder="اليوزر نيم (إنجليزي)" autocapitalize="none"><input id="${col}p" placeholder="الرمز (6 خانات على الأقل)"><input id="${col}t" placeholder="رقم الهاتف" inputmode="tel"><button onclick="addAcct('${col}')">${btn}</button></div>`;
-const V={
- orders:()=>{const o=[...D.orders].sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-  return sum()+(o.length?o.map(x=>`<div class="card"><div class="row"><b>${esc(x.item||'طلب')}</b><span class="tag s-${x.status}">${SL[x.status]||esc(x.status)}</span></div>
-<p>${esc(nm('stores',x.storeId))} ← ${esc(nm('areas',x.areaId))}${x.driverId?' | السائق: '+esc(nm('drivers',x.driverId)):''}</p>
-<p>سعر الطلب ${N(x.price)} | الكروة ${N(x.fee)}${x.fragile?' | قابل للكسر':''}</p>
-<div class="row"><button class="o" onclick="editFee('${x.id}')">تعديل الكروة</button>${x.status!='cancelled'?`<button class="d" onclick="cancelO('${x.id}')">إلغاء الطلب</button>`:''}</div></div>`).join(''):'<p class="empty">ما كو طلبات لحد الآن. تظهر هنا لما يرفعها المتجر.</p>')},
- areas:()=>`<div class="card f"><input id="an" placeholder="اسم المنطقة"><input id="ap" type="number" placeholder="الكروة بالدينار"><button onclick="addArea()">إضافة منطقة</button></div>`+
-  [...D.areas].sort((a,b)=>a.price-b.price).map(a=>`<div class="card"><div class="row"><b>${esc(a.name)}</b><span>${N(a.price)} د.ع</span></div><div class="row"><button class="o" onclick="setPrice('${a.id}')">تعديل السعر</button><button class="${a.active?'d':'o'}" onclick="tgl('areas','${a.id}')">${a.active?'إيقاف':'تفعيل'}</button></div>${a.active?'':'<p>موقوفة: ما تظهر للمتاجر</p>'}</div>`).join(''),
- drivers:()=>form('drivers','إضافة سائق')+D.drivers.map(d=>{const full=(d.balance||0)>=ST.debtLimit;return `<div class="card"><div class="row"><b>${esc(d.name)}</b><span>${esc(d.username)}</span></div>
-<p class="${full?'bad':''}">الدين: ${N(d.balance)} / ${N(ST.debtLimit)}${full?' (متوقف عن الطلبات)':''}</p>${d.active?'':'<p>الحساب معطّل</p>'}
-<div class="row"><button onclick="settle('${d.id}')">تسديد</button><button class="o" onclick="adjBal('${d.id}')">تعديل الرصيد</button><button class="${d.active?'d':'o'}" onclick="tgl('drivers','${d.id}')">${d.active?'تعطيل':'تفعيل'}</button></div></div>`}).join(''),
- stores:()=>form('stores','إضافة متجر')+D.stores.map(s=>`<div class="card"><div class="row"><b>${esc(s.name)}</b><span>${esc(s.username)}</span></div><p>${esc(s.phone)}${s.active?'':' | الحساب معطّل'}</p>
-<button class="${s.active?'d':'o'}" onclick="tgl('stores','${s.id}')">${s.active?'تعطيل':'تفعيل'}</button></div>`).join(''),
- logs:()=>{const T=x=>{try{return x.at.toDate().toLocaleString('en-GB')}catch(e){return ''}};
-  return '<h3>التسديدات</h3>'+(D.payments.length?D.payments.map(p=>`<div class="card row"><span>${esc(nm('drivers',p.driverId))}</span><b>${N(p.amount)}</b><span>${T(p)}</span></div>`).join(''):'<p class="empty">ما كو تسديدات</p>')+
-  '<h3>سجل الحركات</h3>'+(D.logs.length?D.logs.map(l=>`<div class="card"><div class="row"><b>${esc(AL[l.action]||l.action)}</b><span>${T(l)}</span></div><p>${esc(l.note)} | ${esc(l.by)}</p></div>`).join(''):'<p class="empty">ما كو حركات</p>')},
- settings:()=>`<div class="card f">${[['storeCommission','عمولة المتجر لكل طلب (دينار)'],['driverPct','نسبة عمولة السائق من الكروة %'],['debtLimit','حد دين السائق (دينار)'],['batchMinutes','مهلة تجميع الطلبات (دقيقة)'],['batchDiscount','خصم الطلب الثاني على الكروة %']].map(([k,t])=>`<label>${t}<input id="s_${k}" type="number" value="${ST[k]}"></label>`).join('')}<button onclick="saveS()">حفظ الإعدادات</button></div>`
+  <div v-else>
+    <header>
+      <b>لوحة المدير (Baqubah Delivery)</b>
+      <button @click="logout">خروج</button>
+    </header>
+    <div v-if="banner" class="banner">{{ banner }}</div>
+
+    <div id="nav">
+      <button v-for="t in tabs" :key="t.id" :class="{on: tab === t.id}" @click="tab = t.id">{{ t.name }}</button>
+    </div>
+
+    <div class="main-container">
+      <div v-if="tab === 'orders'">
+        <div class="card row">
+          <span>مسلّمة <b>{{ count('delivered') }}</b></span>
+          <span>مرتجعة <b>{{ count('returned') }}</b></span>
+          <span>ملغية <b>{{ count('cancelled') }}</b></span>
+          <span>ديون السواق <b>{{ N(totalDebt) }}</b></span>
+        </div>
+        <div v-if="!orders.length" class="empty">لا توجد طلبات حالياً</div>
+        <div v-for="x in orders" :key="x.id" class="card">
+          <div class="row">
+            <b>{{ x.item || 'طلب توصيل' }}<span v-if="x.fragile"> (قابل للكسر)</span></b>
+            <span class="tag">{{ SL[x.status] || x.status }}</span>
+          </div>
+          <p>المتجر: {{ getName('stores', x.storeId) }} ← المنطقة: {{ getName('areas', x.areaId) }}</p>
+          <p>السائق: {{ getName('drivers', x.driverId) }} | الطلب: {{ N(x.price) }} | الكروة: {{ N(x.fee) }} د.ع</p>
+          <div class="row" style="margin-top:8px">
+            <button class="o" @click="editFee(x)">تعديل الكروة</button>
+            <button v-if="x.status !== 'cancelled'" class="d" @click="cancelOrder(x)">إلغاء الطلب</button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="tab === 'areas'">
+        <div class="card f">
+          <input v-model="newArea.name" placeholder="اسم المنطقة">
+          <input v-model.number="newArea.price" type="number" placeholder="الكروة (السعر)">
+          <button class="btn-main" :disabled="saving" @click="addArea">{{ saving ? 'جاري الحفظ في السيرفر...' : 'إضافة منطقة' }}</button>
+          <div v-if="saveMsg" class="succ">{{ saveMsg }}</div>
+        </div>
+        <div v-if="loadingAreas" class="empty">جاري جلب المناطق من السيرفر...</div>
+        <div v-else-if="!areas.length" class="empty">لا توجد مناطق مضافة بالسيرفر حتى الآن</div>
+        <div v-for="a in areas" :key="a.id" class="card">
+          <div class="row">
+            <b>{{ a.name }}</b>
+            <span>{{ N(a.price) }} د.ع</span>
+          </div>
+          <div v-if="a.pending" class="tag warn" style="margin-top:6px">⏳ لم يُحفظ بالسيرفر بعد</div>
+          <div class="row" style="margin-top:10px">
+            <button class="o" @click="editAreaPrice(a)">تعديل السعر</button>
+            <button class="d" @click="deleteArea(a.id)">حذف</button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="tab === 'drivers'">
+        <div class="card f">
+          <input v-model="newAcct.name" placeholder="اسم السائق">
+          <input v-model="newAcct.username" placeholder="اليوزر (إنجليزي)" autocapitalize="none">
+          <input v-model="newAcct.password" placeholder="الرمز (6 خانات)">
+          <input v-model="newAcct.phone" placeholder="الهاتف">
+          <button class="btn-main" @click="addAcct('drivers')">إضافة سائق</button>
+        </div>
+        <div v-if="!drivers.length" class="empty">لا يوجد سواق مسجلين</div>
+        <div v-for="d in drivers" :key="d.id" class="card">
+          <div class="row"><b>{{ d.name }}</b><span>{{ d.username }}</span></div>
+          <p :class="{bad: (d.balance||0) >= ST.debtLimit}">الدين: <b>{{ N(d.balance||0) }} د.ع</b> / الحد {{ N(ST.debtLimit) }}</p>
+          <p v-if="!d.active" class="bad">الحساب معطّل</p>
+          <div class="row">
+            <button class="o" @click="addMoney(d)">تسديد</button>
+            <button class="o" @click="zeroBalance(d)">تصفير</button>
+            <button :class="d.active ? 'd' : 'o'" @click="toggleStatus('drivers', d)">{{ d.active ? 'تعطيل' : 'تفعيل' }}</button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="tab === 'stores'">
+        <div class="card f">
+          <input v-model="newAcct.name" placeholder="اسم المتجر">
+          <input v-model="newAcct.username" placeholder="اليوزر (إنجليزي)" autocapitalize="none">
+          <input v-model="newAcct.password" placeholder="الرمز (6 خانات)">
+          <input v-model="newAcct.phone" placeholder="الهاتف">
+          <button class="btn-main" @click="addAcct('stores')">إضافة متجر</button>
+        </div>
+        <div v-if="!stores.length" class="empty">لا توجد متاجر مسجلة</div>
+        <div v-for="s in stores" :key="s.id" class="card">
+          <div class="row"><b>{{ s.name }}</b><span>{{ s.username }}</span></div>
+          <p v-if="!s.active" class="bad">الحساب معطّل</p>
+          <button :class="s.active ? 'd' : 'o'" style="margin-top:8px" @click="toggleStatus('stores', s)">{{ s.active ? 'تعطيل' : 'تفعيل' }}</button>
+        </div>
+      </div>
+
+      <div v-if="tab === 'settings'" class="card f">
+        <label>نسبة عمولة السائق %<input v-model.number="ST.driverPct" type="number"></label>
+        <label>عمولة المتجر الثابتة<input v-model.number="ST.storeCommission" type="number"></label>
+        <label>حد الدين المسموح للسائق<input v-model.number="ST.debtLimit" type="number"></label>
+        <button class="btn-main" @click="saveSettings">حفظ الإعدادات</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const cfg = {
+  apiKey: "AIzaSyDvPfS9YMY7BonaRIBFCcilfEXpdMo0F_M",
+  authDomain: "baqubah-delivery.firebaseapp.com",
+  projectId: "baqubah-delivery",
+  storageBucket: "baqubah-delivery.firebasestorage.app",
+  messagingSenderId: "607280279395",
+  appId: "1:607280279395:web:859d9c7fb693a1b0b66d56"
 };
 
-function sum(){const c=q=>D.orders.filter(x=>x.status==q).length,debt=D.drivers.reduce((a,d)=>a+(d.balance||0),0);
- return `<div class="card row"><span>مسلّمة <b>${c('delivered')}</b></span><span>مرتجعة <b>${c('returned')}</b></span><span>ملغية <b>${c('cancelled')}</b></span><span>ديون السواق <b>${N(debt)}</b></span></div>`}
-async function adjBal(id){const d=D.drivers.find(x=>x.id==id),v=prompt('الرصيد الجديد (الدين)',d.balance||0);if(v===null||v===''||isNaN(v))return;await db.collection('drivers').doc(id).update({balance:+v});log('adj_balance',id,(d.balance||0)+' → '+v)}
-async function addArea(){const n=$('#an').value.trim(),p=+$('#ap').value;if(!n||!p)return alert('اكتب الاسم والكروة');await db.collection('areas').add({name:n,price:p,active:true});log('add_area',n,p);render(true)}
-async function setPrice(id){const a=D.areas.find(x=>x.id==id),v=prompt('الكروة الجديدة',a.price);if(v&&!isNaN(v)){await db.collection('areas').doc(id).update({price:+v});log('area_price',id,a.price+' → '+v)}}
-async function tgl(c,id){const x=D[c].find(y=>y.id==id);await db.collection(c).doc(id).update({active:!x.active});if(c!='areas')await db.collection('users').doc(id).update({active:!x.active});log('toggle_'+c,id,!x.active)}
-async function editFee(id){const o=D.orders.find(x=>x.id==id),v=prompt('الكروة الجديدة',o.fee);if(v===null||v===''||isNaN(v))return;const nf=+v;
- await db.collection('orders').doc(id).update({fee:nf});
- if(o.status=='delivered'&&o.driverId){const df=Math.round((nf-o.fee)*ST.driverPct/100);if(df)await db.collection('drivers').doc(o.driverId).update({balance:TS.increment(df)})}
- log('edit_fee',id,o.fee+' → '+nf)}
-async function cancelO(id){const r=prompt('سبب الإلغاء');if(!r)return;await db.collection('orders').doc(id).update({status:'cancelled',cancelReason:r});log('cancel',id,r)}
-async function settle(id){const d=D.drivers.find(x=>x.id==id),v=prompt('المبلغ المسدّد',d.balance||0);if(!v||isNaN(v)||+v<=0)return;
- await db.collection('drivers').doc(id).update({balance:TS.increment(-(+v))});await db.collection('payments').add({driverId:id,amount:+v,by:auth.currentUser.email,at:TS.serverTimestamp()});log('settle',id,v)}
-async function addAcct(col){const g=k=>$('#'+col+k).value.trim(),f={name:g('n'),username:g('u'),phone:g('t')},pw=$('#'+col+'p').value;
- if(!f.name||!f.username||pw.length<6)return alert('اكتب الاسم واليوزر ورمز من 6 خانات على الأقل');
- try{const c=await sec.auth().createUserWithEmailAndPassword(mail(f.username),pw),id=c.user.uid;await sec.auth().signOut();
-  await db.collection('users').doc(id).set({role:col=='drivers'?'driver':'store',name:f.name,username:f.username,active:true});
-  await db.collection(col).doc(id).set({...f,active:true,...(col=='drivers'?{balance:0}:{})});
-  log('add_'+col,id,f.name);render(true)}catch(e){alert(e.code=='auth/email-already-in-use'?'اليوزر مستخدم من قبل':e.message)}}
-async function saveS(){const o={};for(const k of Object.keys(ST))o[k]=+$('#s_'+k).value;await db.collection('settings').doc('main').set(o);alert('تم الحفظ')}
-</script>
-<script>
-const B=['https://www.gstatic.com/firebasejs/10.12.2/','https://cdn.jsdelivr.net/npm/firebase@10.12.2/'];
-function ld(n,b=0){return new Promise((ok,no)=>{const t=document.createElement('script');t.src=B[b]+n;t.onload=ok;t.onerror=()=>b+1<B.length?ld(n,b+1).then(ok,no):no();document.head.appendChild(t)})}
-ld('firebase-app-compat.js').then(()=>ld('firebase-auth-compat.js')).then(()=>ld('firebase-firestore-compat.js')).then(()=>{const t=document.createElement('script');t.text=document.getElementById('appjs').textContent;document.body.appendChild(t)}).catch(()=>{document.getElementById('err').textContent='تعذّر تحميل Firebase. غيّر الشبكة (واي فاي أو بيانات) وحدّث الصفحة.'});
+firebase.initializeApp(cfg);
+const sec = firebase.initializeApp(cfg, 'sec');
+const auth = firebase.auth();
+const db = firebase.firestore();
+try { db.settings({ experimentalForceLongPolling: true }); } catch(e) {}
+
+const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+createApp({
+  setup() {
+    const user = ref(null);
+    const loading = ref(false);
+    const saving = ref(false);
+    const loadingAreas = ref(true);
+    const saveMsg = ref('');
+    const loginErr = ref('');
+    const loginForm = reactive({ u: '', p: '' });
+    const tab = ref('orders');
+    const serverOk = ref(false);
+    const waited = ref(false);
+    const dbErr = ref('');
+
+    const tabs = [
+      {id:'orders', name:'الطلبات'},
+      {id:'areas', name:'المناطق'},
+      {id:'drivers', name:'السواق'},
+      {id:'stores', name:'المتاجر'},
+      {id:'settings', name:'الإعدادات'}
+    ];
+
+    const SL = {new:'بانتظار سائق', accepted:'مقبول', picked:'تم الاستلام', delivered:'تم التسليم', returned:'مرتجع', cancelled:'ملغي'};
+    const ST = reactive({storeCommission:500, driverPct:10, debtLimit:15000});
+
+    const orders = ref([]);
+    const areas = ref([]);
+    const drivers = ref([]);
+    const stores = ref([]);
+
+    const newArea = reactive({ name: '', price: null });
+    const newAcct = reactive({ name: '', username: '', password: '', phone: '' });
+
+    const mail = u => u.trim().toLowerCase() + '@baqubah.app';
+    const N = n => Number(n||0).toLocaleString('en-US');
+    const getName = (col, id) => {
+      const list = col === 'stores' ? stores.value : col === 'drivers' ? drivers.value : areas.value;
+      const found = list.find(x => x.id === id);
+      return found ? found.name : '—';
+    };
+    const count = s => orders.value.filter(x => x.status === s).length;
+    const totalDebt = computed(() => drivers.value.reduce((a, d) => a + (d.balance || 0), 0));
+    const banner = computed(() => dbErr.value || ((!serverOk.value && waited.value)
+      ? '⚠️ لا يوجد اتصال بالسيرفر. أي شي تضيفه لن يُحفظ. غيّر الشبكة (واي فاي أو بيانات الموبايل) وحدّث الصفحة.' : ''));
+
+    let started = false;
+    const initCloudSync = () => {
+      if (started) return;
+      started = true;
+      setTimeout(() => { waited.value = true; }, 12000);
+      const opts = { includeMetadataChanges: true };
+      const eh = e => { dbErr.value = 'تعذّر القراءة من السيرفر (' + (e.code || e.message) + ')'; };
+      const ok = s => { if (!s.metadata.fromCache) { serverOk.value = true; dbErr.value = ''; } };
+      const list = d => ({ id: d.id, ...d.data() });
+      db.collection('orders').onSnapshot(opts, s => { ok(s); orders.value = s.docs.map(list); }, eh);
+      db.collection('areas').onSnapshot(opts, s => {
+        ok(s);
+        areas.value = s.docs.map(d => ({ ...list(d), pending: d.metadata.hasPendingWrites }));
+        if (!s.metadata.fromCache) loadingAreas.value = false;
+      }, e => { loadingAreas.value = false; eh(e); });
+      db.collection('drivers').onSnapshot(opts, s => { ok(s); drivers.value = s.docs.map(list); }, eh);
+      db.collection('stores').onSnapshot(opts, s => { ok(s); stores.value = s.docs.map(list); }, eh);
+      db.collection('settings').doc('main').onSnapshot(s => { if (s.exists) Object.assign(ST, s.data()); }, eh);
+    };
+
+    onMounted(() => {
+      auth.onAuthStateChanged(u => {
+        if (u && u.email !== mail('admin')) {
+          loginErr.value = 'هذا الحساب ليس حساب المدير';
+          auth.signOut();
+          return;
+        }
+        user.value = u;
+        if (u) initCloudSync();
+      });
+    });
+
+    const tryLogin = async () => {
+      const u = loginForm.u.trim().replace(/@.*$/, '');
+      const p = loginForm.p.trim().replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+      if (!u || !p) { loginErr.value = 'أدخل البيانات كاملاً'; return; }
+      loading.value = true; loginErr.value = '';
+      try {
+        await auth.signInWithEmailAndPassword(mail(u), p);
+      } catch (e) { loginErr.value = 'تعذّر الدخول (' + (e.code || e.message) + ')'; }
+      finally { loading.value = false; }
+    };
+
+    const logout = () => auth.signOut();
+
+    const guard = () => {
+      if (!serverOk.value) { alert('لا يوجد اتصال بالسيرفر حالياً، لن يُحفظ شي. غيّر الشبكة وحاول مرة ثانية.'); return false; }
+      return true;
+    };
+    const timeout = ms => new Promise((_, no) => setTimeout(() => no(new Error('انتهت المهلة، الحفظ لم يصل للسيرفر')), ms));
+
+    const addArea = async () => {
+      if (!newArea.name || !newArea.price) return alert('أدخل اسم المنطقة والسعر');
+      if (!guard()) return;
+      saving.value = true; saveMsg.value = '';
+      try {
+        await Promise.race([db.collection('areas').add({ name: newArea.name.trim(), price: Number(newArea.price), active: true }), timeout(12000)]);
+        saveMsg.value = 'تم حفظ المنطقة بالسيرفر ✅';
+        newArea.name = ''; newArea.price = null;
+        setTimeout(() => saveMsg.value = '', 4000);
+      } catch (e) {
+        alert('فشل الحفظ: ' + (e.code || e.message));
+      } finally { saving.value = false; }
+    };
+
+    const editAreaPrice = async a => {
+      const v = prompt('أدخل السعر الجديد:', a.price);
+      if (v && !isNaN(v)) await db.collection('areas').doc(a.id).update({ price: Number(v) });
+    };
+    const deleteArea = async id => {
+      if (confirm('هل أنت متأكد من حذف هذه المنطقة؟')) await db.collection('areas').doc(id).delete();
+    };
+    const addMoney = async d => {
+      const amt = prompt('المبلغ المسدّد من السائق:', d.balance || 0);
+      if (amt && !isNaN(amt) && Number(amt) > 0)
+        await db.collection('drivers').doc(d.id).update({ balance: firebase.firestore.FieldValue.increment(-Number(amt)) });
+    };
+    const zeroBalance = async d => {
+      if (confirm('تصفير دين السائق؟')) await db.collection('drivers').doc(d.id).update({ balance: 0 });
+    };
+    const toggleStatus = async (col, item) => {
+      await db.collection(col).doc(item.id).update({ active: !item.active });
+      await db.collection('users').doc(item.id).update({ active: !item.active }).catch(() => {});
+    };
+    const editFee = async x => {
+      const v = prompt('الكروة الجديدة:', x.fee);
+      if (v === null || v === '' || isNaN(v)) return;
+      const nf = Number(v);
+      await db.collection('orders').doc(x.id).update({ fee: nf });
+      if (x.status === 'delivered' && x.driverId) {
+        const df = Math.round((nf - (x.fee || 0)) * ST.driverPct / 100);
+        if (df) await db.collection('drivers').doc(x.driverId).update({ balance: firebase.firestore.FieldValue.increment(df) });
+      }
+    };
+    const cancelOrder = async x => {
+      const r = prompt('سبب الإلغاء:');
+      if (r) await db.collection('orders').doc(x.id).update({ status: 'cancelled', cancelReason: r });
+    };
+    const saveSettings = async () => {
+      await db.collection('settings').doc('main').set({ ...ST });
+      alert('تم حفظ الإعدادات');
+    };
+
+    const addAcct = async col => {
+      if (!newAcct.name || !newAcct.username || newAcct.password.length < 6) return alert('يرجى ملء كافة البيانات بشكل صحيح (الرمز 6 خانات على الأقل)');
+      if (!guard()) return;
+      try {
+        const c = await sec.auth().createUserWithEmailAndPassword(mail(newAcct.username), newAcct.password);
+        const uid = c.user.uid;
+        await sec.auth().signOut();
+        await db.collection('users').doc(uid).set({ role: col === 'drivers' ? 'driver' : 'store', name: newAcct.name, username: newAcct.username, active: true });
+        await db.collection(col).doc(uid).set({ name: newAcct.name, username: newAcct.username, phone: newAcct.phone, active: true, balance: 0 });
+        alert('تمت الإضافة بنجاح');
+        newAcct.name = ''; newAcct.username = ''; newAcct.password = ''; newAcct.phone = '';
+      } catch (e) { alert(e.code === 'auth/email-already-in-use' ? 'اليوزر مستخدم من قبل' : 'خطأ: ' + (e.code || e.message)); }
+    };
+
+    return {
+      user, loading, saving, loadingAreas, saveMsg, loginErr, loginForm, tab, tabs, SL, ST, orders, areas, drivers, stores,
+      newArea, newAcct, banner, totalDebt, count, tryLogin, logout, getName, N, addArea, editAreaPrice,
+      deleteArea, addMoney, zeroBalance, toggleStatus, editFee, cancelOrder, saveSettings, addAcct
+    };
+  }
+}).mount('#app');
 </script>
 </body>
 </html>
