@@ -39,9 +39,9 @@ main{max-width:600px;margin:auto;padding:16px}
 .fin-row { display:flex; justify-content:space-between; margin-bottom:6px; }
 .fin-row:last-child { margin-bottom:0; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px; font-weight:bold;}
 .customer-box { background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin:10px 0; text-align:center; }
-.customer-box b { font-size:16px; color:#1e3a8a; display:block; margin-bottom:8px; }
+.customer-box b { font-size:14px; color:#1e3a8a; display:block; margin-bottom:8px; }
 .btn-group { display:flex; gap:8px; }
-.btn-group a { flex:1; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:14px; display:flex; justify-content:center; align-items:center; gap:5px; }
+.btn-group a { flex:1; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:13px; display:flex; justify-content:center; align-items:center; gap:5px; }
 .btn-call { background:#e0e7ff; color:#3730a3; }
 .btn-wa { background:#dcfce7; color:#166534; }
 .map-link { display:inline-block; background:#e0f2fe; color:#0369a1; padding:6px 12px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:bold; margin-top:6px; margin-bottom:10px;}
@@ -163,7 +163,9 @@ function start(){
  const pr=ref(db,"presence/"+uid);
  onValue(pr, s=>{
    const status = s.val() || {};
-   isOnline = status.online === true;
+   if(Object.keys(activeOrders).length === 0) {
+      isOnline = status.online === true;
+   }
    updateStatusUI();
  });
 
@@ -188,7 +190,11 @@ function start(){
   for(const k in all){
    if(!["delivered","cancelled"].includes(all[k].status)) activeOrders[k]=all[k];
   }
+  if(Object.keys(activeOrders).length > 0) {
+     isOnline = true; // إجبار السائق على البقاء متصل إذا كان لديه طلب
+  }
   fetchPrivateData();
+  updateStatusUI();
   drawOrders();
  });
 }
@@ -208,7 +214,7 @@ function fetchPrivateData(){
 }
 
 function toggleStatus(){
- if(!isOnline && Object.keys(activeOrders).length>0) return say("لا يمكنك الإغلاق ولديك طلبات نشطة", 1);
+ if(Object.keys(activeOrders).length>0) return say("لا يمكنك الإغلاق ولديك طلبات نشطة", 1);
  
  isOnline=!isOnline;
  const pr=ref(db,"presence/"+uid);
@@ -220,7 +226,16 @@ function toggleStatus(){
 $("btnStatus").addEventListener("click", toggleStatus);
 
 function updateStatusUI(){
+ const hasActive = Object.keys(activeOrders).length > 0;
  const btn=$("btnStatus");
+ 
+ if(hasActive) {
+   isOnline = true;
+   btn.className="status-btn on";
+   $("statusTxt").textContent="متصل (لديك طلب نشط)";
+   return;
+ }
+
  if(isOnline){
   btn.className="status-btn on";
   $("statusTxt").textContent="متصل (متاح للطلبات)";
@@ -244,14 +259,13 @@ function buildFinBox(o) {
     </div>`;
 }
 
-// دالة لإنشاء زر الخريطة
 function buildMapBtn(url) {
     if(!url) return "";
     return `<a href="${esc(url)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`;
 }
 
 function drawOrders(){
- // Available Orders (بدون رقم الزبون)
+ // Available Orders
  if(!isOnline){
   $("availContainer").hidden = true;
  } else {
@@ -313,6 +327,16 @@ function drawOrders(){
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canDel?'':'disabled'} onclick="updateStep('${id}','delivered')">${canDel?'تم التوصيل للزبون':'انتظر 5 دقائق...'}</button>`;
   }
 
+  // صندوق بيانات المتجر
+  let storeBox = `
+    <div class="customer-box" style="background:#f0fdf4; border-color:#bbf7d0; padding:10px;">
+      <b style="color:#166534">هاتف المتجر: <span dir="ltr">${esc(o.storePhone || "غير متوفر")}</span></b>
+      ${o.storePhone ? `<div class="btn-group" style="margin-top:4px">
+        <a href="tel:${esc(o.storePhone)}" class="btn-call" style="background:#dcfce7; color:#166534">📞 اتصال بالمتجر</a>
+      </div>` : ""}
+    </div>`;
+
+  // صندوق بيانات الزبون
   let customerBox = "";
   if(q.customerPhone && o.status !== "waiting_store") {
      const waLink = `https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`;
@@ -335,6 +359,7 @@ function drawOrders(){
    <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
    
    ${buildMapBtn(o.storeMapUrl)}
+   ${storeBox}
    ${buildFinBox(o)}
    ${customerBox}
    
