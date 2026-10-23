@@ -24,6 +24,7 @@ main{max-width:600px;margin:auto;padding:16px}
 .stat.warn b{color:var(--bad)}
 .card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;background:#fff;position:relative}
 .card.new{border:2px solid var(--pri);box-shadow:0 0 15px rgba(23,105,170,.15)}
+.card.waiting{border:2px solid var(--warn);background:#fffbeb}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .status-btn{width:100%;padding:18px;font-size:18px;border-radius:12px;margin-bottom:16px;display:flex;justify-content:center;align-items:center;gap:10px;border:none;cursor:pointer}
 .status-btn.on{background:var(--ok);color:#fff;box-shadow:0 4px 15px rgba(33,136,56,.3)}
@@ -34,6 +35,7 @@ main{max-width:600px;margin:auto;padding:16px}
 #err{color:var(--bad);font-size:13px;text-align:center;font-weight:600}
 [hidden]{display:none!important}
 .badge{background:#e0f2fe;color:#0369a1;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:bold}
+.badge.wait{background:#fef3c7;color:#b45309}
 </style>
 </head>
 <body>
@@ -56,7 +58,6 @@ main{max-width:600px;margin:auto;padding:16px}
 <main>
 <div id="msg"></div>
 
-<!-- Stats -->
 <div class="grid">
 <div class="stat"><span>محفظتي (دين للمنصة)</span><b id="statDebt">0</b></div>
 <div class="stat"><span>أرباحي اليوم</span><b id="statProfit">0</b></div>
@@ -65,21 +66,17 @@ main{max-width:600px;margin:auto;padding:16px}
 <b>تنبيه:</b> لقد وصلت للحد الأقصى من الدين. يرجى مراجعة الإدارة لتصفير المحفظة.
 </div>
 
-<!-- Online Toggle -->
 <button id="btnStatus" class="status-btn off">
 <span class="dot"></span> <span id="statusTxt">غير متصل (مغلق)</span>
 </button>
 
-<!-- Announcement -->
 <div id="annBox" class="box" style="background:#fff7e0;color:#8a5a00;border:1px solid #fde68a" hidden></div>
 
-<!-- Available Orders -->
 <div id="availContainer" hidden>
 <h3>الطلبات المتاحة</h3>
 <div id="availList"></div>
 </div>
 
-<!-- Active Orders -->
 <div id="activeContainer" hidden>
 <h3>طلباتي الحالية</h3>
 <div id="activeList"></div>
@@ -110,13 +107,9 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
 let availOrders={}, activeOrders={}, finance={};
 
-// Audio
 const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
-const beep=()=>{try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();o.connect(ctx.destination);o.frequency.value=880;o.start();o.stop(ctx.currentTime+0.4);}catch{}}
-
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
-// Login
 $("btnLogin").onclick=async()=>{
  $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
  try{
@@ -128,7 +121,7 @@ $("btnLogin").onclick=async()=>{
 
 $("btnOut").onclick=()=>{
  if(Object.keys(activeOrders).length>0){ return say("لا يمكنك الخروج ولديك طلبات نشطة!", 1); }
- if(isOnline) toggleStatus(); // Go offline before logout
+ if(isOnline) toggleStatus();
  signOut(auth);
 };
 
@@ -144,7 +137,6 @@ onAuthStateChanged(auth, async u=>{
  start();
 });
 
-// GPS Watcher
 function startGPS(){
  if(!navigator.geolocation)return say("المتصفح لا يدعم تحديد الموقع", 1);
  navigator.geolocation.watchPosition(p=>{
@@ -155,14 +147,12 @@ function startGPS(){
 
 function start(){
  startGPS();
- // Settings
  onValue(ref(db,"settings"),s=>{
   settings=s.val()||{};
   if(settings.announcement){$("annBox").textContent=settings.announcement;$("annBox").hidden=false;}
   else $("annBox").hidden=true;
  });
 
- // Presence & Online Status Initialization
  const pr=ref(db,"presence/"+uid);
  onValue(pr, s=>{
    const status = s.val() || {};
@@ -177,28 +167,25 @@ function start(){
   }
  });
 
- // Finance
  onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{
-  finance=s.val()||{};drawStats();
+  finance=s.val()||{};
  });
 
- // Available Orders
  onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{
   availOrders=s.val()||{};drawOrders();
  });
 
- // Active Orders
+ // Fetch active orders including waiting_store
  onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
   const all=s.val()||{};
   activeOrders={};
   for(const k in all){
    if(!["delivered","cancelled"].includes(all[k].status)) activeOrders[k]=all[k];
   }
-  drawOrders();drawStats();
+  drawOrders();
  });
 }
 
-// Status Toggle
 function toggleStatus(){
  if(!isOnline && Object.keys(activeOrders).length>0) return say("لا يمكنك الإغلاق ولديك طلبات نشطة", 1);
  
@@ -222,36 +209,14 @@ function updateStatusUI(){
  }
 }
 
-function drawStats(){
- const delivered = Object.values(availOrders).filter(o=>o.driverId===uid && o.status==="delivered");
- // Note: using availOrders might not have delivered ones. better to fetch all delivered.
- // For simplicity, we just calculate from activeOrders and trust the DB logic.
- 
- const debt = Object.values(finance).filter(f=>f.type==="cash_received").reduce((s,f)=>s+f.amount,0); // Simplified for now
- // (We'll improve the debt calculation later if needed, but UI shows 0 for now if no data)
- 
- $("statDebt").textContent="0 د.ع"; // Placeholder, logic will be added in Admin
- 
- const today=new Date().setHours(0,0,0,0);
- const profit=Object.values(activeOrders).reduce((s,o)=>s+(o.driverProfit||0),0); // Simplified
- $("statProfit").textContent=fmt(profit)+" د.ع";
-}
-
-// Distance
-function getDist(lat1, lon1, lat2, lon2){
- if(!lat1||!lat2)return 0;
- const R=6371e3, p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
- const dp=(lat2-lat1)*Math.PI/180, dl=(lon2-lon1)*Math.PI/180;
- const a=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
- return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
 function drawOrders(){
+ // Available Orders
  if(!isOnline){
   $("availContainer").hidden = true;
  } else {
   const av=Object.entries(availOrders).filter(([id,o])=>{
     if(o.driverId) return false; 
+    if(o.rejectedBy && o.rejectedBy[uid]) return false; // Hide rejected orders
     if(Object.keys(activeOrders).length>0){
        return (Date.now()-o.createdAt) > 120000;
     }
@@ -265,37 +230,49 @@ function drawOrders(){
     <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
     <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
     <p style="margin:6px 0;font-size:14px"><b>الكروة:</b> ${fmt(o.deliveryFee)} د.ع</p>
-    <button style="width:100%;margin-top:10px" onclick="acceptOrder('${id}')">قبول الطلب</button>
+    <div style="display:flex; gap:8px; margin-top:10px">
+      <button style="flex:2" onclick="acceptOrder('${id}')">قبول الطلب</button>
+      <button class="red" style="flex:1; background:var(--bad)" onclick="rejectOrder('${id}')">رفض</button>
+    </div>
    </div>
   `).join("");
  }
 
+ // Active Orders
  const ac=Object.entries(activeOrders);
  $("activeContainer").hidden = !ac.length;
  $("activeList").innerHTML = ac.map(([id,o])=>{
   let actionBtn="";
   let warn="";
+  let statusBadge = "";
   const now=Date.now();
   
-  if(o.status==="accepted"){
+  if(o.status==="waiting_store"){
+   statusBadge = `<span class="badge wait">بانتظار موافقة المتجر</span>`;
+   actionBtn=`<div style="text-align:center; padding:15px; background:#fef3c7; color:#b45309; border-radius:8px; font-weight:bold; margin-top:10px">يرجى الانتظار حتى يوافق المتجر على طلبك...</div>`;
+  }
+  else if(o.status==="accepted"){
+   statusBadge = `<span class="badge">بالطريق للمتجر</span>`;
    if(o.storeLat && pos.lat){
      const d=getDist(pos.lat, pos.lng, o.storeLat, o.storeLng);
      if(d>300) warn=`<p style="color:var(--bad);font-size:12px;margin:4px 0">أنت بعيد عن المتجر (${Math.round(d)}م)</p>`;
    }
-   actionBtn=`<button class="grn" style="width:100%;margin-top:10px;background:var(--ok)" onclick="updateStep('${id}','arrived_store')">وصلت للمتجر</button>`;
+   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" onclick="updateStep('${id}','arrived_store')">وصلت للمتجر</button>`;
   } 
   else if(o.status==="arrived_store"){
+   statusBadge = `<span class="badge">وصل للمتجر</span>`;
    const canPick = (now - (o.stepAt||0)) > 60000; 
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">${canPick?'تم استلام الطلب':'انتظر دقيقة...'}</button>`;
   }
   else if(["picked_up","delivering"].includes(o.status)){
+   statusBadge = `<span class="badge">بالطريق للزبون</span>`;
    const canDel = (now - (o.stepAt||0)) > 300000; 
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canDel?'':'disabled'} onclick="updateStep('${id}','delivered')">${canDel?'تم التوصيل للزبون':'انتظر 5 دقائق...'}</button>`;
   }
 
   return `
-  <div class="card">
-   <div class="row"><b>#${esc(id.slice(-6))}</b> <span class="badge">${o.status}</span></div>
+  <div class="card ${o.status==='waiting_store'?'waiting':''}">
+   <div class="row"><b>#${esc(id.slice(-6))}</b> ${statusBadge}</div>
    <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
    <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
    <p style="margin:6px 0;font-size:14px"><b>المجموع للزبون:</b> ${fmt(o.customerTotal)}</p>
@@ -306,17 +283,31 @@ function drawOrders(){
  }).join("");
 }
 
-// Global functions
+function getDist(lat1, lon1, lat2, lon2){
+ if(!lat1||!lat2)return 0;
+ const R=6371e3, p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
+ const dp=(lat2-lat1)*Math.PI/180, dl=(lon2-lon1)*Math.PI/180;
+ const a=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
+ return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
 window.acceptOrder=async(id)=>{
  if(!isOnline) return say("يجب أن تكون متصلاً لتقبل الطلب", 1);
  try{
   await update(ref(db,"orders/"+id),{
     driverId:uid, driverName:driver.name, driverPhone:driver.phone||"",
-    status:"accepted", stepAt:serverTimestamp(), acceptedAt:Date.now()
+    status:"waiting_store", stepAt:serverTimestamp(), acceptedAt:Date.now()
   });
-  say("تم قبول الطلب بنجاح");
-  speak("تم قبول الطلب");
+  say("تم قبول الطلب، بانتظار موافقة المتجر");
+  speak("تم قبول الطلب، بانتظار موافقة المتجر");
  }catch(e){say("تم أخذه من سائق آخر", 1);}
+};
+
+window.rejectOrder=async(id)=>{
+ try{
+  await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]: true});
+  say("تم رفض الطلب.");
+ }catch(e){say("فشل الرفض",1);}
 };
 
 window.updateStep=async(id,newStatus)=>{
@@ -344,10 +335,7 @@ window.updateStep=async(id,newStatus)=>{
  }catch(e){say("فشل التحديث",1);}
 };
 
-// Timers loop
 setInterval(drawOrders, 1000);
-
-window.__ready=true;
 </script>
 </body>
 </html>
