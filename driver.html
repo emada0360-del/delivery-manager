@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Baqubah Delivery | السائق</title>
+<style>
+:root{--bg:#f2f5f9;--ink:#172235;--pri:#1769aa;--ok:#218838;--bad:#dc3545;--warn:#bd7200;--line:#e0e6ef}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Tahoma,Arial;background:var(--bg);color:var(--ink);padding-bottom:50px}
+button,input,select{font:inherit}
+button{border:0;border-radius:8px;padding:12px 16px;background:var(--pri);color:#fff;cursor:pointer;font-weight:700;transition:.15s}
+button:hover{filter:brightness(1.1)}
+button:disabled{opacity:.5;cursor:not-allowed}
+input,select{width:100%;padding:12px;border:1px solid #ccd5e2;border-radius:10px;background:#fff;margin:6px 0 14px;outline:none}
+header{background:#14263d;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
+header h2{margin:0;font-size:18px}
+main{max-width:600px;margin:auto;padding:16px}
+.box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat{background:#fff;border-radius:12px;padding:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.stat span{font-size:12px;color:#64748b;display:block;margin-bottom:4px}
+.stat b{font-size:20px;color:var(--pri)}
+.stat.warn b{color:var(--bad)}
+.card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;background:#fff}
+.card.new{border:2px solid var(--pri);box-shadow:0 0 15px rgba(23,105,170,.15)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.status-btn{width:100%;padding:18px;font-size:18px;border-radius:12px;margin-bottom:16px;display:flex;justify-content:center;align-items:center;gap:10px}
+.status-btn.on{background:var(--ok);box-shadow:0 4px 15px rgba(33,136,56,.3)}
+.status-btn.off{background:#6b7280}
+.dot{width:10px;height:10px;border-radius:50%;background:#fff;}
+#login{max-width:380px;margin:60px auto}
+#msg{padding:12px;border-radius:8px;display:none;margin-bottom:12px;font-weight:600;text-align:center;position:sticky;top:70px;z-index:40;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<section id="login" class="box">
+<h2 style="text-align:center;margin-top:0">دخول السائق</h2>
+<form id="lf" onsubmit="return false;">
+<label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
+<label>كلمة المرور</label><input id="pw" type="password" required>
+<button type="button" id="btnLogin" style="width:100%;margin-top:10px">دخول</button>
+</form>
+<p id="err"></p>
+</section>
+
+<div id="app" hidden>
+<header>
+<h2 id="drvName">السائق</h2>
+<button id="btnOut" class="bad" style="padding:8px 12px;font-size:13px">خروج</button>
+</header>
+<main>
+<div id="msg"></div>
+
+<!-- Stats -->
+<div class="grid">
+<div class="stat"><span>محفظتي (دين للمنصة)</span><b id="statDebt">0</b></div>
+<div class="stat"><span>أرباحي اليوم</span><b id="statProfit">0</b></div>
+</div>
+<div id="warnBox" class="box" style="background:#fdecea;color:#b42318;border:1px solid #f5c2c7" hidden>
+<b>تنبيه:</b> لقد وصلت للحد الأقصى من الدين. يرجى مراجعة الإدارة لتصفير المحفظة.
+</div>
+
+<!-- Online Toggle -->
+<button id="btnStatus" class="status-btn off" onclick="toggleStatus()">
+<span class="dot"></span> <span id="statusTxt">غير متصل (مغلق)</span>
+</button>
+
+<!-- Announcement -->
+<div id="annBox" class="box" style="background:#fff7e0;color:#8a5a00" hidden></div>
+
+<!-- Available Orders -->
+<div id="availContainer" hidden>
+<h3>الطلبات المتاحة</h3>
+<div id="availList"></div>
+</div>
+
+<!-- Active Orders -->
+<div id="activeContainer" hidden>
+<h3>طلباتي الحالية</h3>
+<div id="activeList"></div>
+</div>
+
+</main>
+</div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+
+const cfg = {
+  apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
+  authDomain: "baqubah-delivery-e729e.firebaseapp.com",
+  databaseURL: "https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",
+  projectId: "baqubah-delivery-e729e",
+  storageBucket: "baqubah-delivery-e729e.firebasestorage.app",
+  messagingSenderId: "450084520701",
+  appId: "1:450084520701:web:719e2040338540ce36f494"
+};
+const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n||0).toLocaleString("en-US");
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
+let availOrders={}, activeOrders={}, finance={}, startTime=Date.now();
+
+// Audio
+const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
+const beep=()=>{try{const ctx=new(window.AudioContext||window.webkitAudioContext)();const o=ctx.createOscillator();o.connect(ctx.destination);o.frequency.value=880;o.start();o.stop(ctx.currentTime+0.4);}catch{}}
+
+function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
+
+// Login
+$("btnLogin").onclick=async()=>{
+ $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
+ try{
+  await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value);
+ }catch(e){
+  $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة.";
+ }finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
+};
+
+$("btnOut").onclick=()=>{
+ if(Object.keys(activeOrders).length>0){ return say("لا يمكنك الخروج ولديك طلبات نشطة!", 1); }
+ signOut(auth);
+};
+
+onAuthStateChanged(auth, async u=>{
+ if(!u){$("login").hidden=false;$("app").hidden=true;return;}
+ const snap=await get(ref(db,"users/"+u.uid));
+ if(!snap.exists()||snap.val().role!=="driver"||snap.val().isActive===false){
+  await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
+ }
+ uid=u.uid;driver=snap.val();
+ $("drvName").textContent=driver.name;
+ $("login").hidden=true;$("app").hidden=false;
+ start();
+});
+
+// GPS Watcher
+function startGPS(){
+ if(!navigator.geolocation)return say("المتصفح لا يدعم تحديد الموقع", 1);
+ navigator.geolocation.watchPosition(p=>{
+  pos.lat = p.coords.latitude;
+  pos.lng = p.coords.longitude;
+ }, e=>console.log("GPS Error", e), {enableHighAccuracy:true});
+}
+
+function start(){
+ startGPS();
+ // Settings
+ onValue(ref(db,"settings"),s=>{
+  settings=s.val()||{};
+  if(settings.announcement){$("annBox").textContent=settings.announcement;$("annBox").hidden=false;}
+  else $("annBox").hidden=true;
+ });
+
+ // Presence
+ const pr=ref(db,"presence/"+uid);
+ onValue(ref(db,".info/connected"),s=>{
+  if(s.val()===true){
+   onDisconnect(pr).set({online:false,lastSeen:serverTimestamp()});
+   if(isOnline) set(pr,{online:true,lastSeen:serverTimestamp()});
+  }
+ });
+
+ // Finance
+ onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{
+  finance=s.val()||{};drawStats();
+ });
+
+ // Available Orders
+ onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{
+  availOrders=s.val()||{};drawOrders();
+ });
+
+ // Active Orders
+ onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
+  const all=s.val()||{};
+  activeOrders={};
+  for(const k in all){
+   if(!["delivered","cancelled"].includes(all[k].status)) activeOrders[k]=all[k];
+  }
+  drawOrders();drawStats();
+ });
+}
+
+function drawStats(){
+ const delivered = Object.values(ordersAll()).filter(o=>o.driverId===uid && o.status==="delivered");
+ const debt = delivered.reduce((s,o)=>s+(o.platformDeliveryCommission||0)+(o.storeCommission||0),0) 
+  - Object.values(finance).filter(f=>f.type==="cash_received").reduce((s,f)=>s+f.amount,0);
+ 
+ $("statDebt").textContent=fmt(debt)+" د.ع";
+ $("warnBox").hidden = debt < (settings.debtLimit||15000);
+ 
+ const today=new Date().setHours(0,0,0,0);
+ const profit=delivered.filter(o=>o.deliveredAt>=today).reduce((s,o)=>s+(o.driverProfit||0),0);
+ $("statProfit").textContent=fmt(profit)+" د.ع";
+}
+const ordersAll=()=>Object.assign({},availOrders,activeOrders); // merge
+
+function toggleStatus(){
+ if(!isOnline && Object.keys(activeOrders).length>0) return say("لا يمكنك الإغلاق ولديك طلبات نشطة", 1);
+ isOnline=!isOnline;
+ const pr=ref(db,"presence/"+uid);
+ set(pr,{online:isOnline,lastSeen:serverTimestamp()});
+ 
+ const btn=$("btnStatus");
+ if(isOnline){
+  btn.className="status-btn on";
+  $("statusTxt").textContent="متصل (متاح للطلبات)";
+  startGPS();
+ }else{
+  btn.className="status-btn off";
+  $("statusTxt").textContent="غير متصل (مغلق)";
+ }
+ drawOrders();
+}
+
+// Distance
+function getDist(lat1, lon1, lat2, lon2){
+ if(!lat1||!lat2)return 0;
+ const R=6371e3, p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
+ const dp=(lat2-lat1)*Math.PI/180, dl=(lon2-lon1)*Math.PI/180;
+ const a=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
+ return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function drawOrders(){
+ // Available
+ const av=Object.entries(availOrders).filter(([id,o])=>{
+   if(o.driverId) return false; // taken
+   // 2-minute delay if busy
+   if(Object.keys(activeOrders).length>0){
+      return (Date.now()-o.createdAt) > 120000;
+   }
+   return true;
+ });
+ 
+ $("availContainer").hidden = !av.length || !isOnline;
+ $("availList").innerHTML = av.map(([id,o])=>`
+  <div class="card new">
+   <div class="row"><b>#${esc(id.slice(-6))}</b></div>
+   <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
+   <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
+   <p style="margin:6px 0;font-size:14px"><b>الكروة:</b> ${fmt(o.deliveryFee)} د.ع</p>
+   <button style="width:100%;margin-top:10px" onclick="acceptOrder('${id}')">قبول الطلب</button>
+  </div>
+ `).join("");
+
+ // Active
+ const ac=Object.entries(activeOrders);
+ $("activeContainer").hidden = !ac.length;
+ $("activeList").innerHTML = ac.map(([id,o])=>{
+  let actionBtn="";
+  let warn="";
+  const now=Date.now();
+  
+  if(o.status==="accepted"){
+   if(o.storeLat && pos.lat){
+     const d=getDist(pos.lat, pos.lng, o.storeLat, o.storeLng);
+     if(d>300) warn=`<p style="color:var(--bad);font-size:12px;margin:4px 0">أنت بعيد عن المتجر (${Math.round(d)}م)</p>`;
+   }
+   actionBtn=`<button class="grn" style="width:100%;margin-top:10px" onclick="updateStep('${id}','arrived_store')">وصلت للمتجر</button>`;
+  } 
+  else if(o.status==="arrived_store"){
+   const canPick = (now - (o.stepAt||0)) > 60000; // 1 min
+   actionBtn=`<button class="grn" style="width:100%;margin-top:10px" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">${canPick?'تم استلام الطلب':'انتظر...'}</button>`;
+  }
+  else if(["picked_up","delivering"].includes(o.status)){
+   const canDel = (now - (o.stepAt||0)) > 300000; // 5 mins
+   actionBtn=`<button class="grn" style="width:100%;margin-top:10px" ${canDel?'':'disabled'} onclick="updateStep('${id}','delivered')">${canDel?'تم التوصيل للزبون':'انتظر...'}</button>`;
+  }
+
+  return `
+  <div class="card">
+   <div class="row"><b>#${esc(id.slice(-6))}</b> <span style="color:var(--pri)">${o.status}</span></div>
+   <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
+   <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
+   <p style="margin:6px 0;font-size:14px"><b>المجموع للزبون:</b> ${fmt(o.customerTotal)}</p>
+   ${warn}
+   ${actionBtn}
+  </div>
+  `;
+ }).join("");
+}
+
+window.acceptOrder=async(id)=>{
+ if(!isOnline) return say("يجب أن تكون متصلاً لتقبل الطلب", 1);
+ try{
+  await update(ref(db,"orders/"+id),{
+    driverId:uid, driverName:driver.name, driverPhone:driver.phone||"",
+    status:"accepted", stepAt:serverTimestamp(), acceptedAt:Date.now()
+  });
+  say("تم قبول الطلب بنجاح");
+  speak("تم قبول الطلب");
+ }catch(e){say("تم أخذه من سائق آخر", 1);}
+};
+
+window.updateStep=async(id,newStatus)=>{
+ const o=activeOrders[id];
+ if(!o)return;
+ 
+ if(newStatus==="arrived_store"){
+   if(o.storeLat && pos.lat){
+    const d=getDist(pos.lat,pos.lng,o.storeLat,o.storeLng);
+    if(d>300) return say(`يجب أن تكون قريباً من المتجر (المسافة الحالية ${Math.round(d)}م)`, 1);
+   }
+ }
+ 
+ try{
+  const patch={status:newStatus, stepAt:serverTimestamp()};
+  if(newStatus==="delivered"){
+    const profit=Math.round(o.deliveryFee*0.9);
+    patch.deliveredAt=Date.now();
+    patch.driverProfit=profit;
+    patch.platformDeliveryCommission=o.deliveryFee-profit;
+  }
+  await update(ref(db,"orders/"+id),patch);
+  if(newStatus==="delivered") speak("تم التوصيل بنجاح");
+  else speak("تم تحديث الحالة");
+ }catch(e){say("فشل التحديث",1);}
+};
+
+// Timers loop
+setInterval(drawOrders, 1000);
+
+window.__ready=true;
+</script>
+</body>
+</html>
