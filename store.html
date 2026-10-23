@@ -19,7 +19,7 @@ header h2{margin:0;font-size:18px}
 .dot{width:8px;height:8px;border-radius:50%;background:#22c55e}.dot.off{background:#94a3b8}
 main{max-width:600px;margin:auto;padding:16px}
 .box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
-.card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;background:#fff}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .steps{display:flex;margin:16px 0 8px}
 .st{flex:1;text-align:center;font-size:11px;color:#64748b}
@@ -35,9 +35,6 @@ main{max-width:600px;margin:auto;padding:16px}
 #msg{padding:12px;border-radius:8px;display:none;margin-bottom:12px;font-weight:600;text-align:center}
 #err{color:var(--bad);font-size:13px;text-align:center;font-weight:600}
 [hidden]{display:none!important}
-#modal{position:fixed;inset:0;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
-.dlg{background:#fff;border-radius:16px;padding:24px;max-width:400px;width:100%}
-.dlg h3{margin-top:0}
 </style>
 </head>
 <body>
@@ -90,21 +87,10 @@ main{max-width:600px;margin:auto;padding:16px}
 </main>
 </div>
 
-<div id="modal" hidden>
-<div class="dlg">
-<h3 id="mdlTitle">تنبيه</h3>
-<p id="mdlText" style="line-height:1.7"></p>
-<div class="row" style="margin-top:20px">
-<button id="mdlOk" class="grn">موافق</button>
-<button id="mdlCancel" class="bad">إلغاء الطلب</button>
-</div>
-</div>
-</div>
-
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,remove} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -119,20 +105,18 @@ const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const ST={pending:"بانتظار سائق",accepted:"السائق بالطريق",arrived_store:"السائق وصل",picked_up:"تم الاستلام",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
+
+const ST={pending:"بانتظار سائق",waiting_store:"سائق ينتظر موافقتك",accepted:"السائق بالطريق",arrived_store:"السائق وصل",picked_up:"تم الاستلام",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
 
 let uid=null,store=null,areas={},orders={},priv={},settings={},driversOnline=0;
 const stops=[];
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
-// Login
 $("btnLogin").onclick=async()=>{
  $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
- try{
-  await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value);
- }catch(e){
-  $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة.";
- }finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
+ try{ await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value); }
+ catch(e){ $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة."; }
+ finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
 };
 
 onAuthStateChanged(auth, async u=>{
@@ -147,34 +131,22 @@ onAuthStateChanged(auth, async u=>{
  start();
 });
 
-// Init Data
 function start(){
  stops.forEach(s=>s());stops.length=0;
- // Settings & Announcements
  stops.push(onValue(ref(db,"settings"),s=>{
   settings=s.val()||{};
   if(settings.announcement){$("announcement").textContent=settings.announcement;$("announcement").hidden=false;}
   else $("announcement").hidden=true;
  }));
- // Online Drivers
  stops.push(onValue(ref(db,"presence"),s=>{
   const p=s.val()||{};
   driversOnline=Object.values(p).filter(x=>x&&x.online===true).length;
   $("onCount").textContent=driversOnline;
   $("pulse").className="dot "+(driversOnline>0?"":"off");
  }));
- // Areas
- stops.push(onValue(ref(db,"areas"),s=>{
-  areas=s.val()||{}; drawAreas();
- }));
- // Orders
- stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{
-  orders=s.val()||{}; drawOrders();
- }));
- // Private data for customer info
- stops.push(onValue(query(ref(db,"orderPrivate"),orderByChild("storeId"),equalTo(uid)),s=>{
-  priv=s.val()||{}; drawOrders();
- }));
+ stops.push(onValue(ref(db,"areas"),s=>{ areas=s.val()||{}; drawAreas(); }));
+ stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{ orders=s.val()||{}; drawOrders(); }));
+ stops.push(onValue(query(ref(db,"orderPrivate"),orderByChild("storeId"),equalTo(uid)),s=>{ priv=s.val()||{}; drawOrders(); }));
 }
 
 function drawAreas(){
@@ -183,8 +155,7 @@ function drawAreas(){
  if(areas[keep])$("area").value=keep;
  calcTotal();
 }
-$("area").onchange=calcTotal;
-$("price").oninput=calcTotal;
+$("area").onchange=calcTotal;$("price").oninput=calcTotal;
 function calcTotal(){
  const a=areas[$("area").value], p=Number($("price").value)||0;
  const fee=a?Number(a.fee)||0:0;
@@ -192,7 +163,6 @@ function calcTotal(){
  $("totalTxt").textContent=fmt(p+fee)+" د.ع";
 }
 
-// Create Order
 $("btnCreate").onclick=async()=>{
  const aId=$("area").value, a=areas[aId], p=Number($("price").value);
  const ph=$("phone").value.trim(), cn=$("cname").value.trim(), nt=$("note").value.trim();
@@ -205,17 +175,15 @@ $("btnCreate").onclick=async()=>{
   const key=push(ref(db,"orders")).key;
   await update(ref(db),{
    ["orders/"+key]:{
-    storeId:uid, storeName:store.name, areaId:aId, area:a.name,
+    storeId:uid, storeName:store.name, storePhone:store.phone||"", // <-- إضافة رقم المتجر هنا
+    areaId:aId, area:a.name,
     itemPrice:p, deliveryFee:a.fee, customerTotal:p+a.fee,
     storeCommission:Number(settings.storeCommission||500),
     amountToReceive:p-Number(settings.storeCommission||500),
     storeMapUrl:store.mapUrl||"",
     status:"pending", createdAt:Date.now()
    },
-   ["orderPrivate/"+key]:{
-    storeId:uid, customerPhone:ph,
-    ...(cn?{customerName:cn}:{}), ...(nt?{note:nt}:{})
-   }
+   ["orderPrivate/"+key]:{ storeId:uid, customerPhone:ph, ...(cn?{customerName:cn}:{}), ...(nt?{note:nt}:{}) }
   });
   $("price").value="";$("phone").value="";$("cname").value="";$("note").value="";
   calcTotal(); say("تم إرسال الطلب بنجاح");
@@ -223,20 +191,10 @@ $("btnCreate").onclick=async()=>{
  $("btnCreate").disabled=false;
 };
 
-// Draw Orders
-let lastStatuses={};
 function drawOrders(){
  const os=Object.entries(orders).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
  const active=os.filter(([,o])=>!["delivered","cancelled"].includes(o.status));
  const history=os.filter(([,o])=>["delivered","cancelled"].includes(o.status));
-
- // Check for new accepted orders to show modal
- active.forEach(([id,o])=>{
-  if(lastStatuses[id]==="pending" && o.status==="accepted"){
-    showModal(id,o);
-  }
-  lastStatuses[id]=o.status;
- });
 
  $("activeOrders").innerHTML=active.length?active.map(([id,o])=>card(id,o,false)).join(""):"<p style='color:#64748b'>لا توجد طلبات نشطة.</p>";
  $("historyOrders").innerHTML=history.length?history.map(([id,o])=>card(id,o,true)).join(""):"<p style='color:#64748b'>لا يوجد سجل.</p>";
@@ -246,7 +204,7 @@ function card(id,o,isHistory){
  const q=priv[id]||{};
  let stepper="";
  if(!isHistory){
-  const st={pending:0,accepted:1,arrived_store:2,picked_up:3,delivering:3,delivered:4};
+  const st={pending:0,waiting_store:0,accepted:1,arrived_store:2,picked_up:3,delivering:3,delivered:4};
   const lvl=st[o.status]||0;
   stepper=`<div class="steps">
    <div class="st ${lvl>=1?'done':''}"><i>${lvl>1?'✓':'1'}</i> قبول</div>
@@ -260,10 +218,21 @@ function card(id,o,isHistory){
  if(["accepted","arrived_store","picked_up","delivering"].includes(o.status))badgeCls="acc";
  if(o.status==="delivered")badgeCls="done";
  if(o.status==="cancelled")badgeCls="canc";
+ if(o.status==="waiting_store")badgeCls="pending";
 
- const driverHtml = o.driverName ? `<div style="background:#f1f5ff;padding:10px;border-radius:8px;margin:10px 0;font-size:14px">
+ let driverHtml = o.driverName ? `<div style="background:#f1f5ff;padding:10px;border-radius:8px;margin:10px 0;font-size:14px">
   <b>السائق:</b> ${esc(o.driverName)} ${o.driverPhone?`| <a href="tel:${esc(o.driverPhone)}" style="color:var(--pri);font-weight:700">اتصال</a>`:""}
  </div>` : "";
+
+ let actionHtml = "";
+ if(o.status === "waiting_store"){
+   actionHtml = `<div style="display:flex; gap:8px; margin-top:10px">
+    <button class="grn" style="flex:2; background:var(--ok)" onclick="acceptDriver('${id}')">قبول السائق</button>
+    <button class="bad" style="flex:1; background:var(--bad)" onclick="cancelOrder('${id}')">رفض</button>
+   </div>`;
+ } else if(o.status==="pending" || o.status==="accepted") {
+   actionHtml = `<button type="button" class="bad" style="width:100%;margin-top:8px; background:var(--bad)" onclick="cancelOrder('${id}')">إلغاء الطلب</button>`;
+ }
 
  return `<div class="card">
   <div class="row"><b>#${esc(id.slice(-6))}</b><span class="badge ${badgeCls}">${ST[o.status]}</span></div>
@@ -271,9 +240,16 @@ function card(id,o,isHistory){
   ${driverHtml}
   <p style="font-size:14px;margin:8px 0"><b>المنطقة:</b> ${esc(o.area)} | <b>الزبون:</b> ${esc(q.customerPhone||"—")}</p>
   <p style="font-size:14px;margin:8px 0"><b>المجموع:</b> ${fmt(o.customerTotal)} د.ع</p>
-  ${(o.status==="pending"||o.status==="accepted")?`<button type="button" class="bad" style="width:100%;margin-top:8px" onclick="cancelOrder('${id}')">إلغاء الطلب</button>`:""}
+  ${actionHtml}
  </div>`;
 }
+
+window.acceptDriver = async(id) => {
+ try{
+  await update(ref(db,"orders/"+id),{status:"accepted"});
+  say("تم قبول السائق، وهو بالطريق إليك.");
+ }catch(e){ say("فشل القبول", 1); }
+};
 
 window.cancelOrder=async(id)=>{
  if(!confirm("هل تريد إلغاء هذا الطلب؟"))return;
@@ -282,22 +258,6 @@ window.cancelOrder=async(id)=>{
 };
 
 $("btnHistory").onclick=()=>{$("historyOrders").hidden=!$("historyOrders").hidden;};
-
-// Modal for Driver Arrival
-let currentModalId=null;
-function showModal(id,o){
- currentModalId=id;
- $("mdlText").innerHTML=`السائق <b>${esc(o.driverName)}</b> قبل طلبك وهو بالطريق إلى المتجر.`;
- $("modal").hidden=false;
- // Play beep
- try{const ctx=new AudioContext();const osc=ctx.createOscillator();osc.type="sine";osc.frequency.value=880;osc.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+0.5);}catch{}
-}
-$("mdlOk").onclick=()=>{$("modal").hidden=true;currentModalId=null;};
-$("mdlCancel").onclick=()=>{
- if(currentModalId){cancelOrder(currentModalId);$("modal").hidden=true;currentModalId=null;}
-};
-
-window.__ready=true;
 </script>
 </body>
 </html>
