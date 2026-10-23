@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Baqubah Delivery | المتجر</title>
+<style>
+:root{--bg:#f2f5f9;--ink:#172235;--pri:#1769aa;--ok:#218838;--bad:#dc3545;--warn:#bd7200;--line:#e0e6ef}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Tahoma,Arial;background:var(--bg);color:var(--ink);padding-bottom:50px}
+button,input,select,textarea{font:inherit}
+button{border:0;border-radius:8px;padding:10px 14px;background:var(--pri);color:#fff;cursor:pointer;font-weight:600;transition:.15s}
+button:hover{filter:brightness(1.1)}
+button:disabled{opacity:.5}
+input,select,textarea{width:100%;padding:12px;border:1px solid #ccd5e2;border-radius:10px;background:#fff;margin:6px 0 14px;outline:none}
+header{background:#14263d;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
+header h2{margin:0;font-size:18px}
+.pill{background:rgba(255,255,255,.1);padding:6px 12px;border-radius:20px;font-size:13px;display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:#22c55e}.dot.off{background:#94a3b8}
+main{max-width:600px;margin:auto;padding:16px}
+.box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
+.card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.steps{display:flex;margin:16px 0 8px}
+.st{flex:1;text-align:center;font-size:11px;color:#64748b}
+.st i{display:block;width:24px;height:24px;border-radius:50%;background:#e2e8f0;margin:0 auto 6px;line-height:24px;font-style:normal;font-weight:700;color:#64748b}
+.st.on i{background:var(--pri);color:#fff;box-shadow:0 0 0 4px #1769aa22}
+.st.done i{background:var(--ok);color:#fff}
+.badge{padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700}
+.badge.pending{background:#fef3c7;color:#b45309}
+.badge.acc{background:#e0f2fe;color:#0369a1}
+.badge.done{background:#dcfce7;color:#15803d}
+.badge.canc{background:#fee2e2;color:#b91c1c}
+#login{max-width:380px;margin:60px auto}
+#msg{padding:12px;border-radius:8px;display:none;margin-bottom:12px;font-weight:600;text-align:center}
+#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600}
+[hidden]{display:none!important}
+#modal{position:fixed;inset:0;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.dlg{background:#fff;border-radius:16px;padding:24px;max-width:400px;width:100%}
+.dlg h3{margin-top:0}
+</style>
+</head>
+<body>
+
+<section id="login" class="box">
+<h2 style="text-align:center;margin-top:0">دخول المتجر</h2>
+<form id="lf" onsubmit="return false;">
+<label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
+<label>كلمة المرور</label><input id="pw" type="password" required>
+<button type="button" id="btnLogin" style="width:100%;margin-top:10px">دخول</button>
+</form>
+<p id="err"></p>
+</section>
+
+<div id="app" hidden>
+<header>
+<h2 id="sname">المتجر</h2>
+<div class="pill"><i class="dot" id="pulse"></i><span id="onCount">0</span> متصل</div>
+</header>
+<main>
+<div id="msg"></div>
+<div id="announcement" class="box" style="background:#fff7e0;color:#8a5a00;border:1px solid #fde68a" hidden></div>
+
+<div class="box" id="createBox">
+<h3 style="margin-top:0">طلب جديد</h3>
+<label>المنطقة</label>
+<select id="area"><option value="">اختر المنطقة...</option></select>
+<label>سعر الطلب (دينار)</label>
+<input id="price" type="number" min="500" step="250" placeholder="مثال: 10000">
+<label>رقم هاتف الزبون</label>
+<input id="phone" type="tel" placeholder="07XXXXXXXXX" maxlength="11">
+<label>اسم الزبون (اختياري)</label>
+<input id="cname" placeholder="مثال: أبو محمد">
+<label>ملاحظة/عنوان (اختياري)</label>
+<input id="note" placeholder="مثال: قرب الجامع">
+<div style="background:#f8fafc;padding:12px;border-radius:8px;margin-bottom:14px;font-size:14px">
+<div class="row"><span>أجرة التوصيل:</span> <b id="feeTxt">0</b></div>
+<div class="row"><span>المجموع للزبون:</span> <b id="totalTxt" style="color:var(--pri)">0</b></div>
+</div>
+<button id="btnCreate" style="width:100%;font-size:16px;padding:14px">إرسال الطلب</button>
+</div>
+
+<h3>الطلبات النشطة</h3>
+<div id="activeOrders"></div>
+
+<h3 style="margin-top:24px">سجل الطلبات</h3>
+<button type="button" id="btnHistory" class="gray" style="width:100%;margin-bottom:10px;background:#e2e8f0;color:#0f172a">عرض/إخفاء السجل</button>
+<div id="historyOrders" hidden></div>
+
+</main>
+</div>
+
+<div id="modal" hidden>
+<div class="dlg">
+<h3 id="mdlTitle">تنبيه</h3>
+<p id="mdlText" style="line-height:1.7"></p>
+<div class="row" style="margin-top:20px">
+<button id="mdlOk" class="grn">موافق</button>
+<button id="mdlCancel" class="bad">إلغاء الطلب</button>
+</div>
+</div>
+</div>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,remove} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+
+const cfg = {
+  apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
+  authDomain: "baqubah-delivery-e729e.firebaseapp.com",
+  databaseURL: "https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",
+  projectId: "baqubah-delivery-e729e",
+  storageBucket: "baqubah-delivery-e729e.firebasestorage.app",
+  messagingSenderId: "450084520701",
+  appId: "1:450084520701:web:719e2040338540ce36f494"
+};
+const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n||0).toLocaleString("en-US");
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ST={pending:"بانتظار سائق",accepted:"السائق بالطريق",arrived_store:"السائق وصل",picked_up:"تم الاستلام",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
+
+let uid=null,store=null,areas={},orders={},priv={},settings={},driversOnline=0;
+const stops=[];
+function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
+
+// Login
+$("btnLogin").onclick=async()=>{
+ $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
+ try{
+  await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value);
+ }catch(e){
+  $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة.";
+ }finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
+};
+
+onAuthStateChanged(auth, async u=>{
+ if(!u){$("login").hidden=false;$("app").hidden=true;return;}
+ const snap=await get(ref(db,"users/"+u.uid));
+ if(!snap.exists()||snap.val().role!=="store"||snap.val().isActive===false){
+  await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
+ }
+ uid=u.uid;store=snap.val();
+ $("sname").textContent=store.name;
+ $("login").hidden=true;$("app").hidden=false;
+ start();
+});
+
+// Init Data
+function start(){
+ stops.forEach(s=>s());stops.length=0;
+ // Settings & Announcements
+ stops.push(onValue(ref(db,"settings"),s=>{
+  settings=s.val()||{};
+  if(settings.announcement){$("announcement").textContent=settings.announcement;$("announcement").hidden=false;}
+  else $("announcement").hidden=true;
+ }));
+ // Online Drivers
+ stops.push(onValue(ref(db,"presence"),s=>{
+  const p=s.val()||{};
+  driversOnline=Object.values(p).filter(x=>x&&x.online===true).length;
+  $("onCount").textContent=driversOnline;
+  $("pulse").className="dot "+(driversOnline>0?"":"off");
+ }));
+ // Areas
+ stops.push(onValue(ref(db,"areas"),s=>{
+  areas=s.val()||{}; drawAreas();
+ }));
+ // Orders
+ stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{
+  orders=s.val()||{}; drawOrders();
+ }));
+ // Private data for customer info
+ stops.push(onValue(query(ref(db,"orderPrivate"),orderByChild("storeId"),equalTo(uid)),s=>{
+  priv=s.val()||{}; drawOrders();
+ }));
+}
+
+function drawAreas(){
+ const keep=$("area").value;
+ $("area").innerHTML='<option value="">اختر المنطقة...</option>'+Object.entries(areas).filter(([,a])=>a.isActive!==false).map(([id,a])=>`<option value="${esc(id)}">${esc(a.name)} (${fmt(a.fee)} د.ع)</option>`).join("");
+ if(areas[keep])$("area").value=keep;
+ calcTotal();
+}
+$("area").onchange=calcTotal;
+$("price").oninput=calcTotal;
+function calcTotal(){
+ const a=areas[$("area").value], p=Number($("price").value)||0;
+ const fee=a?Number(a.fee)||0:0;
+ $("feeTxt").textContent=fmt(fee)+" د.ع";
+ $("totalTxt").textContent=fmt(p+fee)+" د.ع";
+}
+
+// Create Order
+$("btnCreate").onclick=async()=>{
+ const aId=$("area").value, a=areas[aId], p=Number($("price").value);
+ const ph=$("phone").value.trim(), cn=$("cname").value.trim(), nt=$("note").value.trim();
+ if(!a)return say("اختر المنطقة",1);
+ if(!p||p<500)return say("أدخل سعراً صحيحاً",1);
+ if(!/^07[0-9]{9}$/.test(ph))return say("رقم الزبون يجب أن يبدأ بـ 07 ويكون 11 رقماً",1);
+
+ $("btnCreate").disabled=true;
+ try{
+  const key=push(ref(db,"orders")).key;
+  await update(ref(db),{
+   ["orders/"+key]:{
+    storeId:uid, storeName:store.name, areaId:aId, area:a.name,
+    itemPrice:p, deliveryFee:a.fee, customerTotal:p+a.fee,
+    storeCommission:Number(settings.storeCommission||500),
+    amountToReceive:p-Number(settings.storeCommission||500),
+    storeMapUrl:store.mapUrl||"",
+    status:"pending", createdAt:Date.now()
+   },
+   ["orderPrivate/"+key]:{
+    storeId:uid, customerPhone:ph,
+    ...(cn?{customerName:cn}:{}), ...(nt?{note:nt}:{})
+   }
+  });
+  $("price").value="";$("phone").value="";$("cname").value="";$("note").value="";
+  calcTotal(); say("تم إرسال الطلب بنجاح");
+ }catch(e){say("فشل الإرسال: "+e.message,1);}
+ $("btnCreate").disabled=false;
+};
+
+// Draw Orders
+let lastStatuses={};
+function drawOrders(){
+ const os=Object.entries(orders).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
+ const active=os.filter(([,o])=>!["delivered","cancelled"].includes(o.status));
+ const history=os.filter(([,o])=>["delivered","cancelled"].includes(o.status));
+
+ // Check for new accepted orders to show modal
+ active.forEach(([id,o])=>{
+  if(lastStatuses[id]==="pending" && o.status==="accepted"){
+    showModal(id,o);
+  }
+  lastStatuses[id]=o.status;
+ });
+
+ $("activeOrders").innerHTML=active.length?active.map(([id,o])=>card(id,o,false)).join(""):"<p style='color:#64748b'>لا توجد طلبات نشطة.</p>";
+ $("historyOrders").innerHTML=history.length?history.map(([id,o])=>card(id,o,true)).join(""):"<p style='color:#64748b'>لا يوجد سجل.</p>";
+}
+
+function card(id,o,isHistory){
+ const q=priv[id]||{};
+ let stepper="";
+ if(!isHistory){
+  const st={pending:0,accepted:1,arrived_store:2,picked_up:3,delivering:3,delivered:4};
+  const lvl=st[o.status]||0;
+  stepper=`<div class="steps">
+   <div class="st ${lvl>=1?'done':''}"><i>${lvl>1?'✓':'1'}</i> قبول</div>
+   <div class="st ${lvl>=2?'done':''}"><i>${lvl>2?'✓':'2'}</i> وصول</div>
+   <div class="st ${lvl>=3?'done':''}"><i>${lvl>3?'✓':'3'}</i> استلام</div>
+   <div class="st ${lvl>=4?'done':''}"><i>${lvl>=4?'✓':'4'}</i> تسليم</div>
+  </div>`;
+ }
+ 
+ let badgeCls="pending";
+ if(["accepted","arrived_store","picked_up","delivering"].includes(o.status))badgeCls="acc";
+ if(o.status==="delivered")badgeCls="done";
+ if(o.status==="cancelled")badgeCls="canc";
+
+ const driverHtml = o.driverName ? `<div style="background:#f1f5ff;padding:10px;border-radius:8px;margin:10px 0;font-size:14px">
+  <b>السائق:</b> ${esc(o.driverName)} ${o.driverPhone?`| <a href="tel:${esc(o.driverPhone)}" style="color:var(--pri);font-weight:700">اتصال</a>`:""}
+ </div>` : "";
+
+ return `<div class="card">
+  <div class="row"><b>#${esc(id.slice(-6))}</b><span class="badge ${badgeCls}">${ST[o.status]}</span></div>
+  ${stepper}
+  ${driverHtml}
+  <p style="font-size:14px;margin:8px 0"><b>المنطقة:</b> ${esc(o.area)} | <b>الزبون:</b> ${esc(q.customerPhone||"—")}</p>
+  <p style="font-size:14px;margin:8px 0"><b>المجموع:</b> ${fmt(o.customerTotal)} د.ع</p>
+  ${(o.status==="pending"||o.status==="accepted")?`<button type="button" class="bad" style="width:100%;margin-top:8px" onclick="cancelOrder('${id}')">إلغاء الطلب</button>`:""}
+ </div>`;
+}
+
+window.cancelOrder=async(id)=>{
+ if(!confirm("هل تريد إلغاء هذا الطلب؟"))return;
+ try{await update(ref(db,"orders/"+id),{status:"cancelled"});say("تم الإلغاء.");}
+ catch(e){say("فشل الإلغاء: "+e.message,1);}
+};
+
+$("btnHistory").onclick=()=>{$("historyOrders").hidden=!$("historyOrders").hidden;};
+
+// Modal for Driver Arrival
+let currentModalId=null;
+function showModal(id,o){
+ currentModalId=id;
+ $("mdlText").innerHTML=`السائق <b>${esc(o.driverName)}</b> قبل طلبك وهو بالطريق إلى المتجر.`;
+ $("modal").hidden=false;
+ // Play beep
+ try{const ctx=new AudioContext();const osc=ctx.createOscillator();osc.type="sine";osc.frequency.value=880;osc.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+0.5);}catch{}
+}
+$("mdlOk").onclick=()=>{$("modal").hidden=true;currentModalId=null;};
+$("mdlCancel").onclick=()=>{
+ if(currentModalId){cancelOrder(currentModalId);$("modal").hidden=true;currentModalId=null;}
+};
+
+window.__ready=true;
+</script>
+</body>
+</html>
