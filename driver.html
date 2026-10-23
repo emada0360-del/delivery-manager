@@ -39,6 +39,7 @@ main{max-width:600px;margin:auto;padding:16px}
 .fin-box { background:#f8fafc; border-radius:8px; padding:10px; margin:10px 0; font-size:13px; border:1px solid #e2e8f0; }
 .fin-row { display:flex; justify-content:space-between; margin-bottom:6px; }
 .fin-row:last-child { margin-bottom:0; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px; font-weight:bold;}
+.debt-box { background:#fff1f2; border-radius:8px; padding:10px; margin:10px 0; font-size:13px; border:1px solid #fecdd3; }
 .customer-box { background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin:10px 0; text-align:center; }
 .customer-box b { font-size:14px; color:#1e3a8a; display:block; margin-bottom:8px; }
 .btn-group { display:flex; gap:8px; }
@@ -117,7 +118,6 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
 let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
 
-// المتغيرات المالية لحماية السائق
 let currentDebt = 0;
 let debtLimit = 15000;
 
@@ -164,7 +164,7 @@ function start(){
   debtLimit = Number(settings.debtLimit || 15000);
   if(settings.announcement){$("annBox").textContent=settings.announcement;$("annBox").hidden=false;}
   else $("annBox").hidden=true;
-  drawStats(); // تحديث الحسابات عند تغيير الإعدادات
+  drawStats();
  });
 
  const pr=ref(db,"presence/"+uid);
@@ -234,7 +234,6 @@ function drawStats() {
     for (const id in allMyOrders) {
         const o = allMyOrders[id];
         if (o.status === "delivered") {
-            // التقريب لتجنب الكسور العشرية
             debt += Math.round(Number(o.platformDeliveryCommission) || 0) + Math.round(Number(o.storeCommission) || 0);
             if (o.deliveredAt >= todayStart) {
                 todayProfit += Math.round(Number(o.driverProfit) || 0);
@@ -256,8 +255,6 @@ function drawStats() {
     $("statProfit").textContent = fmt(todayProfit) + " د.ع";
 
     $("warnBox").hidden = debt < debtLimit;
-    
-    // تحديث حالة الزر إذا كان مديناً
     updateStatusUI();
 }
 
@@ -301,8 +298,12 @@ function updateStatusUI(){
  }
 }
 
+// دالة بناء صندوق الحسابات المالية وتفصيل الدين
 function buildFinBox(o) {
     const storeCom = Number(settings.storeCommission || 500);
+    const platformCom = Math.round(o.deliveryFee * 0.1);
+    const totalDebtAdded = storeCom + platformCom;
+    
     const payStore = Math.round(o.itemPrice - storeCom);
     const collectCustomer = Math.round(o.customerTotal);
     const profit = Math.round(o.deliveryFee * 0.9);
@@ -312,6 +313,11 @@ function buildFinBox(o) {
         <div class="fin-row" style="color:#dc3545"><span>تدفع للمتجر:</span> <b>${fmt(payStore)} د.ع</b></div>
         <div class="fin-row" style="color:#1769aa"><span>تستلم من الزبون:</span> <b>${fmt(collectCustomer)} د.ع</b></div>
         <div class="fin-row" style="color:#218838"><span>ربحك الصافي (الكروة):</span> <b>${fmt(profit)} د.ع</b></div>
+    </div>
+    <div class="debt-box">
+        <div class="fin-row" style="color:#b42318; margin-bottom:2px"><span>عمولة المنصة (10%):</span> <b>${fmt(platformCom)} د.ع</b></div>
+        <div class="fin-row" style="color:#b42318; margin-bottom:2px"><span>عمولة المتجر (ثابتة):</span> <b>${fmt(storeCom)} د.ع</b></div>
+        <div class="fin-row" style="color:#b42318; border-top:1px solid #fecdd3; padding-top:4px; margin-top:4px"><span>سيضاف لدينك:</span> <b>${fmt(totalDebtAdded)} د.ع</b></div>
     </div>`;
 }
 
@@ -321,7 +327,6 @@ function buildMapBtn(url) {
 }
 
 function drawOrders(){
- // Available Orders
  if(!isOnline || currentDebt >= debtLimit){
   $("availContainer").hidden = true;
  } else {
@@ -350,7 +355,6 @@ function drawOrders(){
   `).join("");
  }
 
- // Active Orders
  const ac=Object.entries(activeOrders);
  $("activeContainer").hidden = !ac.length;
  $("activeList").innerHTML = ac.map(([id,o])=>{
