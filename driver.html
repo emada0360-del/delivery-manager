@@ -12,7 +12,6 @@ button,input,select{font:inherit}
 button{border:0;border-radius:8px;padding:12px 16px;background:var(--pri);color:#fff;cursor:pointer;font-weight:700;transition:.15s}
 button:hover{filter:brightness(1.1)}
 button:disabled{opacity:.5;cursor:not-allowed}
-input,select{width:100%;padding:12px;border:1px solid #ccd5e2;border-radius:10px;background:#fff;margin:6px 0 14px;outline:none}
 header{background:#14263d;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
 header h2{margin:0;font-size:18px}
 main{max-width:600px;margin:auto;padding:16px}
@@ -36,6 +35,15 @@ main{max-width:600px;margin:auto;padding:16px}
 [hidden]{display:none!important}
 .badge{background:#e0f2fe;color:#0369a1;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:bold}
 .badge.wait{background:#fef3c7;color:#b45309}
+.fin-box { background:#f8fafc; border-radius:8px; padding:10px; margin:10px 0; font-size:13px; border:1px solid #e2e8f0; }
+.fin-row { display:flex; justify-content:space-between; margin-bottom:6px; }
+.fin-row:last-child { margin-bottom:0; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px; font-weight:bold;}
+.customer-box { background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin:10px 0; text-align:center; }
+.customer-box b { font-size:16px; color:#1e3a8a; display:block; margin-bottom:8px; }
+.btn-group { display:flex; gap:8px; }
+.btn-group a { flex:1; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:14px; display:flex; justify-content:center; align-items:center; gap:5px; }
+.btn-call { background:#e0e7ff; color:#3730a3; }
+.btn-wa { background:#dcfce7; color:#166534; }
 </style>
 </head>
 <body>
@@ -105,18 +113,16 @@ const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
-let availOrders={}, activeOrders={}, finance={};
+let availOrders={}, activeOrders={}, finance={}, privData={};
 
 const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
 $("btnLogin").onclick=async()=>{
  $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
- try{
-  await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value);
- }catch(e){
-  $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة.";
- }finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
+ try{ await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value); }
+ catch(e){ $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة."; }
+ finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
 };
 
 $("btnOut").onclick=()=>{
@@ -175,14 +181,29 @@ function start(){
   availOrders=s.val()||{};drawOrders();
  });
 
- // Fetch active orders including waiting_store
+ // Fetch Active Orders & Private Details
  onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
   const all=s.val()||{};
   activeOrders={};
   for(const k in all){
    if(!["delivered","cancelled"].includes(all[k].status)) activeOrders[k]=all[k];
   }
+  fetchPrivateData();
   drawOrders();
+ });
+}
+
+function fetchPrivateData(){
+ const ids=Object.keys(activeOrders);
+ if(!ids.length) return;
+ ids.forEach(id=>{
+   if(privData[id]) return; // Already fetched
+   get(ref(db,"orderPrivate/"+id)).then(snap=>{
+     if(snap.exists()){
+       privData[id]=snap.val();
+       drawOrders(); // Redraw when data arrives
+     }
+   });
  });
 }
 
@@ -209,14 +230,28 @@ function updateStatusUI(){
  }
 }
 
+function buildFinBox(o) {
+    const storeCom = Number(settings.storeCommission || 500);
+    const payStore = o.itemPrice - storeCom;
+    const collectCustomer = o.customerTotal;
+    const profit = Math.round(o.deliveryFee * 0.9);
+    
+    return `
+    <div class="fin-box">
+        <div class="fin-row" style="color:#dc3545"><span>تدفع للمتجر:</span> <b>${fmt(payStore)} د.ع</b></div>
+        <div class="fin-row" style="color:#1769aa"><span>تستلم من الزبون:</span> <b>${fmt(collectCustomer)} د.ع</b></div>
+        <div class="fin-row" style="color:#218838"><span>ربحك الصافي (الكروة):</span> <b>${fmt(profit)} د.ع</b></div>
+    </div>`;
+}
+
 function drawOrders(){
- // Available Orders
+ // Available Orders (بدون رقم الزبون)
  if(!isOnline){
   $("availContainer").hidden = true;
  } else {
   const av=Object.entries(availOrders).filter(([id,o])=>{
     if(o.driverId) return false; 
-    if(o.rejectedBy && o.rejectedBy[uid]) return false; // Hide rejected orders
+    if(o.rejectedBy && o.rejectedBy[uid]) return false; 
     if(Object.keys(activeOrders).length>0){
        return (Date.now()-o.createdAt) > 120000;
     }
@@ -229,7 +264,7 @@ function drawOrders(){
     <div class="row"><b>طلب #${esc(id.slice(-6))}</b></div>
     <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
     <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
-    <p style="margin:6px 0;font-size:14px"><b>الكروة:</b> ${fmt(o.deliveryFee)} د.ع</p>
+    ${buildFinBox(o)}
     <div style="display:flex; gap:8px; margin-top:10px">
       <button style="flex:2" onclick="acceptOrder('${id}')">قبول الطلب</button>
       <button class="red" style="flex:1; background:var(--bad)" onclick="rejectOrder('${id}')">رفض</button>
@@ -238,7 +273,7 @@ function drawOrders(){
   `).join("");
  }
 
- // Active Orders
+ // Active Orders (يظهر رقم الزبون هنا)
  const ac=Object.entries(activeOrders);
  $("activeContainer").hidden = !ac.length;
  $("activeList").innerHTML = ac.map(([id,o])=>{
@@ -246,6 +281,7 @@ function drawOrders(){
   let warn="";
   let statusBadge = "";
   const now=Date.now();
+  const q = privData[id] || {}; // جلب بيانات الزبون
   
   if(o.status==="waiting_store"){
    statusBadge = `<span class="badge wait">بانتظار موافقة المتجر</span>`;
@@ -270,12 +306,31 @@ function drawOrders(){
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canDel?'':'disabled'} onclick="updateStep('${id}','delivered')">${canDel?'تم التوصيل للزبون':'انتظر 5 دقائق...'}</button>`;
   }
 
+  // بناء صندوق الزبون إذا كان الرقم موجوداً
+  let customerBox = "";
+  if(q.customerPhone && o.status !== "waiting_store") {
+     const waLink = `https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`;
+     customerBox = `
+      <div class="customer-box">
+        <b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>
+        ${q.customerName?`<div style="margin-bottom:8px;font-size:13px;color:#475569">الاسم: ${esc(q.customerName)}</div>`:""}
+        ${q.note?`<div style="margin-bottom:8px;font-size:13px;color:#b45309">ملاحظة: ${esc(q.note)}</div>`:""}
+        <div class="btn-group">
+          <a href="tel:${esc(q.customerPhone)}" class="btn-call">📞 اتصال</a>
+          <a href="${esc(waLink)}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a>
+        </div>
+      </div>`;
+  }
+
   return `
   <div class="card ${o.status==='waiting_store'?'waiting':''}">
    <div class="row"><b>#${esc(id.slice(-6))}</b> ${statusBadge}</div>
    <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
    <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
-   <p style="margin:6px 0;font-size:14px"><b>المجموع للزبون:</b> ${fmt(o.customerTotal)}</p>
+   
+   ${buildFinBox(o)}
+   ${customerBox}
+   
    ${warn}
    ${actionBtn}
   </div>
