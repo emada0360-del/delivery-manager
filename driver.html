@@ -44,6 +44,7 @@ main{max-width:600px;margin:auto;padding:16px}
 .btn-group a { flex:1; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:14px; display:flex; justify-content:center; align-items:center; gap:5px; }
 .btn-call { background:#e0e7ff; color:#3730a3; }
 .btn-wa { background:#dcfce7; color:#166534; }
+.map-link { display:inline-block; background:#e0f2fe; color:#0369a1; padding:6px 12px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:bold; margin-top:6px; margin-bottom:10px;}
 </style>
 </head>
 <body>
@@ -181,7 +182,6 @@ function start(){
   availOrders=s.val()||{};drawOrders();
  });
 
- // Fetch Active Orders & Private Details
  onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
   const all=s.val()||{};
   activeOrders={};
@@ -197,11 +197,11 @@ function fetchPrivateData(){
  const ids=Object.keys(activeOrders);
  if(!ids.length) return;
  ids.forEach(id=>{
-   if(privData[id]) return; // Already fetched
+   if(privData[id]) return;
    get(ref(db,"orderPrivate/"+id)).then(snap=>{
      if(snap.exists()){
        privData[id]=snap.val();
-       drawOrders(); // Redraw when data arrives
+       drawOrders();
      }
    });
  });
@@ -244,6 +244,12 @@ function buildFinBox(o) {
     </div>`;
 }
 
+// دالة لإنشاء زر الخريطة
+function buildMapBtn(url) {
+    if(!url) return "";
+    return `<a href="${esc(url)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`;
+}
+
 function drawOrders(){
  // Available Orders (بدون رقم الزبون)
  if(!isOnline){
@@ -264,6 +270,7 @@ function drawOrders(){
     <div class="row"><b>طلب #${esc(id.slice(-6))}</b></div>
     <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
     <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
+    ${buildMapBtn(o.storeMapUrl)}
     ${buildFinBox(o)}
     <div style="display:flex; gap:8px; margin-top:10px">
       <button style="flex:2" onclick="acceptOrder('${id}')">قبول الطلب</button>
@@ -273,7 +280,7 @@ function drawOrders(){
   `).join("");
  }
 
- // Active Orders (يظهر رقم الزبون هنا)
+ // Active Orders
  const ac=Object.entries(activeOrders);
  $("activeContainer").hidden = !ac.length;
  $("activeList").innerHTML = ac.map(([id,o])=>{
@@ -281,7 +288,7 @@ function drawOrders(){
   let warn="";
   let statusBadge = "";
   const now=Date.now();
-  const q = privData[id] || {}; // جلب بيانات الزبون
+  const q = privData[id] || {}; 
   
   if(o.status==="waiting_store"){
    statusBadge = `<span class="badge wait">بانتظار موافقة المتجر</span>`;
@@ -306,7 +313,6 @@ function drawOrders(){
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canDel?'':'disabled'} onclick="updateStep('${id}','delivered')">${canDel?'تم التوصيل للزبون':'انتظر 5 دقائق...'}</button>`;
   }
 
-  // بناء صندوق الزبون إذا كان الرقم موجوداً
   let customerBox = "";
   if(q.customerPhone && o.status !== "waiting_store") {
      const waLink = `https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`;
@@ -328,6 +334,7 @@ function drawOrders(){
    <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
    <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
    
+   ${buildMapBtn(o.storeMapUrl)}
    ${buildFinBox(o)}
    ${customerBox}
    
