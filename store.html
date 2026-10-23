@@ -35,6 +35,9 @@ main{max-width:600px;margin:auto;padding:16px}
 #msg{padding:12px;border-radius:8px;display:none;margin-bottom:12px;font-weight:600;text-align:center}
 #err{color:var(--bad);font-size:13px;text-align:center;font-weight:600}
 [hidden]{display:none!important}
+.fin-box { background:#f8fafc; border-radius:8px; padding:10px; margin:10px 0; font-size:13px; border:1px solid #e2e8f0; }
+.fin-row { display:flex; justify-content:space-between; margin-bottom:4px; }
+.fin-row:last-child { margin-bottom:0; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px; font-weight:bold;}
 </style>
 </head>
 <body>
@@ -70,10 +73,15 @@ main{max-width:600px;margin:auto;padding:16px}
 <input id="cname" placeholder="مثال: أبو محمد">
 <label>ملاحظة/عنوان (اختياري)</label>
 <input id="note" placeholder="مثال: قرب الجامع">
-<div style="background:#f8fafc;padding:12px;border-radius:8px;margin-bottom:14px;font-size:14px">
-<div class="row"><span>أجرة التوصيل:</span> <b id="feeTxt">0</b></div>
-<div class="row"><span>المجموع للزبون:</span> <b id="totalTxt" style="color:var(--pri)">0</b></div>
+
+<div style="background:#f8fafc;padding:12px;border-radius:8px;margin-bottom:14px;font-size:14px; border:1px solid #e2e8f0">
+<div class="row" style="margin-bottom:6px"><span>أجرة التوصيل:</span> <b id="feeTxt">0</b></div>
+<div class="row" style="margin-bottom:6px"><span>المجموع على الزبون:</span> <b id="totalTxt" style="color:var(--pri)">0</b></div>
+<div class="row" style="border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px;">
+  <span style="color:var(--ok);font-weight:bold">تستلم من السائق:</span> <b id="receiveTxt" style="color:var(--ok)">0</b>
 </div>
+</div>
+
 <button id="btnCreate" style="width:100%;font-size:16px;padding:14px">إرسال الطلب</button>
 </div>
 
@@ -137,6 +145,7 @@ function start(){
   settings=s.val()||{};
   if(settings.announcement){$("announcement").textContent=settings.announcement;$("announcement").hidden=false;}
   else $("announcement").hidden=true;
+  calcTotal(); // Refresh calculations when settings load
  }));
  stops.push(onValue(ref(db,"presence"),s=>{
   const p=s.val()||{};
@@ -156,11 +165,16 @@ function drawAreas(){
  calcTotal();
 }
 $("area").onchange=calcTotal;$("price").oninput=calcTotal;
+
 function calcTotal(){
  const a=areas[$("area").value], p=Number($("price").value)||0;
  const fee=a?Number(a.fee)||0:0;
+ const storeCom = Number(settings.storeCommission || 500);
+ const receiveAmt = Math.max(0, p - storeCom);
+ 
  $("feeTxt").textContent=fmt(fee)+" د.ع";
  $("totalTxt").textContent=fmt(p+fee)+" د.ع";
+ $("receiveTxt").textContent=fmt(receiveAmt)+" د.ع";
 }
 
 $("btnCreate").onclick=async()=>{
@@ -173,13 +187,14 @@ $("btnCreate").onclick=async()=>{
  $("btnCreate").disabled=true;
  try{
   const key=push(ref(db,"orders")).key;
+  const storeCom = Number(settings.storeCommission||500);
   await update(ref(db),{
    ["orders/"+key]:{
-    storeId:uid, storeName:store.name, storePhone:store.phone||"", // <-- إضافة رقم المتجر هنا
+    storeId:uid, storeName:store.name, storePhone:store.phone||"",
     areaId:aId, area:a.name,
     itemPrice:p, deliveryFee:a.fee, customerTotal:p+a.fee,
-    storeCommission:Number(settings.storeCommission||500),
-    amountToReceive:p-Number(settings.storeCommission||500),
+    storeCommission:storeCom,
+    amountToReceive:p-storeCom,
     storeMapUrl:store.mapUrl||"",
     status:"pending", createdAt:Date.now()
    },
@@ -234,12 +249,23 @@ function card(id,o,isHistory){
    actionHtml = `<button type="button" class="bad" style="width:100%;margin-top:8px; background:var(--bad)" onclick="cancelOrder('${id}')">إلغاء الطلب</button>`;
  }
 
+ // صندوق الحسابات للمتجر
+ const storeCom = Number(settings.storeCommission || 500);
+ const receiveAmt = Math.max(0, o.itemPrice - storeCom);
+ let finBox = `
+  <div class="fin-box">
+    <div class="fin-row"><span>سعر الطلب:</span> <b>${fmt(o.itemPrice)} د.ع</b></div>
+    <div class="fin-row"><span>أجرة التوصيل:</span> <b>${fmt(o.deliveryFee)} د.ع</b></div>
+    <div class="fin-row"><span>المجموع من الزبون:</span> <b style="color:var(--pri)">${fmt(o.customerTotal)} د.ع</b></div>
+    <div class="fin-row"><span style="color:var(--ok)">تستلم من السائق:</span> <b style="color:var(--ok)">${fmt(receiveAmt)} د.ع</b></div>
+  </div>`;
+
  return `<div class="card">
   <div class="row"><b>#${esc(id.slice(-6))}</b><span class="badge ${badgeCls}">${ST[o.status]}</span></div>
   ${stepper}
   ${driverHtml}
   <p style="font-size:14px;margin:8px 0"><b>المنطقة:</b> ${esc(o.area)} | <b>الزبون:</b> ${esc(q.customerPhone||"—")}</p>
-  <p style="font-size:14px;margin:8px 0"><b>المجموع:</b> ${fmt(o.customerTotal)} د.ع</p>
+  ${finBox}
   ${actionHtml}
  </div>`;
 }
