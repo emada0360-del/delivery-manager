@@ -134,7 +134,7 @@ addEventListener("offline",()=>$("net").hidden=false);
 async function doLogin(){
  $("err").textContent="";const b=$("btnLogin");b.disabled=true;b.textContent="جاري الدخول...";
  try{await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value)}
- catch{$("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة."}
+ catch(e){$("err").textContent="فشل الدخول: "+(e.code||e.message)}
  finally{b.disabled=false;b.textContent="تسجيل الدخول"}
 }
 $("btnLogin").onclick=doLogin;
@@ -165,7 +165,7 @@ onAuthStateChanged(auth,async u=>{
   $("drvName").textContent=user.name||"السائق";
   $("login").hidden=true;$("app").hidden=false;
   start();
- }catch(e){await signOut(auth);$("err").textContent="تعذر تحميل بيانات الحساب، تحقق من الإنترنت."}
+ }catch(e){console.error(e);await signOut(auth);$("err").textContent="خطأ بعد الدخول: "+(e.code||e.message)}
 });
 
 function startGPS(){
@@ -356,4 +356,4 @@ function drawOrders(){
 
 function getDist(a,b,c,d){
  if(!a||!c)return 0;
- const R=6371e3,p1=a*Math.PI/180,p2=c*Math.PI/180,
+ const R=6371e3,p1=a*Math.PI/180,p2=c*Mat
