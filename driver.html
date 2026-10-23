@@ -7,69 +7,36 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-    --bg: #f1f5f9;
-    --ink: #0f172a;
-    --pri: #2563eb;
-    --pri-dark: #1d4ed8;
-    --ok: #16a34a;
-    --ok-dark: #15803d;
-    --bad: #dc2626;
-    --warn: #d97706;
-    --line: #e2e8f0;
-    --card: #ffffff;
+    --bg: #f1f5f9; --ink: #0f172a; --pri: #2563eb; --pri-dark: #1d4ed8;
+    --ok: #16a34a; --bad: #dc2626; --warn: #d97706; --line: #e2e8f0; --card: #ffffff;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body {
-    margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--ink); padding-bottom: 50px;
-}
+body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--ink); padding-bottom: 50px; }
 button, input, select { font: inherit; }
-button {
-    border: 0; border-radius: 12px; padding: 14px 20px; background: var(--pri); color: #fff; cursor: pointer;
-    font-weight: 700; transition: 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-}
+button { border: 0; border-radius: 12px; padding: 14px 20px; background: var(--pri); color: #fff; cursor: pointer; font-weight: 700; transition: 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
 button:active { transform: scale(0.97); }
 button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-input {
-    width: 100%; padding: 14px; border: 1.5px solid var(--line); border-radius: 12px;
-    background: #fff; margin: 6px 0 16px; outline: none; transition: 0.2s;
-}
+input { width: 100%; padding: 14px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; margin: 6px 0 16px; outline: none; transition: 0.2s; }
 input:focus { border-color: var(--pri); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
 label { font-size: 13px; font-weight: 700; color: #64748b; display: block; margin-top: 8px; }
 
-/* Header */
-header {
-    background: #1e293b; color: #fff; padding: 16px 20px; display: flex; justify-content: space-between;
-    align-items: center; position: sticky; top: 0; z-index: 50; box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-}
+header { background: #1e293b; color: #fff; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
 header h2 { margin: 0; font-size: 18px; font-weight: 800; }
 main { max-width: 600px; margin: auto; padding: 20px 16px; }
 
-/* Stats */
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-.stat-card {
-    background: var(--card); border-radius: 16px; padding: 16px; text-align: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02);
-}
+.stat-card { background: var(--card); border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
 .stat-card span { font-size: 12px; font-weight: 700; color: #64748b; display: block; margin-bottom: 6px; }
 .stat-card b { font-size: 22px; color: var(--pri); font-weight: 800; }
 .stat-card.warn b { color: var(--bad); }
 
-/* Status Button */
-.status-btn {
-    width: 100%; padding: 20px; font-size: 18px; border-radius: 16px; margin-bottom: 20px;
-    display: flex; justify-content: center; align-items: center; gap: 10px; border: none; transition: 0.3s;
-}
+.status-btn { width: 100%; padding: 20px; font-size: 18px; border-radius: 16px; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 10px; border: none; transition: 0.3s; }
 .status-btn.on { background: var(--ok); color: #fff; box-shadow: 0 8px 25px rgba(22, 163, 74, 0.4); }
 .status-btn.off { background: #cbd5e1; color: #475569; box-shadow: none; }
 .status-btn.blocked { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
 .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #fff; }
 
-/* Cards */
-.card {
-    background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 16px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02);
-    animation: slideUp 0.3s ease;
-}
+.card { background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); animation: slideUp 0.3s ease; }
 @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .card.new { border: 2px solid var(--pri); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.15); }
 .card.waiting { border: 2px solid var(--warn); background: #fffbeb; }
@@ -79,11 +46,7 @@ main { max-width: 600px; margin: auto; padding: 20px 16px; }
 .badge.wait { background: #fef3c7; color: #b45309; }
 .badge.acc { background: #e0f2fe; color: #0369a1; }
 
-/* Receipt / Finance Box */
-.receipt {
-    background: #f8fafc; border-radius: 12px; padding: 16px; margin: 16px 0;
-    border: 1px dashed #cbd5e1; font-size: 14px;
-}
+.receipt { background: #f8fafc; border-radius: 12px; padding: 16px; margin: 16px 0; border: 1px dashed #cbd5e1; font-size: 14px; }
 .receipt-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 600; color: #64748b; }
 .receipt-row:last-child { margin-bottom: 0; }
 .receipt-row.pay { color: var(--bad); }
@@ -92,31 +55,20 @@ main { max-width: 600px; margin: auto; padding: 20px 16px; }
 .receipt-debt { background: #fff1f2; border-radius: 8px; padding: 12px; margin-top: 12px; border: 1px solid #fecdd3; }
 .receipt-debt .receipt-row { color: #b42318; font-size: 13px; }
 
-/* Info Boxes */
-.info-box {
-    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 12px;
-    margin: 12px 0; display: flex; justify-content: space-between; align-items: center;
-}
+.info-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 12px; margin: 12px 0; display: flex; justify-content: space-between; align-items: center; }
 .info-box.blue { background: #eff6ff; border-color: #bfdbfe; }
 .info-box b { display: block; font-size: 13px; color: #475569; margin-bottom: 4px; }
 .info-box span { font-size: 15px; font-weight: 800; color: var(--ink); direction: ltr; display: inline-block; }
 .btn-group { display: flex; gap: 6px; }
-.btn-sm {
-    padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; text-decoration: none;
-    display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
+.btn-sm { padding: 8px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 .btn-call { background: #e0f2fe; color: #0369a1; }
 .btn-wa { background: #dcfce7; color: #166534; }
-.map-link {
-    display: inline-block; background: #e0f2fe; color: #0369a1; padding: 8px 14px; border-radius: 8px;
-    text-decoration: none; font-size: 13px; font-weight: 700; margin-bottom: 10px;
-}
+.map-link { display: inline-block; background: #e0f2fe; color: #0369a1; padding: 8px 14px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 700; margin-bottom: 10px; }
 
-/* Utilities */
 #msg { padding: 12px; border-radius: 12px; margin-bottom: 16px; font-weight: 700; text-align: center; display: none; }
 #login { max-width: 400px; margin: 10vh auto; padding: 30px; background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
 #login h2 { text-align: center; color: var(--pri); margin-top: 0; font-size: 24px; }
-#err { color: var(--bad); text-align: center; font-size: 14px; font-weight: 700; min-height: 20px; margin-top: 10px; }
+#err { color: var(--bad); text-align: center; font-size: 14px; font-weight: 700; min-height: 20px; margin-top: 10px; line-height: 1.5; }
 [hidden] { display: none !important; }
 .action-row { display: flex; gap: 10px; margin-top: 16px; }
 .action-row button { flex: 1; }
@@ -135,6 +87,7 @@ main { max-width: 600px; margin: auto; padding: 20px 16px; }
 <button type="button" id="btnLogin" style="width:100%;margin-top:10px;background:var(--pri-dark)">تسجيل الدخول</button>
 </form>
 <p id="err"></p>
+<button id="btnForceLogout" style="width:100%; background:#e2e8f0; color:#0f172a; box-shadow:none; display:none; margin-top:10px;" onclick="signOut(auth)">تسجيل الخروج من الحساب الحالي</button>
 </section>
 
 <div id="app" hidden>
@@ -176,7 +129,7 @@ main { max-width: 600px; margin: auto; padding: 20px 16px; }
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {getDatabase,ref,set,update,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -196,14 +149,35 @@ let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
 let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
 let currentDebt = 0, debtLimit = 15000;
 
+// دالة تحويل الأرقام العربية إلى إنجليزية
+const convertNum = (str) => str.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+
 const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
+// --- دالة تسجيل الدخول الآمنة (مع كشف الأخطاء) ---
 $("btnLogin").onclick=async()=>{
- $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
- try{ await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value); }
- catch(e){ $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة."; }
- finally{$("btnLogin").disabled=false;$("btnLogin").textContent="تسجيل الدخول";}
+ $("err").textContent=""; 
+ $("btnLogin").disabled=true; 
+ $("btnLogin").textContent="جاري التحقق...";
+ 
+ try{ 
+  let phone = convertNum($("un").value.trim());
+  let pass = $("pw").value;
+  
+  if(!phone || !pass) throw new Error("أدخل رقم الهاتف وكلمة المرور");
+  
+  if(!phone.includes("@")) phone += "@baqubah.app";
+  
+  await signInWithEmailAndPassword(auth, phone, pass); 
+ }
+ catch(e){ 
+  $("err").textContent = "فشل الدخول: " + (e.code === 'auth/invalid-credential' ? "رقم الهاتف أو كلمة المرور خاطئة" : e.message); 
+ }
+ finally{
+  $("btnLogin").disabled=false; 
+  $("btnLogin").textContent="تسجيل الدخول";
+ }
 };
 
 $("btnOut").onclick=()=>{
@@ -212,17 +186,40 @@ $("btnOut").onclick=()=>{
  signOut(auth);
 };
 
+// --- مراقبة حالة الدخول (محمية من التعليق) ---
 onAuthStateChanged(auth, async u=>{
- if(!u){$("login").hidden=false;$("app").hidden=true;return;}
- const snap=await get(ref(db,"users/"+u.uid));
- const user = snap.val();
- if(!user || user.role!=="driver" || user.isActive===false){
-  await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
+ if(!u){
+  $("login").hidden=false;
+  $("app").hidden=true;
+  $("btnForceLogout").style.display="none";
+  return;
  }
- uid=u.uid;driver=user;
- $("drvName").textContent=user.name;
- $("login").hidden=true;$("app").hidden=false;
- start();
+ 
+ try {
+  const snap=await get(ref(db,"users/"+u.uid));
+  const user = snap.val();
+  
+  if(!user || user.role!=="driver" || user.isActive===false){
+   // الحساب مسجل ولكن ليس سائقاً
+   $("login").hidden=false;
+   $("app").hidden=true;
+   $("err").textContent="أنت مسجل حالياً بحساب آخر. يرجى تسجيل الخروج للدخول كسائق.";
+   $("btnForceLogout").style.display="block";
+   return;
+  }
+  
+  uid=u.uid;
+  driver=user;
+  $("drvName").textContent=user.name;
+  $("login").hidden=true;
+  $("app").hidden=false;
+  $("btnForceLogout").style.display="none";
+  start();
+  
+ } catch(e) {
+  $("err").textContent = "خطأ في الاتصال بقاعدة البيانات: " + e.message;
+  $("btnForceLogout").style.display="block";
+ }
 });
 
 function startGPS(){
@@ -404,21 +401,4 @@ function drawOrders(){
   let customerBox = "";
   if(q.customerPhone && o.status !== "waiting_store") {
      const waLink = `https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك.`;
-     customerBox = `<div class="info-box blue"><div><b>هاتف الزبون</b><span>${esc(q.customerPhone)}</span>${q.note?`<br><span style="color:var(--warn);font-size:12px;font-weight:700">ملاحظة: ${esc(q.note)}</span>`:""}</div><div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-sm btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class="btn-sm btn-wa">🟢 واتساب</a></div></div>`;
-  }
-
-  return `<div class="card ${o.status==='waiting_store'?'waiting':''}">
-   <div class="card-header"><b>طلب #${esc(id.slice(-6))}</b>${statusBadge}</div>
-   <p style="margin:6px 0;font-size:14px;font-weight:700">المتجر: ${esc(o.storeName)}</p>
-   <p style="margin:6px 0;font-size:14px;font-weight:700">المنطقة: ${esc(o.area)}</p>
-   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر</a>`:""}
-   ${storeBox}${buildFinBox(o)}${customerBox}
-   ${warn}${actionBtn}
-  </div>`;
- }).join("");
-}
-
-function getDist(lat1, lon1, lat2, lon2){
- if(!lat1||!lat2)return 0;
- const R=6371e3, p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
- cons
+     customerBox = `<div class="info-box blue"><div><b>هاتف الزبون</b><span>${esc(q.customerPhone)}</span>${q.note?`<br><span style="color:var(--warn);font-size:12px;font-weight:700">ملاحظة: ${esc(q.note)}</span>`:""}</div><div c
