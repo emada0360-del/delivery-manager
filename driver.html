@@ -4,21 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>دلفري حر | السائق</title>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
     --bg: #f1f5f9; --ink: #0f172a; --pri: #2563eb; --pri-dark: #1d4ed8;
     --ok: #16a34a; --bad: #dc2626; --warn: #d97706; --line: #e2e8f0; --card: #ffffff;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg); color: var(--ink); padding-bottom: 50px; }
+body { margin: 0; font-family: system-ui, Tahoma, Arial, sans-serif; background: var(--bg); color: var(--ink); padding-bottom: 50px; }
 button, input, select { font: inherit; }
 button { border: 0; border-radius: 12px; padding: 14px 20px; background: var(--pri); color: #fff; cursor: pointer; font-weight: 700; transition: 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
 button:active { transform: scale(0.97); }
 button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-input { width: 100%; padding: 14px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; margin: 6px 0 16px; outline: none; transition: 0.2s; }
+input { width: 100%; padding: 14px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; margin: 6px 0 16px; outline: none; transition: 0.2s; font-size: 16px; }
 input:focus { border-color: var(--pri); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
-label { font-size: 13px; font-weight: 700; color: #64748b; display: block; margin-top: 8px; }
+label { font-size: 14px; font-weight: 700; color: #64748b; display: block; margin-top: 8px; }
 
 header { background: #1e293b; color: #fff; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
 header h2 { margin: 0; font-size: 18px; font-weight: 800; }
@@ -36,8 +35,7 @@ main { max-width: 600px; margin: auto; padding: 20px 16px; }
 .status-btn.blocked { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
 .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #fff; }
 
-.card { background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); animation: slideUp 0.3s ease; }
-@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.card { background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid rgba(0,0,0,0.02); }
 .card.new { border: 2px solid var(--pri); box-shadow: 0 8px 25px rgba(37, 99, 235, 0.15); }
 .card.waiting { border: 2px solid var(--warn); background: #fffbeb; }
 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
@@ -149,17 +147,15 @@ let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
 let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
 let currentDebt = 0, debtLimit = 15000;
 
-// دالة تحويل الأرقام العربية إلى إنجليزية
 const convertNum = (str) => str.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
 
 const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
-// --- دالة تسجيل الدخول الآمنة (مع كشف الأخطاء) ---
 $("btnLogin").onclick=async()=>{
  $("err").textContent=""; 
  $("btnLogin").disabled=true; 
- $("btnLogin").textContent="جاري التحقق...";
+ $("btnLogin").textContent="جاري...";
  
  try{ 
   let phone = convertNum($("un").value.trim());
@@ -172,7 +168,7 @@ $("btnLogin").onclick=async()=>{
   await signInWithEmailAndPassword(auth, phone, pass); 
  }
  catch(e){ 
-  $("err").textContent = "فشل الدخول: " + (e.code === 'auth/invalid-credential' ? "رقم الهاتف أو كلمة المرور خاطئة" : e.message); 
+  $("err").textContent = "فشل الدخول: " + (e.code === 'auth/invalid-credential' ? "البيانات خاطئة" : e.message); 
  }
  finally{
   $("btnLogin").disabled=false; 
@@ -186,7 +182,6 @@ $("btnOut").onclick=()=>{
  signOut(auth);
 };
 
-// --- مراقبة حالة الدخول (محمية من التعليق) ---
 onAuthStateChanged(auth, async u=>{
  if(!u){
   $("login").hidden=false;
@@ -200,10 +195,9 @@ onAuthStateChanged(auth, async u=>{
   const user = snap.val();
   
   if(!user || user.role!=="driver" || user.isActive===false){
-   // الحساب مسجل ولكن ليس سائقاً
    $("login").hidden=false;
    $("app").hidden=true;
-   $("err").textContent="أنت مسجل حالياً بحساب آخر. يرجى تسجيل الخروج للدخول كسائق.";
+   $("err").textContent="أنت مسجل بحساب آخر. يرجى تسجيل الخروج للدخول كسائق.";
    $("btnForceLogout").style.display="block";
    return;
   }
@@ -217,7 +211,7 @@ onAuthStateChanged(auth, async u=>{
   start();
   
  } catch(e) {
-  $("err").textContent = "خطأ في الاتصال بقاعدة البيانات: " + e.message;
+  $("err").textContent = "خطأ في قاعدة البيانات: " + e.message;
   $("btnForceLogout").style.display="block";
  }
 });
@@ -401,4 +395,10 @@ function drawOrders(){
   let customerBox = "";
   if(q.customerPhone && o.status !== "waiting_store") {
      const waLink = `https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك.`;
-     customerBox = `<div class="info-box blue"><div><b>هاتف الزبون</b><span>${esc(q.customerPhone)}</span>${q.note?`<br><span style="color:var(--warn);font-size:12px;font-weight:700">ملاحظة: ${esc(q.note)}</span>`:""}</div><div c
+     customerBox = `<div class="info-box blue"><div><b>هاتف الزبون</b><span>${esc(q.customerPhone)}</span>${q.note?`<br><span style="color:var(--warn);font-size:12px;font-weight:700">ملاحظة: ${esc(q.note)}</span>`:""}</div><div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-sm btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class="btn-sm btn-wa">🟢 واتساب</a></div></div>`;
+  }
+
+  return `<div class="card ${o.status==='waiting_store'?'waiting':''}">
+   <div class="card-header"><b>طلب #${esc(id.slice(-6))}</b>${statusBadge}</div>
+   <p style="margin:6px 0;font-size:14px;font-weight:700">المتجر: ${esc(o.storeName)}</p>
+   <p style="ma
