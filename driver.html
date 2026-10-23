@@ -66,7 +66,7 @@ main { max-width: 600px; margin: auto; padding: 20px 16px; }
 #msg { padding: 12px; border-radius: 12px; margin-bottom: 16px; font-weight: 700; text-align: center; display: none; }
 #login { max-width: 400px; margin: 10vh auto; padding: 30px; background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
 #login h2 { text-align: center; color: var(--pri); margin-top: 0; font-size: 24px; }
-#err { color: var(--bad); text-align: center; font-size: 14px; font-weight: 700; min-height: 20px; margin-top: 10px; line-height: 1.5; }
+#err { color: var(--bad); text-align: center; font-size: 14px; font-weight: 700; min-height: 20px; margin-top: 10px; }
 [hidden] { display: none !important; }
 .action-row { display: flex; gap: 10px; margin-top: 16px; }
 .action-row button { flex: 1; }
@@ -85,7 +85,6 @@ main { max-width: 600px; margin: auto; padding: 20px 16px; }
 <button type="button" id="btnLogin" style="width:100%;margin-top:10px;background:var(--pri-dark)">تسجيل الدخول</button>
 </form>
 <p id="err"></p>
-<button id="btnForceLogout" style="width:100%; background:#e2e8f0; color:#0f172a; box-shadow:none; display:none; margin-top:10px;" onclick="signOut(auth)">تسجيل الخروج من الحساب الحالي</button>
 </section>
 
 <div id="app" hidden>
@@ -127,7 +126,7 @@ main { max-width: 600px; margin: auto; padding: 20px 16px; }
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -147,33 +146,15 @@ let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
 let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
 let currentDebt = 0, debtLimit = 15000;
 
-const convertNum = (str) => str.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
-
 const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
+// الكود القديم البسيط 100% الذي كان يعمل
 $("btnLogin").onclick=async()=>{
- $("err").textContent=""; 
- $("btnLogin").disabled=true; 
- $("btnLogin").textContent="جاري...";
- 
- try{ 
-  let phone = convertNum($("un").value.trim());
-  let pass = $("pw").value;
-  
-  if(!phone || !pass) throw new Error("أدخل رقم الهاتف وكلمة المرور");
-  
-  if(!phone.includes("@")) phone += "@baqubah.app";
-  
-  await signInWithEmailAndPassword(auth, phone, pass); 
- }
- catch(e){ 
-  $("err").textContent = "فشل الدخول: " + (e.code === 'auth/invalid-credential' ? "البيانات خاطئة" : e.message); 
- }
- finally{
-  $("btnLogin").disabled=false; 
-  $("btnLogin").textContent="تسجيل الدخول";
- }
+ $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
+ try{ await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value); }
+ catch(e){ $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة."; }
+ finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
 };
 
 $("btnOut").onclick=()=>{
@@ -182,38 +163,18 @@ $("btnOut").onclick=()=>{
  signOut(auth);
 };
 
+// الكود القديم البسيط 100%
 onAuthStateChanged(auth, async u=>{
- if(!u){
-  $("login").hidden=false;
-  $("app").hidden=true;
-  $("btnForceLogout").style.display="none";
-  return;
+ if(!u){$("login").hidden=false;$("app").hidden=true;return;}
+ const snap=await get(ref(db,"users/"+u.uid));
+ const user = snap.val();
+ if(!user || user.role!=="driver" || user.isActive===false){
+  await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
  }
- 
- try {
-  const snap=await get(ref(db,"users/"+u.uid));
-  const user = snap.val();
-  
-  if(!user || user.role!=="driver" || user.isActive===false){
-   $("login").hidden=false;
-   $("app").hidden=true;
-   $("err").textContent="أنت مسجل بحساب آخر. يرجى تسجيل الخروج للدخول كسائق.";
-   $("btnForceLogout").style.display="block";
-   return;
-  }
-  
-  uid=u.uid;
-  driver=user;
-  $("drvName").textContent=user.name;
-  $("login").hidden=true;
-  $("app").hidden=false;
-  $("btnForceLogout").style.display="none";
-  start();
-  
- } catch(e) {
-  $("err").textContent = "خطأ في قاعدة البيانات: " + e.message;
-  $("btnForceLogout").style.display="block";
- }
+ uid=u.uid;driver=user;
+ $("drvName").textContent=user.name;
+ $("login").hidden=true;$("app").hidden=false;
+ start();
 });
 
 function startGPS(){
@@ -401,4 +362,24 @@ function drawOrders(){
   return `<div class="card ${o.status==='waiting_store'?'waiting':''}">
    <div class="card-header"><b>طلب #${esc(id.slice(-6))}</b>${statusBadge}</div>
    <p style="margin:6px 0;font-size:14px;font-weight:700">المتجر: ${esc(o.storeName)}</p>
-   <p style="ma
+   <p style="margin:6px 0;font-size:14px;font-weight:700">المنطقة: ${esc(o.area)}</p>
+   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر</a>`:""}
+   ${storeBox}${buildFinBox(o)}${customerBox}
+   ${warn}${actionBtn}
+  </div>`;
+ }).join("");
+}
+
+function getDist(lat1, lon1, lat2, lon2){
+ if(!lat1||!lat2)return 0;
+ const R=6371e3, p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
+ const dp=(lat2-lat1)*Math.PI/180, dl=(lon2-lon1)*Math.PI/180;
+ const a=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
+ return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+window.acceptOrder=async(id)=>{
+ if(currentDebt >= debtLimit) return say("لا يمكنك قبول الطلبات، لقد تجاوزت سقف الدين", 1);
+ if(!isOnline) return say("يجب أن تكون متصلاً لتقبل الطلب", 1);
+ try{
+  await update(ref
