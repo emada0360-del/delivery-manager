@@ -39,9 +39,7 @@ td select{margin:0;width:auto;min-width:140px;padding:6px}
 #msg{padding:12px 16px;margin:16px 20px 0;border-radius:8px;display:none;font-weight:600}
 [hidden]{display:none!important}
 .tag{display:inline-block;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;background:#eef2f7;color:#374151}
-.tag.g{background:#e6f4ea;color:#176337}.tag.r{background:#fdecea;color:#b42318}.tag.y{background:#fef3c7;color:#b45309}
-a { color: var(--pri); text-decoration: none; font-weight: bold; }
-a:hover { text-decoration: underline; }
+.tag.g{background:#e6f4ea;color:#176337}.tag.r{background:#fdecea;color:#b42318}
 </style>
 </head>
 <body>
@@ -60,7 +58,6 @@ a:hover { text-decoration: underline; }
 <nav id="nav">
 <button type="button" class="on" data-t="t1">الرئيسية</button>
 <button type="button" data-t="t2">الطلبات</button>
-<button type="button" data-t="t9" style="background:#e0f2fe;color:#0369a1">الطلبات الحية 🔴</button>
 <button type="button" data-t="t3">السائقون</button>
 <button type="button" data-t="t4">المتاجر</button>
 <button type="button" data-t="t5">المناطق</button>
@@ -81,14 +78,6 @@ a:hover { text-decoration: underline; }
 <h3>الإعلانات والرسائل</h3>
 <textarea id="ann" rows="3" placeholder="اكتب إعلاناً يظهر لجميع السائقين والمتاجر..."></textarea>
 <button type="button" id="btnAnn" class="grn">حفظ ونشر الإعلان</button>
-</div>
-</section>
-
-<section id="t9" class="tab" hidden>
-<div class="box">
-  <h3 style="margin-top:0; color:var(--pri)">متابعة الطلبات الحية (Live)</h3>
-  <p style="color:var(--mut); margin-bottom:16px;">هنا تظهر الطلبات الجارية الآن مع السائق المسؤول عنها.</p>
-  <div id="liveOrders" class="wrap"></div>
 </div>
 </section>
 
@@ -206,7 +195,6 @@ let users={},orders={},areas={},fin={},pres={},settings={},started=false;
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#ffebee":"#e8f5e9";m.style.color=bad?"#b71c1c":"#176337";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
 const run=async fn=>{try{await fn()}catch(e){say(e.message,1);console.error(e)}};
 
-// دالة التحقق من المدير (تظهر الخطأ الحقيقي إذا فشلت)
 async function isAdmin(uid){
   try {
     const snap = await get(ref(db, "users/"+uid));
@@ -214,14 +202,11 @@ async function isAdmin(uid){
       const allUsers = await get(ref(db, "users"));
       if(!allUsers.exists()){
          await set(ref(db, "users/"+uid), {role:"admin", name:"المدير العام", username:"admin", isActive:true, createdAt:Date.now()});
-         return {ok: true};
+         return true;
       }
     }
-    if (snap.exists() && snap.val().role === "admin") return {ok: true};
-    return {ok: false, msg: "حسابك مسجل ولكن ليس لديه صلاحية admin في قاعدة البيانات."};
-  } catch(e) { 
-    return {ok: false, msg: "فشل الاتصال بقاعدة البيانات. تأكد من قواعد الحماية (Rules) أو الإنترنت. " + e.message};
-  }
+    return snap.exists() && snap.val().role === "admin";
+  } catch(e) { return false; }
 }
 
 $("btnLogin").onclick=async ()=>{
@@ -229,11 +214,8 @@ $("btnLogin").onclick=async ()=>{
  try{
    const cred = await signInWithEmailAndPassword(auth,$("em").value.trim(),$("pw").value);
    const adm = await isAdmin(cred.user.uid);
-   if(!adm.ok){ 
-     await signOut(auth); 
-     $("le").textContent = adm.msg; 
-   }
- }catch(err){ $("le").textContent = "خطأ في المصادقة: " + (err.code||err.message); }
+   if(!adm){ await signOut(auth); $("le").textContent="هذا الحساب ليس مديراً."; }
+ }catch(err){ $("le").textContent = "خطأ: " + (err.code||err.message); }
  finally{ $("btnLogin").disabled=false; $("btnLogin").textContent="دخول"; }
 };
 
@@ -241,7 +223,7 @@ $("out").onclick=()=>signOut(auth);
 onAuthStateChanged(auth, async u=>{
   if(!u){ $("login").hidden=false; $("app").hidden=true; return; }
   const adm = await isAdmin(u.uid);
-  if(!adm.ok){ $("login").hidden=false; $("app").hidden=true; $("le").textContent=adm.msg; return; }
+  if(!adm){ $("login").hidden=false; $("app").hidden=true; $("le").textContent="هذا الحساب ليس مديراً."; return; }
   $("login").hidden=true; $("app").hidden=false; $("le").textContent="";
   if(!started){started=true; start();}
 });
@@ -274,9 +256,7 @@ function draw(){
  $("s2").textContent=fmt(os.filter(o=>!["delivered","cancelled"].includes(o.status)).length);
  $("s3").textContent=fmt(drs.filter(([id,u])=>u.isActive!==false&&online(id)).length);
  $("s4").textContent=fmt(sts.filter(([,u])=>u.isActive!==false).length);
- 
  drawOrders();
- drawLiveOrders();
 
  $("drivers").innerHTML=table(["الاسم","الهاتف (الدخول)","الاتصال","مسلّمة","المستحق","الحالة","إجراءات"],drs.map(([id,u])=>{
   const d=getDebt(id);
@@ -326,31 +306,6 @@ function draw(){
  }
 }
 
-function drawLiveOrders(){
- const live = Object.entries(orders).filter(([id,o]) => o && !["delivered", "cancelled"].includes(o.status))
-   .sort((a,b) => (b[1].createdAt||0) - (a[1].createdAt||0));
- $("liveOrders").innerHTML = table(
-   ["الطلب", "المتجر", "السائق", "رقم السائق", "الحالة", "الوقت"],
-   live.map(([id,o]) => {
-     let tagClass = "y";
-     if(["accepted", "arrived_store", "picked_up", "delivering"].includes(o.status)) tagClass = "g";
-     
-     const driverName = o.driverName ? `<b>${esc(o.driverName)}</b>` : '<span style="color:#94a3b8">بانتظار سائق</span>';
-     const driverPhone = o.driverPhone ? `<a href="tel:${esc(o.driverPhone)}" dir="ltr">${esc(o.driverPhone)}</a>` : '—';
-     
-     return `<tr>
-       <td>#${esc(id.slice(-6))}</td>
-       <td>${esc(o.storeName)}</td>
-       <td>${driverName}</td>
-       <td style="text-align:left">${driverPhone}</td>
-       <td><span class="tag ${tagClass}">${ST[o.status]}</span></td>
-       <td dir="ltr" style="text-align:right">${new Date(o.createdAt).toLocaleTimeString('ar-IQ')}</td>
-     </tr>`;
-   }),
-   "لا توجد طلبات حية الآن. جميع الطلبات مكتملة أو ملغية."
- );
-}
-
 function drawOrders(){
  const t=$("q").value.trim().toLowerCase(),f=$("f").value;
  const rows=Object.entries(orders).filter(([id,o])=>o&&(!f||o.status===f)&&[id,o.storeName,o.area,o.driverName].join(" ").toLowerCase().includes(t))
@@ -375,4 +330,34 @@ $("btnSet").onclick=()=>run(async()=>{
   say("تم حفظ الإعدادات.");
 });
 
-const clos
+const closeModal=()=>{$("modalHost").innerHTML=""};
+function modal(title,bodyHTML,onOk,okLabel="حفظ",okClass="grn"){
+ $("modalHost").innerHTML=`<div class="modal-bg"><form class="modal" id="mform">
+  <h3>${esc(title)}</h3>${bodyHTML}
+  <div class="actions">
+   <button type="submit" class="${okClass}">${esc(okLabel)}</button>
+   <button type="button" class="gray" id="mcancel">إلغاء</button>
+  </div></form></div>`;
+ $("mcancel").onclick=closeModal;
+ $("modalHost").querySelector(".modal-bg").onclick=e=>{if(e.target.classList.contains("modal-bg"))closeModal()};
+ $("mform").onsubmit=async e=>{e.preventDefault();try{await onOk()}catch(err){say(err.message,1)}};
+}
+const confirmBox=text=>new Promise(res=>{
+ modal("تأكيد",`<p style="margin:0;line-height:1.7">${esc(text)}</p>`,async()=>{closeModal();res(true)},"نعم","red");
+ $("mcancel").onclick=()=>{closeModal();res(false)};
+});
+
+document.addEventListener("click",e=>{
+ const b=e.target.closest("button");if(!b||b.disabled||b.type==="submit")return;const d=b.dataset;
+ run(async()=>{
+  if(d.ss){ if(await confirmBox("تغيير حالة الطلب؟")){await update(ref(db,"orders/"+d.ss),{status:document.querySelector(`select[data-s="${CSS.escape(d.ss)}"]`).value});say("تم التحديث.")} }
+  else if(d.tg){ const u=users[d.tg]; await update(ref(db,"users/"+d.tg),{isActive:u.isActive===false}); say("تم التحديث."); }
+  else if(d.ta){ const a=areas[d.ta]; await update(ref(db,"areas/"+d.ta),{isActive:a.isActive===false}); say("تم التحديث."); }
+  else if(d.ed){ editUser(d.ed,"driver"); }
+  else if(d.es){ editUser(d.es,"store"); }
+  else if(d.ea){ editArea(d.ea); }
+  else if(d.zp){ resetWallet(d.zp); }
+  else if(d.del){
+    const kind=d.kind||(users[d.del]?(users[d.del].role==="driver"?"driver":"store"):"area");
+    const label=kind==="order"?`الطلب #${d.del.slice(-6)}`:(kind==="area"?`المنطقة ${areas[d.del].name}`:users[d.del].name);
+    if(await confirmBox(`حذف ${label} نهائياً؟`)){ await remove(ref(db, kind==="order"?"orders/"+d.del:(kind==="area"?"are
