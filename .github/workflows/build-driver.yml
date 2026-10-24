@@ -31,7 +31,7 @@ jobs:
           cd build
           echo '{"name":"baqubah-app","version":"1.0.0","private":true}' > package.json
           printf '{"appId":"com.baqubah.%s","appName":"Baqubah %s","webDir":"www"}' "$APP" "$APP" > capacitor.config.json
-          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/local-notifications@6
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/local-notifications@6 @capacitor-community/text-to-speech@5
           npx cap add android
 
       - name: Add background service (driver only)
@@ -132,6 +132,7 @@ jobs:
                      '<property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="order_listener" />'
                      '</service>\n')
           add = ''.join('<uses-permission android:name="android.permission.%s" />\n' % x for x in perms)
+          add += '<queries><intent><action android:name="android.intent.action.TTS_SERVICE" /></intent></queries>\n'
           s = s.replace('<application', add + '<application', 1)
           s = s.replace('</application>', svc + '</application>', 1)
           open(p, 'w', encoding='utf-8').write(s)
