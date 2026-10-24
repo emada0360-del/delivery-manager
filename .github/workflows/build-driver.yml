@@ -1,4 +1,4 @@
-name: Build Driver APK
+name: Build APKs
 
 on:
   workflow_dispatch:
@@ -6,9 +6,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apk/driver
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [driver, store]
+    env:
+      APP: ${{ matrix.app }}
     steps:
       - uses: actions/checkout@v4
 
@@ -23,16 +26,17 @@ jobs:
 
       - name: Create Capacitor project
         run: |
-          cat > package.json <<'EOF'
-          {"name":"baqubah-driver","version":"1.0.0","private":true}
-          EOF
-          cat > capacitor.config.json <<'EOF'
-          {"appId":"com.baqubah.driver","appName":"Baqubah Driver","webDir":"www"}
-          EOF
+          mkdir -p build/www
+          cp "$APP.html" build/www/index.html
+          cd build
+          echo '{"name":"baqubah-app","version":"1.0.0","private":true}' > package.json
+          printf '{"appId":"com.baqubah.%s","appName":"Baqubah %s","webDir":"www"}' "$APP" "$APP" > capacitor.config.json
           npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/local-notifications@6
           npx cap add android
 
-      - name: Add background service for new orders
+      - name: Add background service (driver only)
+        if: matrix.app == 'driver'
+        working-directory: build
         run: |
           JAVA_DIR=android/app/src/main/java/com/baqubah/driver
           cat > $JAVA_DIR/MainActivity.java <<'EOF'
@@ -111,22 +115,30 @@ jobs:
             }
           }
           EOF
+
+      - name: Patch manifest
+        working-directory: build
+        run: |
           python3 - <<'PY'
+          import os
           p = 'android/app/src/main/AndroidManifest.xml'
           s = open(p, encoding='utf-8').read()
-          perms = ['FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_SPECIAL_USE', 'WAKE_LOCK',
-                   'POST_NOTIFICATIONS', 'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION']
+          perms = ['POST_NOTIFICATIONS', 'ACCESS_FINE_LOCATION', 'ACCESS_COARSE_LOCATION']
+          svc = ''
+          if os.environ['APP'] == 'driver':
+              perms += ['FOREGROUND_SERVICE', 'FOREGROUND_SERVICE_SPECIAL_USE', 'WAKE_LOCK']
+              svc = ('<service android:name=".OrderService" android:exported="false" '
+                     'android:foregroundServiceType="specialUse">'
+                     '<property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="order_listener" />'
+                     '</service>\n')
           add = ''.join('<uses-permission android:name="android.permission.%s" />\n' % x for x in perms)
-          svc = ('<service android:name=".OrderService" android:exported="false" '
-                 'android:foregroundServiceType="specialUse">'
-                 '<property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="order_listener" />'
-                 '</service>\n')
           s = s.replace('<application', add + '<application', 1)
           s = s.replace('</application>', svc + '</application>', 1)
           open(p, 'w', encoding='utf-8').write(s)
           PY
 
       - name: Sync and build
+        working-directory: build
         run: |
           npx cap sync android
           cd android
@@ -135,5 +147,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: driver-apk
-          path: apk/driver/android/app/build/outputs/apk/debug/app-debug.apk
+          name: ${{ matrix.app }}-apk
+          path: build/android/app/build/outputs/apk/debug/app-debug.apk
