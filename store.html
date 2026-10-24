@@ -134,9 +134,44 @@ const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-const ST={pending:"بانتظار سائق",waiting_store:"سائق ينتظر موافقتك",accepted:"السائق بالطريقة",arrived_store:"السائق وصل",picked_up:"تم الاستلام",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
+const ST={pending:"بانتظار سائق",waiting_store:"سائق ينتظر موافقتك",accepted:"السائق بالطريق",arrived_store:"السائق وصل",picked_up:"تم الاستلام",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
 
 let uid=null,store=null,areas={},orders={},priv={},settings={},driversOnline=0;
+let alarmTimer = null;
+
+// 🟢 دالة تشغيل صوت التنبيه المتكرر
+function playBeep() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 800;
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+    } catch(e) {}
+}
+
+function checkWaitingAlarm(activeOrders) {
+    const hasWaiting = activeOrders.some(([,o]) => o.status === "waiting_store");
+    if (hasWaiting) {
+        if (!alarmTimer) {
+            playBeep();
+            alarmTimer = setInterval(playBeep, 4000); // يتكرر كل 4 ثوانٍ
+        }
+    } else {
+        if (alarmTimer) {
+            clearInterval(alarmTimer);
+            alarmTimer = null;
+        }
+    }
+}
+
 const stops=[];
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
@@ -264,7 +299,7 @@ $("btnCreate").onclick=async()=>{
    ["orderPrivate/"+key]:{ storeId:uid, customerPhone:ph, ...(cn?{customerName:cn}:{}), ...(nt?{note:nt}:{}) }
   });
   $("price").value="";$("phone").value="";$("cname").value="";$("note").value="";
-  $("area").value=""; $("areaSearch").value=""; // تصفير البحث
+  $("area").value=""; $("areaSearch").value=""; 
   calcTotal(); say("تم إرسال الطلب بنجاح");
  }catch(e){say("فشل الإرسال: "+e.message,1);}
  $("btnCreate").disabled=false;$("btnCreate").textContent="تأكيد وإرسال الطلب";
@@ -273,6 +308,10 @@ $("btnCreate").onclick=async()=>{
 function drawOrders(){
  const os=Object.entries(orders).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
  const active=os.filter(([,o])=>!["delivered","cancelled"].includes(o.status));
+ 
+ // فحص حالة الطلبات النشطة لتشغيل أو إيقاف صوت التنبيه
+ checkWaitingAlarm(active);
+
  const history=os.filter(([,o])=>["delivered","cancelled"].includes(o.status));
 
  $("activeContainer").hidden = !active.length;
@@ -307,14 +346,14 @@ function card(id,o,isHistory){
  let actionHtml = "";
  if(o.status === "waiting_store"){
    actionHtml = `<div style="display:flex; gap:8px; margin-top:10px">
-    <button class="grn" style="flex:2; background:var(--ok)" onclick="acceptDriver('${id}')">قبول السائق</button>
-    <button class="bad" style="flex:1; background:var(--bad)" onclick="cancelOrder('${id}')">رفض</button>
+    <button style="flex:2; background:var(--ok)" onclick="acceptDriver('${id}')">قبول السائق</button>
+    <button style="flex:1; background:var(--bad)" onclick="cancelOrder('${id}')">رفض</button>
    </div>`;
  } else if(o.status==="pending" || o.status==="accepted") {
-   actionHtml = `<button type="button" class="bad" style="width:100%;margin-top:8px; background:var(--bad)" onclick="cancelOrder('${id}')">إلغاء الطلب</button>`;
+   actionHtml = `<button type="button" style="width:100%;margin-top:8px; background:var(--bad)" onclick="cancelOrder('${id}')">إلغاء الطلب</button>`;
  }
 
- const storeCom = Number(settings.storeCommission || 500);
+ const storeCom = Number(o.storeCommission !== undefined ? o.storeCommission : (settings.storeCommission || 500));
  const receiveAmt = Math.max(0, (Number(o.itemPrice)||0) - storeCom);
  
  return `<div class="card">
@@ -339,12 +378,14 @@ window.acceptDriver = async(id) => {
  try{ await update(ref(db,"orders/"+id),{status:"accepted"}); say("تم القبول، السائق في الطريق."); }
  catch(e){ say("حدث خطأ، حاول مجدداً", 1); }
 };
-window.cancelOrder=async(id)=>{
+
+window.cancelOrder = async(id) => {
  if(!confirm("هل أنت متأكد من إلغاء الطلب؟"))return;
- try{await update(ref(db,"orders/"+id),{status:"cancelled"});say("تم إلغاء الطلب.");}
- catch(e){say("فشل الإلغاء: "+e.message,1);}
+ try{ await update(ref(db,"orders/"+id),{status:"cancelled"}); say("تم إلغاء الطلب."); }
+ catch(e){ say("فشل الإلغاء: "+e.message,1); }
 };
-$("btnHistory").onclick=()=>{$("historyOrders").hidden=!$("historyOrders").hidden;};
+
+$("btnHistory").onclick = () => { $("historyOrders").hidden = !$("historyOrders").hidden; };
 </script>
 </body>
 </html>
