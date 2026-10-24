@@ -107,7 +107,14 @@ main{max-width:600px;margin:auto;padding:16px}
 </main>
 </div>
 
+<script>
+function showErr(t){var d=document.getElementById("dbg");if(!d){d=document.createElement("div");d.id="dbg";d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;color:#fff;font:12px monospace;padding:8px;direction:ltr;white-space:pre-wrap";document.body.appendChild(d);}d.textContent+=t+"\n";}
+window.addEventListener("error",function(e){showErr("ERR: "+(e.message||"load error")+" "+(e.filename||""));});
+window.addEventListener("unhandledrejection",function(e){showErr("REJ: "+(e.reason&&e.reason.message||e.reason));});
+setTimeout(function(){if(!window.__loaded)showErr("Firebase libs did not load (check internet)");},8000);
+</script>
 <script type="module">
+window.__loaded=true;
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
@@ -202,8 +209,9 @@ function battHint(){
 }
 /* ================================================================= */
 
-const TTS = isNative ? (window.Capacitor.Plugins||{}).TextToSpeech : null;
-const speak=t=>{try{if(TTS){TTS.stop().catch(()=>{});TTS.speak({text:t,lang:"ar-SA",rate:1,volume:1}).catch(()=>{});return;}const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
+let _ac=null;
+const beep=()=>{try{_ac=_ac||new (window.AudioContext||window.webkitAudioContext)();const o=_ac.createOscillator(),g=_ac.createGain();o.type="sine";o.frequency.value=880;g.gain.value=0.3;o.connect(g);g.connect(_ac.destination);o.start();o.stop(_ac.currentTime+0.25);}catch(e){}};
+const speak=t=>{try{if(!window.speechSynthesis){beep();return;}const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
 $("btnLogin").onclick=async()=>{
@@ -404,14 +412,4 @@ function drawOrders(){
    statusBadge = `<span class="badge">وصل للمتجر</span>`;
    const canPick = (now - (o.stepAt||0)) > 60000; 
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">${canPick?'تم استلام الطلب':'انتظر دقيقة...'}</button>`;
-  }
-  else if(["picked_up","delivering"].includes(o.status)){
-   statusBadge = `<span class="badge">بالطريق للزبون</span>`;
-   const canDel = (now - (o.stepAt||0)) > 300000; 
-   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canDel?'':'disabled'} onclick="updateStep('${id}','delivered')">${canDel?'تم التوصيل للزبون':'انتظر 5 دقائق...'}</button>`;
-  }
-
-  let storeBox = `<div class="customer-box" style="background:#f0fdf4; border-color:#bbf7d0; padding:10px;"><b style="color:#166534">هاتف المتجر: <span dir="ltr">${esc(o.storePhone || "غير متوفر")}</span></b>${o.storePhone ? `<div class="btn-group" style="margin-top:4px"><a href="tel:${esc(o.storePhone)}" class="btn-call" style="background:#dcfce7; color:#166534">📞 اتصال بالمتجر</a></div>` : ""}</div>`;
-
-  let customerBox = "";
-  if(q.customerPhone && o.status !== "waiti
+ 
