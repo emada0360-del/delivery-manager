@@ -60,7 +60,7 @@ a:hover { text-decoration: underline; }
 <nav id="nav">
 <button type="button" class="on" data-t="t1">الرئيسية</button>
 <button type="button" data-t="t2">الطلبات</button>
-<button type="button" data-t="t9" style="background:#e0f2fe;color:#0369a1">الطلبات الحية 🔴</button> <!-- الميزة الجديدة -->
+<button type="button" data-t="t9" style="background:#e0f2fe;color:#0369a1">الطلبات الحية 🔴</button>
 <button type="button" data-t="t3">السائقون</button>
 <button type="button" data-t="t4">المتاجر</button>
 <button type="button" data-t="t5">المناطق</button>
@@ -84,7 +84,6 @@ a:hover { text-decoration: underline; }
 </div>
 </section>
 
-<!-- قسم الطلبات الحية -->
 <section id="t9" class="tab" hidden>
 <div class="box">
   <h3 style="margin-top:0; color:var(--pri)">متابعة الطلبات الحية (Live)</h3>
@@ -207,7 +206,7 @@ let users={},orders={},areas={},fin={},pres={},settings={},started=false;
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#ffebee":"#e8f5e9";m.style.color=bad?"#b71c1c":"#176337";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
 const run=async fn=>{try{await fn()}catch(e){say(e.message,1);console.error(e)}};
 
-// دالة التحقق من المدير (محمية من الأخطاء)
+// دالة التحقق من المدير (تظهر الخطأ الحقيقي إذا فشلت)
 async function isAdmin(uid){
   try {
     const snap = await get(ref(db, "users/"+uid));
@@ -215,11 +214,14 @@ async function isAdmin(uid){
       const allUsers = await get(ref(db, "users"));
       if(!allUsers.exists()){
          await set(ref(db, "users/"+uid), {role:"admin", name:"المدير العام", username:"admin", isActive:true, createdAt:Date.now()});
-         return true;
+         return {ok: true};
       }
     }
-    return snap.exists() && snap.val().role === "admin";
-  } catch(e) { return false; }
+    if (snap.exists() && snap.val().role === "admin") return {ok: true};
+    return {ok: false, msg: "حسابك مسجل ولكن ليس لديه صلاحية admin في قاعدة البيانات."};
+  } catch(e) { 
+    return {ok: false, msg: "فشل الاتصال بقاعدة البيانات. تأكد من قواعد الحماية (Rules) أو الإنترنت. " + e.message};
+  }
 }
 
 $("btnLogin").onclick=async ()=>{
@@ -227,8 +229,11 @@ $("btnLogin").onclick=async ()=>{
  try{
    const cred = await signInWithEmailAndPassword(auth,$("em").value.trim(),$("pw").value);
    const adm = await isAdmin(cred.user.uid);
-   if(!adm){ await signOut(auth); $("le").textContent="هذا الحساب ليس مديراً."; }
- }catch(err){ $("le").textContent = "خطأ: " + (err.code||err.message); }
+   if(!adm.ok){ 
+     await signOut(auth); 
+     $("le").textContent = adm.msg; 
+   }
+ }catch(err){ $("le").textContent = "خطأ في المصادقة: " + (err.code||err.message); }
  finally{ $("btnLogin").disabled=false; $("btnLogin").textContent="دخول"; }
 };
 
@@ -236,7 +241,7 @@ $("out").onclick=()=>signOut(auth);
 onAuthStateChanged(auth, async u=>{
   if(!u){ $("login").hidden=false; $("app").hidden=true; return; }
   const adm = await isAdmin(u.uid);
-  if(!adm){ $("login").hidden=false; $("app").hidden=true; $("le").textContent="هذا الحساب ليس مديراً."; return; }
+  if(!adm.ok){ $("login").hidden=false; $("app").hidden=true; $("le").textContent=adm.msg; return; }
   $("login").hidden=true; $("app").hidden=false; $("le").textContent="";
   if(!started){started=true; start();}
 });
@@ -271,7 +276,7 @@ function draw(){
  $("s4").textContent=fmt(sts.filter(([,u])=>u.isActive!==false).length);
  
  drawOrders();
- drawLiveOrders(); // تحديث الطلبات الحية
+ drawLiveOrders();
 
  $("drivers").innerHTML=table(["الاسم","الهاتف (الدخول)","الاتصال","مسلّمة","المستحق","الحالة","إجراءات"],drs.map(([id,u])=>{
   const d=getDebt(id);
@@ -321,7 +326,6 @@ function draw(){
  }
 }
 
-// 🟢 دالة عرض الطلبات الحية
 function drawLiveOrders(){
  const live = Object.entries(orders).filter(([id,o]) => o && !["delivered", "cancelled"].includes(o.status))
    .sort((a,b) => (b[1].createdAt||0) - (a[1].createdAt||0));
@@ -371,6 +375,4 @@ $("btnSet").onclick=()=>run(async()=>{
   say("تم حفظ الإعدادات.");
 });
 
-const closeModal=()=>{$("modalHost").innerHTML=""};
-function modal(title,bodyHTML,onOk,okLabel="حفظ",okClass="grn"){
- $("modalHost").inne
+const clos
