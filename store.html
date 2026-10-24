@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Baqubah Delivery | المتجر</title>
+<!-- 🔔 كود إشعارات التطبيق -->
+<script>
+window.notifyApp=async(t,b)=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P||!P.LocalNotifications)return;await P.LocalNotifications.createChannel({id:'orders',name:'Orders',importance:5,sound:'default',vibration:true});await P.LocalNotifications.schedule({notifications:[{id:Math.floor(Math.random()*2e9),title:t,body:b,channelId:'orders'}]});}catch(e){}};
+(async()=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P)return;await P.LocalNotifications.requestPermissions();if(P.BackgroundMode){await P.BackgroundMode.enable();}}catch(e){}})();
+</script>
 <style>
 :root{--bg:#f2f5f9;--ink:#172235;--pri:#1769aa;--ok:#218838;--bad:#dc3545;--warn:#bd7200;--line:#e0e6ef}
 *{box-sizing:border-box}
@@ -162,6 +167,8 @@ function checkWaitingAlarm(activeOrders) {
     if (hasWaiting) {
         if (!alarmTimer) {
             playBeep();
+            // 🔔 إشعار عند وجود سائق ينتظر الموافقة
+            if (window.notifyApp) window.notifyApp('سائق ينتظر موافقتك','افتح التطبيق واضغط قبول السائق');
             alarmTimer = setInterval(playBeep, 4000); // يتكرر كل 4 ثوانٍ
         }
     } else {
