@@ -17,7 +17,7 @@ header h2{margin:0;font-size:18px}
 main{max-width:600px;margin:auto;padding:16px}
 .box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
 
-/* الخانات الثلاثة */
+/* 🟢 الخانات الثلاثة */
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .stat{background:#fff;border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.03)}
 .stat span{font-size:11px;color:#64748b;display:block;margin-bottom:4px;line-height:1.3}
@@ -33,12 +33,9 @@ main{max-width:600px;margin:auto;padding:16px}
 .status-btn.off{background:#6b7280;color:#fff}
 .status-btn.blocked{background:#9ca3af;color:#fff;cursor:not-allowed}
 .dot{width:10px;height:10px;border-radius:50%;background:#fff;}
-#login{max-width:380px;margin:60px auto; text-align: right;}
-#login label{display:block; margin-top:12px; font-weight:600; font-size:14px; color:#475569;}
-#login input{width:100%; padding:12px; border:1px solid var(--line); border-radius:8px; outline:none; margin-top:4px; background:#f8fafc; font-size:16px;}
-#login input:focus{border-color:var(--pri); background:#fff;}
+#login{max-width:380px;margin:60px auto}
 #msg{padding:12px;border-radius:8px;display:none;margin-bottom:12px;font-weight:600;text-align:center;position:sticky;top:70px;z-index:40;box-shadow:0 4px 12px rgba(0,0,0,.1)}
-#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600; margin-top:10px;}
+#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600}
 [hidden]{display:none!important}
 .badge{background:#e0f2fe;color:#0369a1;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:bold}
 .badge.wait{background:#fef3c7;color:#b45309}
@@ -60,11 +57,9 @@ main{max-width:600px;margin:auto;padding:16px}
 <section id="login" class="box">
 <h2 style="text-align:center;margin-top:0">دخول السائق</h2>
 <form id="lf" onsubmit="return false;">
-<label>رقم الهاتف</label>
-<input id="un" type="tel" placeholder="07XXXXXXXXX" required>
-<label>كلمة المرور</label>
-<input id="pw" type="password" required>
-<button type="button" id="btnLogin" style="width:100%;margin-top:20px">دخول</button>
+<label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
+<label>كلمة المرور</label><input id="pw" type="password" required>
+<button type="button" id="btnLogin" style="width:100%;margin-top:10px">دخول</button>
 </form>
 <p id="err"></p>
 </section>
@@ -77,6 +72,7 @@ main{max-width:600px;margin:auto;padding:16px}
 <main>
 <div id="msg"></div>
 
+<!-- الخانات الثلاثة -->
 <div class="grid">
 <div class="stat"><span>الطلبات المكتملة</span><b id="statDone">0</b></div>
 <div class="stat"><span>محفظتي (دين)</span><b id="statDebt">0</b></div>
@@ -129,62 +125,6 @@ let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
 let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
 let currentDebt = 0;
 let debtLimit = 15000;
-
-/* 🟢 نظام الإشعارات والصوت (يعمل في المتصفح بأمان) */
-let notifiedOrders = new Set();
-let audioCtx = null;
-
-// تفعيل الصوت عند أول لمسة في الشاشة لتجاوز حظر المتصفح
-document.addEventListener("click", () => {
-    try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-    } catch(e) {}
-});
-
-function playSound() {
-    try {
-        if (!audioCtx) return;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // تردد الصوت
-        gain.gain.setValueAtTime(1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.8);
-    } catch(e) {}
-}
-
-function showBrowserNotification(order) {
-    if (!("Notification" in window)) return;
-    
-    if (Notification.permission === "granted") {
-        try {
-            new Notification("طلب جديد متوفر!", {
-                body: `${order.storeName} - ${order.area} - الكروة: ${fmt(order.deliveryFee)} د.ع`,
-                icon: "https://cdn-icons-png.flaticon.com/512/2830/2830305.png"
-            });
-        } catch(e) { console.log(e); }
-    }
-}
-
-function checkNewOrders() {
-    if (!isOnline || currentDebt >= debtLimit) return;
-
-    const av = Object.values(availOrders).filter(o => !o.driverId && !(o.rejectedBy && o.rejectedBy[uid]));
-    
-    av.forEach(o => {
-        if (!notifiedOrders.has(o.createdAt)) {
-            notifiedOrders.add(o.createdAt); // نسجل وقت الطلب لمنع التكرار
-            playSound();
-            showBrowserNotification(o);
-        }
-    });
-}
-/* ======================================================== */
 
 const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
@@ -246,13 +186,7 @@ function start(){
  });
 
  onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{ finance=s.val()||{}; drawStats(); });
- 
- // 🟢 مراقبة الطلبات وإطلاق الإشعار
- onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{ 
-     availOrders=s.val()||{}; 
-     drawOrders(); 
-     checkNewOrders();
- });
+ onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{ availOrders=s.val()||{}; drawOrders(); });
 
  onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
   allMyOrders = s.val() || {};
@@ -305,16 +239,10 @@ function drawStats() {
 function toggleStatus(){
  if(currentDebt >= debtLimit) return say("لا يمكنك الاتصال، لقد تجاوزت سقف الدين", 1);
  if(!isOnline && Object.keys(activeOrders).length>0) return say("لا يمكنك الإغلاق ولديك طلبات نشطة", 1);
- 
- // 🟢 طلب صلاحية الإشعارات عند الضغط على متصل
- if (!isOnline && "Notification" in window && Notification.permission !== "granted") {
-     Notification.requestPermission();
- }
-
  isOnline=!isOnline;
  const pr=ref(db,"presence/"+uid);
  set(pr,{online:isOnline,lastSeen:serverTimestamp()});
- if(isOnline){ startGPS(); speak("أنت الآن متصل"); checkNewOrders(); } else { speak("أنت الآن غير متصل"); }
+ if(isOnline){ startGPS(); speak("أنت الآن متصل"); } else { speak("أنت الآن غير متصل"); }
 }
 $("btnStatus").addEventListener("click", toggleStatus);
 
@@ -414,4 +342,53 @@ function drawOrders(){
   return `<div class="card ${o.status==='waiting_store'?'waiting':''}">
    <div class="row"><b>#${esc(id.slice(-6))}</b> ${statusBadge}</div>
    <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
-   <p style="margin:6px 0;font-size:14px"><
+   <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
+   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
+   ${storeBox}${buildFinBox(o)}${customerBox}${warn}${actionBtn}
+  </div>`;
+ }).join("");
+}
+
+function getDist(lat1, lon1, lat2, lon2){
+ if(!lat1||!lat2)return 0;
+ const R=6371e3, p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
+ const dp=(lat2-lat1)*Math.PI/180, dl=(lon2-lon1)*Math.PI/180;
+ const a=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
+ return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+window.acceptOrder=async(id)=>{
+ if(currentDebt >= debtLimit) return say("لا يمكنك قبول الطلبات، لقد تجاوزت سقف الدين", 1);
+ if(!isOnline) return say("يجب أن تكون متصلاً لتقبل الطلب", 1);
+ try{
+  await update(ref(db,"orders/"+id),{ driverId:uid, driverName:driver.name, driverPhone:driver.phone||"", status:"waiting_store", stepAt:serverTimestamp(), acceptedAt:Date.now() });
+  say("تم قبول الطلب، بانتظار موافقة المتجر"); speak("تم قبول الطلب، بانتظار موافقة المتجر");
+ }catch(e){say("تم أخذه من سائق آخر", 1);}
+};
+
+window.rejectOrder=async(id)=>{
+ try{ await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]: true}); say("تم رفض الطلب."); }
+ catch(e){say("فشل الرفض",1);}
+};
+
+window.updateStep=async(id,newStatus)=>{
+ const o=activeOrders[id]; if(!o)return;
+ if(newStatus==="arrived_store"){
+   if(o.storeLat && pos.lat){
+    const d=getDist(pos.lat,pos.lng,o.storeLat,o.storeLng);
+    if(d>300) return say(`يجب أن تكون قريباً من المتجر (المسافة الحالية ${Math.round(d)}م)`, 1);
+   }
+ }
+ try{
+  const patch={status:newStatus, stepAt:serverTimestamp()};
+  if(newStatus==="delivered"){
+    const profit=Math.round(o.deliveryFee*0.9);
+    patch.deliveredAt=Date.now(); patch.driverProfit=profit; patch.platformDeliveryCommission=Math.round(o.deliveryFee-profit);
+  }
+  await update(ref(db,"orders/"+id),patch);
+  if(newStatus==="delivered") speak("تم التوصيل بنجاح"); else speak("تم تحديث الحالة");
+ }catch(e){say("فشل التحديث",1);}
+};
+</script>
+</body>
+</html>
