@@ -113,7 +113,7 @@ function showErr(t){var d=document.getElementById("dbg");if(!d){d=document.creat
 window.addEventListener("error",function(e){showErr("ERR: "+(e.message||"load error")+" "+(e.filename||""));});
 window.addEventListener("unhandledrejection",function(e){showErr("REJ: "+(e.reason&&e.reason.message||e.reason));});
 window.addEventListener("error",function(e){var t=e.target;if(t&&(t.src||t.href)&&t!==window)showErr("RES FAIL: "+(t.src||t.href));},true);
-setTimeout(function(){if(!window.__loaded)showErr("v5 | libs did not load | bundled="+(!!document.querySelector('script[src="app.js"]'))+" | native="+(!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())));},8000);
+setTimeout(function(){if(!window.__loaded)showErr("v5 | libs did not load | bundled="+(!!document.querySelector('script[src="app.js"]'))+" | native="+(!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())));},15000);
 </script>
 
 <script type="module">
@@ -142,9 +142,9 @@ let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
 let currentDebt = 0;
 let debtLimit = 15000;
 
-/* ========== إدارة الإشعارات (آمنة للويب وللـ APK) ========== */
+/* ========== إدارة الإشعارات بشكل آمن للويب وللـ APK ========== */
 const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-const LN = isNative ? (window.Capacitor.Plugins||{}).LocalNotifications : null;
+const LN = window.Capacitor?.Plugins?.LocalNotifications || null;
 const notified = new Set();
 let notifReady = false;
 const nid = id => { let h=0; for(const c of String(id)) h=(h*31+c.charCodeAt(0))|0; return Math.abs(h)%2000000000+10; };
@@ -422,4 +422,4 @@ function drawOrders(){
   else if(o.status==="arrived_store"){
    statusBadge = `<span class="badge">وصل للمتجر</span>`;
    const canPick = (now - (o.stepAt||0)) > 60000; 
-   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">${canPick?'تم استلام الطلب':'ا
+   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">${canPick?'تم استلام الطلب':'انتظر دقيقة.
