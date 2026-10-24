@@ -61,10 +61,18 @@ main{max-width:600px;margin:auto;padding:16px}
 .btn-wa { background:#dcfce7; color:#166534; }
 .map-link { display:inline-block; background:#e0f2fe; color:#0369a1; padding:6px 12px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:bold; margin-top:6px; margin-bottom:10px;}
 .history-item { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:10px; }
-.offline-banner { background:var(--bad); color:#fff; text-align:center; padding:8px; font-weight:bold; font-size:14px; display:none; position:sticky; top:60px; z-index:49; }
 </style>
 </head>
 <body>
+
+<!-- 🟢 كود مراقبة الأخطاء: سيظهر أي خطأ برمجي على الشاشة -->
+<script>
+  window.onerror = function(msg, url, line, col, error) {
+    var errDiv = document.getElementById("err");
+    if(errDiv) errDiv.textContent = "خطأ برمجي: " + msg + " (سطر " + line + ")";
+    return false;
+  };
+</script>
 
 <section id="login" class="box">
 <h2 style="text-align:center;margin-top:0">دخول السائق</h2>
@@ -77,7 +85,6 @@ main{max-width:600px;margin:auto;padding:16px}
 </section>
 
 <div id="app" hidden>
-<div id="offlineBanner" class="offline-banner">⚠️ لا يوجد اتصال بالإنترنت</div>
 <header>
 <h2 id="drvName">السائق</h2>
 <button id="btnOut" class="bad" style="padding:8px 12px;font-size:13px">خروج</button>
@@ -149,13 +156,12 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 
 let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
 let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
-let currentDebt = 0;
-let debtLimit = 15000;
+let currentDebt = 0, debtLimit = 15000;
 
 const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
-// الدخول المستقر (لم نلمسه)
+// 🟢 دخول مباشر
 $("btnLogin").onclick=async()=>{
  $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
  try{ await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value); }
@@ -169,6 +175,7 @@ $("btnOut").onclick=()=>{
  signOut(auth);
 };
 
+// 🟢 معالجة حالة الدخول بحماية كاملة
 onAuthStateChanged(auth, async u=>{
  if(!u){$("login").hidden=false;$("app").hidden=true;return;}
  try {
@@ -180,7 +187,10 @@ onAuthStateChanged(auth, async u=>{
   uid=u.uid;driver=user;
   $("drvName").textContent=user.name;
   $("login").hidden=true;$("app").hidden=false;
+  
+  // تشغيل النظام
   start();
+  
  } catch(e) {
   $("err").textContent="خطأ في قراءة البيانات: " + e.message;
   console.error("Auth Error:", e);
@@ -195,45 +205,48 @@ function startGPS(){
 }
 
 function start(){
- startGPS();
- onValue(ref(db,"settings"),s=>{
-  settings=s.val()||{}; debtLimit = Number(settings.debtLimit || 15000);
-  if(settings.announcement){$("annBox").textContent=settings.announcement;$("annBox").hidden=false;}
-  else $("annBox").hidden=true;
-  drawStats();
- });
+ try {
+  startGPS();
+  onValue(ref(db,"settings"),s=>{
+   settings=s.val()||{}; debtLimit = Number(settings.debtLimit || 15000);
+   if(settings.announcement){$("annBox").textContent=settings.announcement;$("annBox").hidden=false;}
+   else $("annBox").hidden=true;
+   drawStats();
+  }, e=>console.log("settings error", e));
 
- const pr=ref(db,"presence/"+uid);
- onValue(pr, s=>{
-   const status = s.val() || {};
-   if(Object.keys(activeOrders).length === 0) { isOnline = status.online === true; }
+  const pr=ref(db,"presence/"+uid);
+  onValue(pr, s=>{
+    const status = s.val() || {};
+    if(Object.keys(activeOrders).length === 0) { isOnline = status.online === true; }
+    updateStatusUI();
+  }, e=>console.log("presence error", e));
+
+  onValue(ref(db,".info/connected"),s=>{
+   if(s.val()===true){
+    onDisconnect(pr).set({online:false,lastSeen:serverTimestamp()});
+    if(isOnline) set(pr,{online:true,lastSeen:serverTimestamp()});
+   }
+  }, e=>console.log("connection error", e));
+
+  onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{ finance=s.val()||{}; drawStats(); }, e=>console.log("finance error", e));
+  onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{ availOrders=s.val()||{}; drawOrders(); }, e=>console.log("pending error", e));
+
+  onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
+   allMyOrders = s.val() || {};
+   activeOrders={};
+   for(const k in allMyOrders){
+    if(!["delivered","cancelled"].includes(allMyOrders[k].status)) { activeOrders[k]=allMyOrders[k]; }
+   }
+   if(Object.keys(activeOrders).length > 0) { isOnline = true; }
+   fetchPrivateData();
    updateStatusUI();
- });
-
- onValue(ref(db,".info/connected"),s=>{
-  $("offlineBanner").style.display = s.val() === true ? "none" : "block";
-  if(s.val()===true){
-   onDisconnect(pr).set({online:false,lastSeen:serverTimestamp()});
-   if(isOnline) set(pr,{online:true,lastSeen:serverTimestamp()});
-  }
- });
-
- onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{ finance=s.val()||{}; drawStats(); });
- onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{ availOrders=s.val()||{}; drawOrders(); });
-
- onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
-  allMyOrders = s.val() || {};
-  activeOrders={};
-  for(const k in allMyOrders){
-   if(!["delivered","cancelled"].includes(allMyOrders[k].status)) { activeOrders[k]=allMyOrders[k]; }
-  }
-  if(Object.keys(activeOrders).length > 0) { isOnline = true; }
-  fetchPrivateData();
-  updateStatusUI();
-  drawOrders();
-  drawStats();
-  drawHistory();
- });
+   drawOrders();
+   drawStats();
+   drawHistory();
+  }, e=>console.log("my orders error", e));
+ } catch (err) {
+  console.error("Start error:", err);
+ }
 }
 
 function fetchPrivateData(){
@@ -248,50 +261,54 @@ function fetchPrivateData(){
 }
 
 function drawStats() {
-    let debt = 0, todayProfit = 0, doneCount = 0;
-    const todayStart = new Date().setHours(0,0,0,0);
-    
-    for (const id in allMyOrders) {
-        const o = allMyOrders[id];
-        if (o.status === "delivered") {
-            doneCount++;
-            debt += Math.round(Number(o.platformDeliveryCommission) || 0) + Math.round(Number(o.storeCommission) || 0);
-            if (o.deliveredAt >= todayStart) { todayProfit += Math.round(Number(o.driverProfit) || 0); }
+    try {
+        let debt = 0, todayProfit = 0, doneCount = 0;
+        const todayStart = new Date().setHours(0,0,0,0);
+        
+        for (const id in allMyOrders) {
+            const o = allMyOrders[id];
+            if (o.status === "delivered") {
+                doneCount++;
+                debt += Math.round(Number(o.platformDeliveryCommission) || 0) + Math.round(Number(o.storeCommission) || 0);
+                if (o.deliveredAt >= todayStart) { todayProfit += Math.round(Number(o.driverProfit) || 0); }
+            }
         }
-    }
-    for (const id in finance) {
-        const f = finance[id];
-        if (f.type === "cash_received") { debt -= Math.round(Number(f.amount) || 0); }
-    }
-    if (debt < 0) debt = 0; currentDebt = debt;
-    
-    $("statDone").textContent = doneCount;
-    $("statDebt").textContent = fmt(debt) + " د.ع";
-    $("statProfit").textContent = fmt(todayProfit) + " د.ع";
-    $("warnBox").hidden = debt < debtLimit;
-    updateStatusUI();
+        for (const id in finance) {
+            const f = finance[id];
+            if (f.type === "cash_received") { debt -= Math.round(Number(f.amount) || 0); }
+        }
+        if (debt < 0) debt = 0; currentDebt = debt;
+        
+        $("statDone").textContent = doneCount;
+        $("statDebt").textContent = fmt(debt) + " د.ع";
+        $("statProfit").textContent = fmt(todayProfit) + " د.ع";
+        $("warnBox").hidden = debt < debtLimit;
+        updateStatusUI();
+    } catch(e) { console.log("Stats error", e); }
 }
 
 function drawHistory() {
-    if(!$("historyList")) return;
-    const delivered = Object.entries(allMyOrders)
-        .filter(([id, o]) => o && o.status === "delivered")
-        .sort((a, b) => (b[1].deliveredAt || 0) - (a[1].deliveredAt || 0));
-    
-    if (!delivered.length) {
-        $("historyList").innerHTML = "<p style='text-align:center;color:#64748b;padding:16px'>لا يوجد طلبات مكتملة بعد.</p>";
-        return;
-    }
-    $("historyList").innerHTML = delivered.map(([id, o]) => `
-        <div class="history-item">
-            <div class="row">
-                <b>طلب #${esc(id.slice(-6))}</b>
-                <span style="color:var(--ok); font-weight:800;">+${fmt(o.driverProfit || 0)} د.ع</span>
+    try {
+        if(!$("historyList")) return;
+        const delivered = Object.entries(allMyOrders)
+            .filter(([id, o]) => o && o.status === "delivered")
+            .sort((a, b) => (b[1].deliveredAt || 0) - (a[1].deliveredAt || 0));
+        
+        if (!delivered.length) {
+            $("historyList").innerHTML = "<p style='text-align:center;color:#64748b;padding:16px'>لا يوجد طلبات مكتملة بعد.</p>";
+            return;
+        }
+        $("historyList").innerHTML = delivered.map(([id, o]) => `
+            <div class="history-item">
+                <div class="row">
+                    <b>طلب #${esc(id.slice(-6))}</b>
+                    <span style="color:var(--ok); font-weight:800;">+${fmt(o.driverProfit || 0)} د.ع</span>
+                </div>
+                <div style="font-size:13px; color:#475569; margin:4px 0;"><b>${esc(o.storeName || "")}</b> - ${esc(o.area || "")}</div>
+                <div style="font-size:12px; color:#94a3b8;">${o.deliveredAt ? new Date(o.deliveredAt).toLocaleString("ar-IQ") : ""}</div>
             </div>
-            <div style="font-size:13px; color:#475569; margin:4px 0;"><b>${esc(o.storeName || "")}</b> - ${esc(o.area || "")}</div>
-            <div style="font-size:12px; color:#94a3b8;">${o.deliveredAt ? new Date(o.deliveredAt).toLocaleString("ar-IQ") : ""}</div>
-        </div>
-    `).join("");
+        `).join("");
+    } catch(e) { console.log("History error", e); }
 }
 
 $("btnHistory").onclick = () => {
@@ -324,87 +341,81 @@ function updateStatusUI(){
 }
 
 function buildFinBox(o) {
-    const storeCom = Number(settings.storeCommission || 500);
-    const platformCom = Math.round(o.deliveryFee * 0.1);
-    const payStore = Math.round(o.itemPrice - storeCom);
-    const collectCustomer = Math.round(o.customerTotal);
-    const profit = Math.round(o.deliveryFee * 0.9);
-    return `
-    <div class="fin-box">
-        <div class="fin-row" style="color:#dc3545"><span>تدفع للمتجر:</span> <b>${fmt(payStore)} د.ع</b></div>
-        <div class="fin-row" style="color:#1769aa"><span>تستلم من الزبون:</span> <b>${fmt(collectCustomer)} د.ع</b></div>
-        <div class="fin-row" style="color:#16a34a"><span>ربحك الصافي (الكروة):</span> <b>${fmt(profit)} د.ع</b></div>
-    </div>
-    <div class="debt-box">
-        <div class="fin-row" style="color:#b42318; margin-bottom:2px"><span>عمولة المنصة (10%):</span> <b>${fmt(platformCom)} د.ع</b></div>
-        <div class="fin-row" style="color:#b42318; margin-bottom:2px"><span>عمولة المتجر (ثابتة):</span> <b>${fmt(storeCom)} د.ع</b></div>
-        <div class="fin-row" style="color:#b42318; border-top:1px solid #fecdd3; padding-top:4px; margin-top:4px"><span>سيضاف لدينك:</span> <b>${fmt(platformCom + storeCom)} د.ع</b></div>
-    </div>`;
+    try {
+        const storeCom = Number(settings.storeCommission || 500);
+        const platformCom = Math.round(o.deliveryFee * 0.1);
+        const payStore = Math.round(o.itemPrice - storeCom);
+        const collectCustomer = Math.round(o.customerTotal);
+        const profit = Math.round(o.deliveryFee * 0.9);
+        return `
+        <div class="fin-box">
+            <div class="fin-row" style="color:#dc3545"><span>تدفع للمتجر:</span> <b>${fmt(payStore)} د.ع</b></div>
+            <div class="fin-row" style="color:#1769aa"><span>تستلم من الزبون:</span> <b>${fmt(collectCustomer)} د.ع</b></div>
+            <div class="fin-row" style="color:#16a34a"><span>ربحك الصافي (الكروة):</span> <b>${fmt(profit)} د.ع</b></div>
+        </div>
+        <div class="debt-box">
+            <div class="fin-row" style="color:#b42318; margin-bottom:2px"><span>عمولة المنصة (10%):</span> <b>${fmt(platformCom)} د.ع</b></div>
+            <div class="fin-row" style="color:#b42318; margin-bottom:2px"><span>عمولة المتجر (ثابتة):</span> <b>${fmt(storeCom)} د.ع</b></div>
+            <div class="fin-row" style="color:#b42318; border-top:1px solid #fecdd3; padding-top:4px; margin-top:4px"><span>سيضاف لدينك:</span> <b>${fmt(platformCom + storeCom)} د.ع</b></div>
+        </div>`;
+    } catch(e) { return ""; }
 }
 
 function drawOrders(){
- let liveAvail = [];
- if(isOnline && currentDebt < debtLimit){
-  liveAvail = Object.entries(availOrders).filter(([id,o])=>{
-    if(o.driverId) return false; 
-    if(o.rejectedBy && o.rejectedBy[uid]) return false; 
-    if(Object.keys(activeOrders).length>0){ return (Date.now()-(o.createdAt||0)) > 120000; }
-    return true;
-  });
- }
- 
- $("availContainer").hidden = !liveAvail.length;
- $("availList").innerHTML = liveAvail.map(([id,o])=>`
-   <div class="card new">
-    <div class="row"><b>طلب #${esc(id.slice(-6))}</b></div>
-    <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
-    <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
-    ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
-    ${buildFinBox(o)}
-    <div style="display:flex; gap:8px; margin-top:10px">
-      <button style="flex:2" onclick="acceptOrder('${id}')">قبول الطلب</button>
-      <button style="flex:1; background:var(--bad)" onclick="rejectOrder('${id}')">رفض</button>
-    </div>
-   </div>`).join("");
-
- const ac=Object.entries(activeOrders);
- $("activeContainer").hidden = !ac.length;
- 
- if(isOnline && !liveAvail.length && !ac.length && currentDebt < debtLimit) {
-    $("waitingScreen").hidden = false;
- } else {
-    $("waitingScreen").hidden = true;
- }
-
- $("activeList").innerHTML = ac.map(([id,o])=>{
-  let actionBtn="", warn="", statusBadge="";
-  const now=Date.now(); const q = privData[id] || {}; 
+ try {
+  let liveAvail = [];
+  if(isOnline && currentDebt < debtLimit){
+   liveAvail = Object.entries(availOrders).filter(([id,o])=>{
+     if(o.driverId) return false; 
+     if(o.rejectedBy && o.rejectedBy[uid]) return false; 
+     if(Object.keys(activeOrders).length>0){ return (Date.now()-(o.createdAt||0)) > 120000; }
+     return true;
+   });
+  }
   
-  if(o.status==="waiting_store"){
-   statusBadge = `<span class="badge wait">بانتظار موافقة المتجر</span>`;
-   actionBtn=`<div style="text-align:center; padding:15px; background:#fef3c7; color:#b45309; border-radius:8px; font-weight:bold; margin-top:10px">يرجى الانتظار حتى يوافق المتجر على طلبك...</div>`;
+  $("availContainer").hidden = !liveAvail.length;
+  $("availList").innerHTML = liveAvail.map(([id,o])=>`
+    <div class="card new">
+     <div class="row"><b>طلب #${esc(id.slice(-6))}</b></div>
+     <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
+     <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
+     ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
+     ${buildFinBox(o)}
+     <div style="display:flex; gap:8px; margin-top:10px">
+       <button style="flex:2" onclick="acceptOrder('${id}')">قبول الطلب</button>
+       <button style="flex:1; background:var(--bad)" onclick="rejectOrder('${id}')">رفض</button>
+     </div>
+    </div>`).join("");
+
+  const ac=Object.entries(activeOrders);
+  $("activeContainer").hidden = !ac.length;
+  
+  if(isOnline && !liveAvail.length && !ac.length && currentDebt < debtLimit) {
+     $("waitingScreen").hidden = false;
+  } else {
+     $("waitingScreen").hidden = true;
   }
-  else if(o.status==="accepted"){
-   statusBadge = `<span class="badge">بالطريق للمتجر</span>`;
-   if(o.storeLat && pos.lat){
-     const d=getDist(pos.lat, pos.lng, o.storeLat, o.storeLng);
-     if(d>300) warn=`<p style="color:var(--bad);font-size:12px;margin:4px 0">أنت بعيد عن المتجر (${Math.round(d)}م)</p>`;
+
+  $("activeList").innerHTML = ac.map(([id,o])=>{
+   let actionBtn="", warn="", statusBadge="";
+   const now=Date.now(); const q = privData[id] || {}; 
+   
+   if(o.status==="waiting_store"){
+    statusBadge = `<span class="badge wait">بانتظار موافقة المتجر</span>`;
+    actionBtn=`<div style="text-align:center; padding:15px; background:#fef3c7; color:#b45309; border-radius:8px; font-weight:bold; margin-top:10px">يرجى الانتظار حتى يوافق المتجر على طلبك...</div>`;
    }
-   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" onclick="updateStep('${id}','arrived_store')">وصلت للمتجر</button>`;
-  } 
-  else if(o.status==="arrived_store"){
-   statusBadge = `<span class="badge">وصل للمتجر</span>`;
-   const canPick = (now - (o.stepAt||0)) > 60000; 
-   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">${canPick?'تم استلام الطلب':'انتظر دقيقة...'}</button>`;
-  }
-  else if(["picked_up","delivering"].includes(o.status)){
-   statusBadge = `<span class="badge">بالطريق للزبون</span>`;
-   const canDel = (now - (o.stepAt||0)) > 300000; 
-   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canDel?'':'disabled'} onclick="updateStep('${id}','delivered')">${canDel?'تم التوصيل للزبون':'انتظر 5 دقائق...'}</button>`;
-  }
-
-  let storeBox = `<div class="customer-box" style="background:#f0fdf4; border-color:#bbf7d0; padding:10px;"><b style="color:#166534">هاتف المتجر: <span dir="ltr">${esc(o.storePhone || "غير متوفر")}</span></b>${o.storePhone ? `<div class="btn-group" style="margin-top:4px"><a href="tel:${esc(o.storePhone)}" class="btn-call" style="background:#dcfce7; color:#166534">📞 اتصال بالمتجر</a></div>` : ""}</div>`;
-
-  let customerBox = "";
-  if(q.customerPhone && o.status !== "waiting_store") {
-     
+   else if(o.status==="accepted"){
+    statusBadge = `<span class="badge">بالطريق للمتجر</span>`;
+    if(o.storeLat && pos.lat){
+      const d=getDist(pos.lat, pos.lng, o.storeLat, o.storeLng);
+      if(d>300) warn=`<p style="color:var(--bad);font-size:12px;margin:4px 0">أنت بعيد عن المتجر (${Math.round(d)}م)</p>`;
+    }
+    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" onclick="updateStep('${id}','arrived_store')">وصلت للمتجر</button>`;
+   } 
+   else if(o.status==="arrived_store"){
+    statusBadge = `<span class="badge">وصل للمتجر</span>`;
+    const canPick = (now - (o.stepAt||0)) > 60000; 
+    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">${canPick?'تم استلام الطلب':'انتظر دقيقة...'}</button>`;
+   }
+   else if(["picked_up","delivering"].includes(o.status)){
+    statusBadge = `<span class="b
