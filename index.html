@@ -60,7 +60,7 @@ a:hover { text-decoration: underline; }
 <nav id="nav">
 <button type="button" class="on" data-t="t1">الرئيسية</button>
 <button type="button" data-t="t2">الطلبات</button>
-<button type="button" data-t="t9" style="background:#e0f2fe;color:#0369a1">الطلبات الحية</button> <!-- التبويب الجديد -->
+<button type="button" data-t="t9" style="background:#e0f2fe;color:#0369a1">الطلبات الحية</button>
 <button type="button" data-t="t3">السائقون</button>
 <button type="button" data-t="t4">المتاجر</button>
 <button type="button" data-t="t5">المناطق</button>
@@ -84,7 +84,6 @@ a:hover { text-decoration: underline; }
 </div>
 </section>
 
-<!-- التبويب الجديد للطلبات الحية -->
 <section id="t9" class="tab" hidden>
 <div class="box">
   <h3 style="margin-top:0; color:var(--pri)">متابعة الطلبات الحية (Live)</h3>
@@ -208,22 +207,25 @@ function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.s
 const run=async fn=>{try{await fn()}catch(e){say(e.message,1);console.error(e)}};
 
 async function isAdmin(uid){
-  const snap = await get(ref(db, "users/"+uid));
-  if(!snap.exists()){
-    const allUsers = await get(ref(db, "users"));
-    if(!allUsers.exists()){
-       await set(ref(db, "users/"+uid), {role:"admin", name:"المدير العام", username:"admin", isActive:true, createdAt:Date.now()});
-       return true;
+  try {
+    const snap = await get(ref(db, "users/"+uid));
+    if(!snap.exists()){
+      const allUsers = await get(ref(db, "users"));
+      if(!allUsers.exists()){
+         await set(ref(db, "users/"+uid), {role:"admin", name:"المدير العام", username:"admin", isActive:true, createdAt:Date.now()});
+         return true;
+      }
     }
-  }
-  return snap.exists() && snap.val().role === "admin";
+    return snap.exists() && snap.val().role === "admin";
+  } catch(e) { return false; }
 }
 
 $("btnLogin").onclick=async ()=>{
  $("le").textContent=""; $("btnLogin").disabled=true; $("btnLogin").textContent="جاري...";
  try{
    const cred = await signInWithEmailAndPassword(auth,$("em").value.trim(),$("pw").value);
-   if(!(await isAdmin(cred.user.uid))){ await signOut(auth); $("le").textContent="هذا الحساب ليس مديراً."; }
+   const adm = await isAdmin(cred.user.uid);
+   if(!adm){ await signOut(auth); $("le").textContent="هذا الحساب ليس مديراً."; }
  }catch(err){ $("le").textContent = "خطأ: " + (err.code||err.message); }
  finally{ $("btnLogin").disabled=false; $("btnLogin").textContent="دخول"; }
 };
@@ -231,8 +233,9 @@ $("btnLogin").onclick=async ()=>{
 $("out").onclick=()=>signOut(auth);
 onAuthStateChanged(auth, async u=>{
   if(!u){ $("login").hidden=false; $("app").hidden=true; return; }
-  if(!(await isAdmin(u.uid))){ $("login").hidden=false; $("app").hidden=true; return; }
-  $("login").hidden=true; $("app").hidden=false;
+  const adm = await isAdmin(u.uid);
+  if(!adm){ $("login").hidden=false; $("app").hidden=true; $("le").textContent="هذا الحساب ليس مديراً."; return; }
+  $("login").hidden=true; $("app").hidden=false; $("le").textContent="";
   if(!started){started=true; start();}
 });
 
@@ -266,9 +269,8 @@ function draw(){
  $("s4").textContent=fmt(sts.filter(([,u])=>u.isActive!==false).length);
  
  drawOrders();
- drawLiveOrders(); // استدعاء دالة الطلبات الحية
+ drawLiveOrders();
 
- // ... باقي الكود كما هو ...
  $("drivers").innerHTML=table(["الاسم","الهاتف (الدخول)","الاتصال","مسلّمة","المستحق","الحالة","إجراءات"],drs.map(([id,u])=>{
   const d=getDebt(id);
   return `<tr><td><b>${esc(u.name)}</b></td><td dir="ltr">${esc(u.username)}</td>
@@ -317,11 +319,9 @@ function draw(){
  }
 }
 
-// 🟢 دالة عرض الطلبات الحية
 function drawLiveOrders(){
  const live = Object.entries(orders).filter(([id,o]) => o && !["delivered", "cancelled"].includes(o.status))
-   .sort((a,b) => (b[1].createdAt||0) - (a[1].createdAt||0)); // الأحدث أولاً
-
+   .sort((a,b) => (b[1].createdAt||0) - (a[1].createdAt||0));
  $("liveOrders").innerHTML = table(
    ["الطلب", "المتجر", "السائق", "رقم السائق", "الحالة", "الوقت"],
    live.map(([id,o]) => {
@@ -357,7 +357,6 @@ function drawOrders(){
 }
 $("q").oninput=drawOrders;$("f").onchange=drawOrders;
 
-// ... باقي أكواد الأزرار والإضافة والحذف كما هي ...
 $("btnAnn").onclick=()=>run(async()=>{ await update(ref(db,"settings"),{announcement:$("ann").value.trim()}); say("تم حفظ الإعلان."); });
 $("btnSet").onclick=()=>run(async()=>{
   await update(ref(db,"settings"),{
@@ -372,4 +371,6 @@ $("btnSet").onclick=()=>run(async()=>{
 const closeModal=()=>{$("modalHost").innerHTML=""};
 function modal(title,bodyHTML,onOk,okLabel="حفظ",okClass="grn"){
  $("modalHost").innerHTML=`<div class="modal-bg"><form class="modal" id="mform">
-  <h3>${esc(title)}</h3>${body
+  <h3>${esc(title)}</h3>${bodyHTML}
+  <div class="actions">
+   <button type="submit" clas
