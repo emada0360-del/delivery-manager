@@ -77,7 +77,7 @@ main{max-width:600px;margin:auto;padding:16px}
 <div id="app" hidden>
 <header>
 <h2 id="drvName">السائق</h2>
-<button id="btnOut" class="bad" style="padding:8px 12px;font-size:13px">خروج</button>
+<button id="btnOut" class="bad" style="padding:8px 12px;font-size:13px; background:#dc3545">خروج</button>
 </header>
 <main>
 <div id="msg"></div>
@@ -164,17 +164,24 @@ $("btnOut").onclick=()=>{
  signOut(auth);
 };
 
+// 🟢 تم إضافة try/catch هنا لحماية الدخول من التعليق
 onAuthStateChanged(auth, async u=>{
  if(!u){$("login").hidden=false;$("app").hidden=true;return;}
- const snap=await get(ref(db,"users/"+u.uid));
- const user = snap.val();
- if(!user || user.role!=="driver" || user.isActive===false){
-  await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
+ 
+ try {
+  const snap=await get(ref(db,"users/"+u.uid));
+  const user = snap.val();
+  if(!user || user.role!=="driver" || user.isActive===false){
+   await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
+  }
+  uid=u.uid;driver=user;
+  $("drvName").textContent=user.name;
+  $("login").hidden=true;$("app").hidden=false;
+  start();
+ } catch(e) {
+  $("err").textContent="خطأ في قراءة البيانات: " + e.message;
+  console.error(e);
  }
- uid=u.uid;driver=user;
- $("drvName").textContent=user.name;
- $("login").hidden=true;$("app").hidden=false;
- start();
 });
 
 function startGPS(){
@@ -236,7 +243,6 @@ function fetchPrivateData(){
  });
 }
 
-// دالة حساب الأرباح والديون والطلبات المنجزة
 function drawStats() {
     let debt = 0, todayProfit = 0, doneCount = 0;
     const todayStart = new Date().setHours(0,0,0,0);
@@ -262,7 +268,6 @@ function drawStats() {
     updateStatusUI();
 }
 
-// دالة عرض سجل الطلبات
 function drawHistory() {
     const delivered = Object.entries(allMyOrders).filter(([id, o]) => o && o.status === "delivered").sort((a, b) => (b[1].deliveredAt || 0) - (a[1].deliveredAt || 0));
     if (!delivered.length) {
@@ -350,14 +355,13 @@ function drawOrders(){
     ${buildFinBox(o)}
     <div style="display:flex; gap:8px; margin-top:10px">
       <button style="flex:2" onclick="acceptOrder('${id}')">قبول الطلب</button>
-      <button class="red" style="flex:1; background:var(--bad)" onclick="rejectOrder('${id}')">رفض</button>
+      <button style="flex:1; background:var(--bad)" onclick="rejectOrder('${id}')">رفض</button>
     </div>
    </div>`).join("");
 
  const ac=Object.entries(activeOrders);
  $("activeContainer").hidden = !ac.length;
  
- // التحكم في شاشة الانتظار
  if(isOnline && !liveAvail.length && !ac.length && currentDebt < debtLimit) {
     $("waitingScreen").hidden = false;
  } else {
@@ -396,4 +400,4 @@ function drawOrders(){
   let customerBox = "";
   if(q.customerPhone && o.status !== "waiting_store") {
      const waLink = `https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`;
-     customerBox = `<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>${q.customerName?`<div style="margin-bottom:8px;font-size:13px;color:#475569">الاسم: ${esc(q.customerName)}</div>`:""}${q.note?`<div style="margin-bottom:8px;font-size:13px;color:#b45309">ملاحظة: ${esc(q.note)}<
+     customerBox = `<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>${q.customerName?`<div style="margin-bottom:8px;font-size:13px;color:#475569">الاسم: ${esc(q.customerName)}</div>`:""}${q.note?`<d
