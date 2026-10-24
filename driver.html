@@ -3,36 +3,42 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#14263d">
 <title>Baqubah Delivery | السائق</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🛵</text></svg>">
 <style>
 :root{--bg:#f2f5f9;--ink:#172235;--pri:#1769aa;--ok:#218838;--bad:#dc3545;--warn:#bd7200;--line:#e0e6ef}
-*{box-sizing:border-box}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;font-family:system-ui,Tahoma,Arial;background:var(--bg);color:var(--ink);padding-bottom:50px}
 button,input,select{font:inherit}
 button{border:0;border-radius:8px;padding:12px 16px;background:var(--pri);color:#fff;cursor:pointer;font-weight:700;transition:.15s}
 button:hover{filter:brightness(1.1)}
+button:active{transform:scale(.98)}
 button:disabled{opacity:.5;cursor:not-allowed}
+button.bad{background:var(--bad)}
+input{width:100%;padding:12px;border:1.5px solid #ccd5e2;border-radius:10px;background:#fff;margin:6px 0 14px;outline:none;font-size:16px}
+input:focus{border-color:var(--pri);box-shadow:0 0 0 3px #1769aa22}
+label{display:block;font-size:13px;font-weight:700;color:#64748b}
 header{background:#14263d;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
 header h2{margin:0;font-size:18px}
 main{max-width:600px;margin:auto;padding:16px}
 .box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
+h3{margin:16px 0 10px;font-size:17px}
 
-/* ثلاثة أسطر مسندلة */
-.stats-list { background:#fff; border-radius:16px; padding:16px 20px; margin-bottom:16px; box-shadow:0 4px 15px rgba(0,0,0,.03); }
-.stat-row { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px dashed #e2e8f0; font-weight:700; font-size:15px;}
-.stat-row:last-child { border-bottom:none; padding-bottom:0;}
-.stat-row:first-child { padding-top:0;}
-.stat-row span { color:#475569; }
-.stat-row b { font-size:18px; }
-.text-danger { color:var(--bad); }
-.text-success { color:var(--ok); }
+.stats-list{background:#fff;border-radius:16px;padding:16px 20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px dashed #e2e8f0;font-weight:700;font-size:15px}
+.stat-row:last-child{border-bottom:none;padding-bottom:0}
+.stat-row:first-child{padding-top:0}
+.stat-row span{color:#475569}
+.stat-row b{font-size:18px}
+.text-danger{color:var(--bad)}
+.text-success{color:var(--ok)}
 
-/* شاشة الانتظار */
-.waiting-state { text-align:center; padding:40px 20px; background:#fff; border-radius:16px; box-shadow:0 4px 15px rgba(0,0,0,.03); margin-bottom:16px; border:2px dashed var(--pri); }
-.waiting-state h3 { color:var(--pri); font-size:20px; margin:16px 0 8px; font-weight:800; }
-.waiting-state p { color:#64748b; font-size:14px; margin:0; }
-.radar { width:80px; height:80px; border-radius:50%; background:radial-gradient(circle,var(--pri) 0 15%,var(--pri)33 16% 40%,transparent 41%); margin:0 auto; animation:pulse 1.8s infinite; }
-@keyframes pulse { 0% { transform:scale(.85); opacity:.6; } 50% { transform:scale(1.1); opacity:1; } 100% { transform:scale(.85); opacity:.6; } }
+.waiting-state{text-align:center;padding:40px 20px;background:#fff;border-radius:16px;box-shadow:0 4px 15px rgba(0,0,0,.03);margin-bottom:16px;border:2px dashed var(--pri)}
+.waiting-state h3{color:var(--pri);font-size:20px;margin:16px 0 8px;font-weight:800}
+.waiting-state p{color:#64748b;font-size:14px;margin:0}
+.radar{width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,var(--pri) 0 15%,#1769aa33 16% 40%,transparent 41%);margin:0 auto;animation:pulse 1.8s infinite}
+@keyframes pulse{0%{transform:scale(.85);opacity:.6}50%{transform:scale(1.1);opacity:1}100%{transform:scale(.85);opacity:.6}}
 
 .card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;background:#fff;position:relative}
 .card.new{border:2px solid var(--pri);box-shadow:0 0 15px rgba(23,105,170,.15)}
@@ -42,35 +48,65 @@ main{max-width:600px;margin:auto;padding:16px}
 .status-btn.on{background:var(--ok);color:#fff;box-shadow:0 4px 15px rgba(33,136,56,.3)}
 .status-btn.off{background:#6b7280;color:#fff}
 .status-btn.blocked{background:#9ca3af;color:#fff;cursor:not-allowed}
-.dot{width:10px;height:10px;border-radius:50%;background:#fff;}
+.dot{width:10px;height:10px;border-radius:50%;background:#fff}
 #login{max-width:380px;margin:60px auto}
 #msg{padding:12px;border-radius:8px;display:none;margin-bottom:12px;font-weight:600;text-align:center;position:sticky;top:70px;z-index:40;box-shadow:0 4px 12px rgba(0,0,0,.1)}
-#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600;min-height:20px;margin-top:10px;}
+#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600;min-height:20px;margin-top:10px;word-break:break-word}
+#connBox{background:#fef3c7;color:#b45309;border:1px solid #fde68a;border-radius:10px;padding:10px;text-align:center;font-weight:700;font-size:13px;margin-bottom:12px}
 [hidden]{display:none!important}
 .badge{background:#e0f2fe;color:#0369a1;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:bold}
 .badge.wait{background:#fef3c7;color:#b45309}
-.fin-box { background:#f8fafc; border-radius:8px; padding:10px; margin:10px 0; font-size:13px; border:1px solid #e2e8f0; }
-.fin-row { display:flex; justify-content:space-between; margin-bottom:6px; }
-.fin-row:last-child { margin-bottom:0; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px; font-weight:bold;}
-.debt-box { background:#fff1f2; border-radius:8px; padding:10px; margin:10px 0; font-size:13px; border:1px solid #fecdd3; }
-.customer-box { background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin:10px 0; text-align:center; }
-.customer-box b { font-size:14px; color:#1e3a8a; display:block; margin-bottom:8px; }
-.btn-group { display:flex; gap:8px; }
-.btn-group a { flex:1; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:13px; display:flex; justify-content:center; align-items:center; gap:5px; }
-.btn-call { background:#e0e7ff; color:#3730a3; }
-.btn-wa { background:#dcfce7; color:#166534; }
-.map-link { display:inline-block; background:#e0f2fe; color:#0369a1; padding:6px 12px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:bold; margin-top:6px; margin-bottom:10px;}
-.history-item { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:10px; }
+.fin-box{background:#f8fafc;border-radius:8px;padding:10px;margin:10px 0;font-size:13px;border:1px solid #e2e8f0}
+.fin-row{display:flex;justify-content:space-between;margin-bottom:6px}
+.fin-row:last-child{margin-bottom:0}
+.fin-box .fin-row:last-child{border-top:1px dashed #cbd5e1;padding-top:6px;margin-top:6px;font-weight:bold}
+.debt-box{background:#fff1f2;border-radius:8px;padding:10px;margin:10px 0;font-size:13px;border:1px solid #fecdd3}
+.customer-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin:10px 0;text-align:center}
+.customer-box b{font-size:14px;color:#1e3a8a;display:block;margin-bottom:8px}
+.btn-group{display:flex;gap:8px}
+.btn-group a{flex:1;padding:10px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:13px;display:flex;justify-content:center;align-items:center;gap:5px}
+.btn-call{background:#e0e7ff;color:#3730a3}
+.btn-wa{background:#dcfce7;color:#166534}
+.map-link{display:inline-block;background:#e0f2fe;color:#0369a1;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:bold;margin-top:6px;margin-bottom:10px}
+.history-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-bottom:10px}
 </style>
 </head>
 <body>
 
+<!-- يعرض تقدم التحميل وأي خطأ حقيقي (مهم إذا كان الإنترنت ضعيف) -->
+<script>
+window.__loaded = false;
+window.__err = false;
+var __t0 = Date.now();
+function setLe(t, isErr){
+  var el = document.getElementById("err");
+  if (!el) return;
+  if (window.__err && !isErr) return;
+  el.textContent = t;
+  el.style.color = isErr ? "#dc3545" : "#1769aa";
+  if (isErr) window.__err = true;
+}
+window.addEventListener("error", function(e){
+  var t = e.target;
+  if (t && t !== window && t.tagName === "SCRIPT") setLe("فشل تحميل سكربت: " + (t.src || "الصفحة"), true);
+  else setLe("خطأ بالصفحة: " + (e.message || "غير معروف") + " (سطر " + e.lineno + ")", true);
+}, true);
+window.addEventListener("unhandledrejection", function(e){
+  console.log("unhandled", e.reason);
+});
+var __tick = setInterval(function(){
+  if (window.__loaded) { clearInterval(__tick); return; }
+  var s = Math.round((Date.now() - __t0) / 1000);
+  if (s >= 3) setLe("جاري تحميل النظام ... " + s + " ثانية", false);
+}, 1000);
+</script>
+
 <section id="login" class="box">
 <h2 style="text-align:center;margin-top:0">دخول السائق</h2>
 <form id="lf" onsubmit="return false;">
-<label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
-<label>كلمة المرور</label><input id="pw" type="password" required>
-<button type="button" id="btnLogin" style="width:100%;margin-top:10px">دخول</button>
+<label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" autocomplete="username" required>
+<label>كلمة المرور</label><input id="pw" type="password" autocomplete="current-password" required>
+<button type="button" id="btnLogin" style="width:100%;margin-top:6px">دخول</button>
 </form>
 <p id="err"></p>
 </section>
@@ -82,8 +118,8 @@ main{max-width:600px;margin:auto;padding:16px}
 </header>
 <main>
 <div id="msg"></div>
+<div id="connBox" hidden>⚠️ الاتصال بالإنترنت ضعيف أو مقطوع، جاري إعادة المحاولة...</div>
 
-<!-- ثلاثة أسطر مسندلة -->
 <div class="stats-list">
   <div class="stat-row"><span>الطلبات المنجزة:</span> <b id="statDone">0</b></div>
   <div class="stat-row"><span>رصيد المحفظة (دين):</span> <b id="statDebt" class="text-danger">0</b></div>
@@ -100,7 +136,6 @@ main{max-width:600px;margin:auto;padding:16px}
 
 <div id="annBox" class="box" style="background:#fff7e0;color:#8a5a00;border:1px solid #fde68a" hidden></div>
 
-<!-- شاشة الانتظار -->
 <div id="waitingScreen" class="waiting-state" hidden>
   <div class="radar"></div>
   <h3>انتظر... سوف يصلك طلب قريباً</h3>
@@ -117,9 +152,8 @@ main{max-width:600px;margin:auto;padding:16px}
 <div id="activeList"></div>
 </div>
 
-<!-- سجل الطلبات -->
 <div class="box" style="margin-top:20px">
-  <button id="btnHistory" style="width:100%; background:#e2e8f0; color:#0f172a; box-shadow:none; font-weight:bold;">عرض سجل الطلبات المكتملة</button>
+  <button id="btnHistory" style="width:100%;background:#e2e8f0;color:#0f172a;font-weight:bold">عرض سجل الطلبات المكتملة</button>
   <div id="historyList" style="margin-top:16px" hidden></div>
 </div>
 
@@ -129,7 +163,12 @@ main{max-width:600px;margin:auto;padding:16px}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {getDatabase,ref,set,update,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp,runTransaction} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+
+// وصلنا هنا يعني المكتبات انحملت
+window.__loaded = true;
+window.__err = false;
+document.getElementById("err").textContent = "";
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -144,292 +183,253 @@ const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const safeUrl=u=>{const s=String(u||"").trim();return /^https?:\/\//i.test(s)?s:""};
 
 let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
 let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
-let currentDebt = 0, debtLimit = 15000;
+let currentDebt=0, debtLimit=15000;
+let started=false, unsubs=[], gpsId=null, gpsWarned=false;
+let knownAvail=new Set(), firstAvail=true;
+let wl=null, wlBusy=false;
 
+const on=(q,cb,eb)=>{ unsubs.push(onValue(q,cb,eb)); };
+const pct=()=>{ const p=Number(settings.driverCommissionPct); return (isFinite(p)&&settings.driverCommissionPct!==undefined&&settings.driverCommissionPct!==null)?p/100:0.1; };
+const storeCom=()=>Number(settings.storeCommission||500);
+
+// ===== صوت واهتزاز وتنبيه =====
+let actx=null;
+const AC=window.AudioContext||window.webkitAudioContext;
+document.addEventListener("click",()=>{ try{ if(AC){ actx=actx||new AC(); actx.resume(); } }catch{} });
+function beep(){
+ try{
+  if(!actx) return;
+  const o=actx.createOscillator(), g=actx.createGain();
+  o.connect(g); g.connect(actx.destination);
+  o.frequency.value=880; g.gain.value=0.25;
+  o.start(); o.stop(actx.currentTime+0.3);
+ }catch{}
+}
 const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
-function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
+function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",4000)}
 
-// 🟢 تسجيل الدخول: نضمن أنه يعمل ولا يتجمد
-$("btnLogin").onclick=async()=>{
- $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
- try{ 
-   let phone = $("un").value.trim();
-   if(!phone.includes("@")) phone = phone + "@baqubah.app";
-   await signInWithEmailAndPassword(auth,phone,$("pw").value); 
- }
- catch(e){ 
-   $("err").textContent = "خطأ في الدخول: " + (e.code === 'auth/invalid-credential' ? "البيانات غير صحيحة" : e.message);
- }
- finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
-};
+// ===== إبقاء الشاشة شغالة وانت متصل =====
+async function lockScreen(){
+ if(wl||wlBusy||!navigator.wakeLock) return;
+ wlBusy=true;
+ try{ wl=await navigator.wakeLock.request("screen"); wl.addEventListener("release",()=>{wl=null}); }catch{}
+ wlBusy=false;
+}
+function unlockScreen(){ try{ if(wl) wl.release(); }catch{} wl=null; }
+function syncWake(){ if(isOnline) lockScreen(); else unlockScreen(); }
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden && isOnline) lockScreen(); });
 
-$("btnOut").onclick=()=>{
- if(Object.keys(activeOrders).length>0){ return say("لا يمكنك الخروج ولديك طلبات نشطة!", 1); }
- if(isOnline) toggleStatus();
+// ===== تسجيل الدخول =====
+function phoneCandidates(raw){
+ raw=String(raw||"").trim();
+ if(raw.includes("@")) return [raw.toLowerCase()];
+ let d=raw.replace(/[٠-٩]/g,x=>"٠١٢٣٤٥٦٧٨٩".indexOf(x)).replace(/\D/g,"");
+ if(d.startsWith("00964")) d=d.slice(5); else if(d.startsWith("964")) d=d.slice(3);
+ d=d.replace(/^0+/,"");
+ const list=["0"+d, d, "964"+d];
+ return [...new Set(list)].map(x=>x+"@baqubah.app");
+}
+
+async function doLogin(){
+ const err=$("err"), btn=$("btnLogin");
+ err.style.color="#dc3545"; err.textContent="";
+ const pass=$("pw").value;
+ const cands=phoneCandidates($("un").value);
+ if(!$("un").value.trim()||!pass){ err.textContent="اكتب رقم الهاتف وكلمة المرور."; return; }
+ btn.disabled=true; btn.textContent="جاري...";
+ let last=null;
+ try{
+  for(const email of cands){
+   try{ await signInWithEmailAndPassword(auth,email,pass); last=null; break; }
+   catch(e){
+    last=e;
+    if(["auth/network-request-failed","auth/too-many-requests","auth/user-disabled","auth/unauthorized-domain","auth/operation-not-allowed"].includes(e.code)) break;
+   }
+  }
+  if(last) throw last;
+ }catch(e){
+  const c=e.code||"";
+  if(["auth/invalid-credential","auth/user-not-found","auth/wrong-password","auth/invalid-email"].includes(c)) err.textContent="الرقم أو كلمة المرور غلط.";
+  else if(c==="auth/network-request-failed") err.textContent="ماكو إنترنت أو الاتصال ضعيف.";
+  else if(c==="auth/too-many-requests") err.textContent="محاولات كثيرة، انتظر شوية وجرب مرة ثانية.";
+  else if(c==="auth/user-disabled") err.textContent="هذا الحساب معطل.";
+  else if(c==="auth/unauthorized-domain") err.textContent="رابط الموقع غير مضاف بـ Firebase (Authorized domains).";
+  else err.textContent="كود الخطأ: "+(c||e.message);
+ }finally{ btn.disabled=false; btn.textContent="دخول"; }
+}
+$("btnLogin").onclick=doLogin;
+["un","pw"].forEach(id=>$(id).addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); }));
+
+$("btnOut").onclick=async()=>{
+ if(Object.keys(activeOrders).length>0) return say("لا يمكنك الخروج ولديك طلبات نشطة!",1);
+ try{ if(uid) await set(ref(db,"presence/"+uid),{online:false,lastSeen:serverTimestamp()}); }catch{}
  signOut(auth);
 };
 
-// 🟢 مراقبة حالة الدخول
+// ===== مراقبة حالة الدخول =====
 onAuthStateChanged(auth, async u=>{
- if(!u){$("login").hidden=false;$("app").hidden=true;return;}
- 
- try {
+ if(!u){
+  stop();
+  $("login").hidden=false; $("app").hidden=true;
+  return;
+ }
+ try{
   const snap=await get(ref(db,"users/"+u.uid));
-  const user = snap.val();
-  
+  const user=snap.val();
   if(!user || user.role!=="driver" || user.isActive===false){
    await signOut(auth);
-   $("err").textContent="هذا الحساب غير مصرح له أو معطل.";
+   $("err").style.color="#dc3545";
+   $("err").textContent = !user ? "الحساب ماله سجل بقاعدة البيانات، راجع الإدارة."
+     : (user.role!=="driver" ? "هذا الحساب مو حساب سائق." : "هذا الحساب معطل.");
    return;
   }
-  
-  uid=u.uid;driver=user;
-  $("drvName").textContent=user.name;
-  
-  // إخفاء شاشة الدخول وإظهار التطبيق
-  $("login").hidden=true;
-  $("app").hidden=false;
-  
-  // تشغيل الوظائف بعد الدخول
-  start();
-  
- } catch(e) {
-  // إذا فشلت قراءة البيانات، نعرض الخطأ للمستخدم بدلاً من التجمد
-  $("err").textContent="خطأ في جلب البيانات (ربما الصلاحيات): " + e.message;
-  console.error(e);
-  await signOut(auth);
+  uid=u.uid; driver=user;
+  $("drvName").textContent=user.name||"السائق";
+  $("login").hidden=true; $("app").hidden=false; $("err").textContent="";
+  if(!started){ started=true; start(); }
+ }catch(e){
+  $("err").style.color="#dc3545";
+  $("err").textContent="خطأ بجلب البيانات: "+(e.code||e.message);
+  try{ await signOut(auth); }catch{}
  }
 });
 
 function startGPS(){
- if(!navigator.geolocation)return say("المتصفح لا يدعم تحديد الموقع", 1);
- navigator.geolocation.watchPosition(p=>{
-  pos.lat = p.coords.latitude; pos.lng = p.coords.longitude;
- }, e=>console.log("GPS Error", e), {enableHighAccuracy:true});
+ if(gpsId!==null) return;
+ if(!navigator.geolocation){ if(!gpsWarned){gpsWarned=true;say("المتصفح لا يدعم تحديد الموقع",1);} return; }
+ gpsId=navigator.geolocation.watchPosition(p=>{
+  pos.lat=p.coords.latitude; pos.lng=p.coords.longitude;
+ }, e=>{ console.log("GPS Error",e); }, {enableHighAccuracy:true,maximumAge:10000,timeout:30000});
+}
+
+function stop(){
+ unsubs.forEach(f=>{try{f()}catch{}}); unsubs=[];
+ if(gpsId!==null){ try{navigator.geolocation.clearWatch(gpsId)}catch{} gpsId=null; }
+ unlockScreen();
+ uid=null; driver=null; started=false; isOnline=false;
+ availOrders={}; activeOrders={}; allMyOrders={}; finance={}; privData={};
+ knownAvail=new Set(); firstAvail=true; pos={lat:null,lng:null};
 }
 
 function start(){
  startGPS();
- 
- // تحميل الإعدادات
- onValue(ref(db,"settings"),s=>{
-  settings=s.val()||{}; debtLimit = Number(settings.debtLimit || 15000);
-  if(settings.announcement){$("annBox").textContent=settings.announcement;$("annBox").hidden=false;}
-  else $("annBox").hidden=true;
-  drawStats();
- }, e=>console.log("Settings error", e));
-
- // حالة الاتصال
  const pr=ref(db,"presence/"+uid);
- onValue(pr, s=>{
-   const status = s.val() || {};
-   if(Object.keys(activeOrders).length === 0) { isOnline = status.online === true; }
-   updateStatusUI();
- }, e=>console.log("Presence error", e));
 
- onValue(ref(db,".info/connected"),s=>{
-  if(s.val()===true){
+ // إذا الإدارة عطّلت الحساب وانت داخل، يطلعك
+ on(ref(db,"users/"+uid), s=>{
+  const u=s.val();
+  if(!u || u.role!=="driver" || u.isActive===false){
+   $("err").style.color="#dc3545";
+   $("err").textContent="تم تعطيل هذا الحساب من الإدارة.";
+   signOut(auth);
+   return;
+  }
+  driver=u; $("drvName").textContent=u.name||"السائق";
+ }, e=>console.log("User error",e));
+
+ on(ref(db,"settings"), s=>{
+  settings=s.val()||{}; debtLimit=Number(settings.debtLimit||15000);
+  if(settings.announcement){ $("annBox").textContent=settings.announcement; $("annBox").hidden=false; }
+  else $("annBox").hidden=true;
+  drawStats(); drawOrders();
+ }, e=>console.log("Settings error",e));
+
+ on(pr, s=>{
+  const status=s.val()||{};
+  if(Object.keys(activeOrders).length===0) isOnline=status.online===true;
+  updateStatusUI(); drawOrders();
+ }, e=>console.log("Presence error",e));
+
+ on(ref(db,".info/connected"), s=>{
+  const ok=s.val()===true;
+  $("connBox").hidden=ok;
+  if(ok){
    onDisconnect(pr).set({online:false,lastSeen:serverTimestamp()});
    if(isOnline) set(pr,{online:true,lastSeen:serverTimestamp()});
   }
- }, e=>console.log("Connection error", e));
+ }, e=>console.log("Connection error",e));
 
- // المالية
- onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{ 
-  finance=s.val()||{}; drawStats(); 
- }, e=>console.log("Finance error", e));
+ on(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)), s=>{
+  finance=s.val()||{}; drawStats();
+ }, e=>console.log("Finance error",e));
 
- // الطلبات المتاحة
- onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{ 
-  availOrders=s.val()||{}; drawOrders(); 
- }, e=>console.log("Pending error", e));
+ on(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")), s=>{
+  availOrders=s.val()||{}; drawOrders();
+ }, e=>{ console.log("Pending error",e); say("تعذر تحميل الطلبات المتاحة",1); });
 
- // طلباتي
- onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
-  allMyOrders = s.val() || {};
+ on(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)), s=>{
+  allMyOrders=s.val()||{};
   activeOrders={};
   for(const k in allMyOrders){
-   if(!["delivered","cancelled"].includes(allMyOrders[k].status)) { activeOrders[k]=allMyOrders[k]; }
+   if(!["delivered","cancelled"].includes(allMyOrders[k].status)) activeOrders[k]=allMyOrders[k];
   }
-  if(Object.keys(activeOrders).length > 0) { isOnline = true; }
+  if(Object.keys(activeOrders).length>0) isOnline=true;
   fetchPrivateData();
-  updateStatusUI();
-  drawOrders();
-  drawStats();
-  drawHistory();
- }, e=>console.log("My orders error", e));
+  updateStatusUI(); drawOrders(); drawStats(); drawHistory();
+ }, e=>{ console.log("My orders error",e); say("تعذر تحميل طلباتك",1); });
 }
 
 function fetchPrivateData(){
- const ids=Object.keys(activeOrders);
- if(!ids.length) return;
- ids.forEach(id=>{
-   if(privData[id]) return;
-   get(ref(db,"orderPrivate/"+id)).then(snap=>{
-     if(snap.exists()){ privData[id]=snap.val(); drawOrders(); }
-   }).catch(e=>console.log("Private error", e));
+ Object.keys(activeOrders).forEach(id=>{
+  if(privData[id]) return;
+  get(ref(db,"orderPrivate/"+id)).then(snap=>{
+   if(snap.exists()){ privData[id]=snap.val(); drawOrders(); }
+  }).catch(e=>console.log("Private error",e));
  });
 }
 
-// 🟢 دوال العرض والحسابات
-function drawStats() {
-    try {
-        let debt = 0, todayProfit = 0, doneCount = 0;
-        const todayStart = new Date().setHours(0,0,0,0);
-        
-        for (const id in allMyOrders) {
-            const o = allMyOrders[id];
-            if (o.status === "delivered") {
-                doneCount++;
-                debt += Math.round(Number(o.platformDeliveryCommission) || 0) + Math.round(Number(o.storeCommission) || 0);
-                if (o.deliveredAt >= todayStart) { todayProfit += Math.round(Number(o.driverProfit) || 0); }
-            }
-        }
-        for (const id in finance) {
-            const f = finance[id];
-            if (f.type === "cash_received") { debt -= Math.round(Number(f.amount) || 0); }
-        }
-        if (debt < 0) debt = 0; currentDebt = debt;
-        
-        $("statDone").textContent = doneCount;
-        $("statDebt").textContent = fmt(debt) + " د.ع";
-        $("statProfit").textContent = fmt(todayProfit) + " د.ع";
-        $("warnBox").hidden = debt < debtLimit;
-        updateStatusUI();
-    } catch(e) { console.log("Stats error", e); }
-}
-
-function drawHistory() {
-    try {
-        if(!$("historyList")) return;
-        const delivered = Object.entries(allMyOrders)
-            .filter(([id, o]) => o && o.status === "delivered")
-            .sort((a, b) => (b[1].deliveredAt || 0) - (a[1].deliveredAt || 0));
-        
-        if (!delivered.length) {
-            $("historyList").innerHTML = "<p style='text-align:center;color:#64748b;padding:16px'>لا يوجد طلبات مكتملة بعد.</p>";
-            return;
-        }
-        $("historyList").innerHTML = delivered.map(([id, o]) => `
-            <div class="history-item">
-                <div class="row">
-                    <b>طلب #${esc(id.slice(-6))}</b>
-                    <span style="color:var(--ok); font-weight:800;">+${fmt(o.driverProfit || 0)} د.ع</span>
-                </div>
-                <div style="font-size:13px; color:#475569; margin:4px 0;"><b>${esc(o.storeName || "")}</b> - ${esc(o.area || "")}</div>
-                <div style="font-size:12px; color:#94a3b8;">${o.deliveredAt ? new Date(o.deliveredAt).toLocaleString("ar-IQ") : ""}</div>
-            </div>
-        `).join("");
-    } catch(e) { console.log("History error", e); }
-}
-
-$("btnHistory").onclick = () => {
-    const el = $("historyList");
-    el.hidden = !el.hidden;
-    if(!el.hidden) drawHistory();
-};
-
-function toggleStatus(){
- if(currentDebt >= debtLimit) return say("لا يمكنك الاتصال، لقد تجاوزت سقف الدين", 1);
- if(!isOnline && Object.keys(activeOrders).length>0) return say("لا يمكنك الإغلاق ولديك طلبات نشطة", 1);
- isOnline=!isOnline;
- const pr=ref(db,"presence/"+uid);
- set(pr,{online:isOnline,lastSeen:serverTimestamp()});
- if(isOnline){ startGPS(); speak("أنت الآن متصل"); } else { speak("أنت الآن غير متصل"); }
-}
-$("btnStatus").addEventListener("click", toggleStatus);
-
-function updateStatusUI(){
- const hasActive = Object.keys(activeOrders).length > 0;
- const btn=$("btnStatus");
- if(currentDebt >= debtLimit && !hasActive) {
-   isOnline = false; btn.className="status-btn blocked"; $("statusTxt").textContent="محظور (تجاوزت سقف الدين)"; return;
- }
- if(hasActive) {
-   isOnline = true; btn.className="status-btn on"; $("statusTxt").textContent="متصل (لديك طلب نشط)"; return;
- }
- if(isOnline){ btn.className="status-btn on"; $("statusTxt").textContent="متصل (متاح للطلبات)"; }
- else{ btn.className="status-btn off"; $("statusTxt").textContent="غير متصل (مغلق)"; }
-}
-
-function buildFinBox(o) {
-    try {
-        const storeCom = Number(settings.storeCommission || 500);
-        const platformCom = Math.round(o.deliveryFee * 0.1);
-        const payStore = Math.round(o.itemPrice - storeCom);
-        const collectCustomer = Math.round(o.customerTotal);
-        const profit = Math.round(o.deliveryFee * 0.9);
-        return `
-        <div class="fin-box">
-            <div class="fin-row" style="color:#dc3545"><span>تدفع للمتجر:</span> <b>${fmt(payStore)} د.ع</b></div>
-            <div class="fin-row" style="color:#1769aa"><span>تستلم من الزبون:</span> <b>${fmt(collectCustomer)} د.ع</b></div>
-            <div class="fin-row" style="color:#16a34a"><span>ربحك الصافي (الكروة):</span> <b>${fmt(profit)} د.ع</b></div>
-        </div>
-        <div class="debt-box">
-            <div class="fin-row" style="color:#b42318; margin-bottom:2px"><span>عمولة المنصة (10%):</span> <b>${fmt(platformCom)} د.ع</b></div>
-            <div class="fin-row" style="color:#b42318; margin-bottom:2px"><span>عمولة المتجر (ثابتة):</span> <b>${fmt(storeCom)} د.ع</b></div>
-            <div class="fin-row" style="color:#b42318; border-top:1px solid #fecdd3; padding-top:4px; margin-top:4px"><span>سيضاف لدينك:</span> <b>${fmt(platformCom + storeCom)} د.ع</b></div>
-        </div>`;
-    } catch(e) { return ""; }
-}
-
-function drawOrders(){
- try {
-  let liveAvail = [];
-  if(isOnline && currentDebt < debtLimit){
-   liveAvail = Object.entries(availOrders).filter(([id,o])=>{
-     if(o.driverId) return false; 
-     if(o.rejectedBy && o.rejectedBy[uid]) return false; 
-     if(Object.keys(activeOrders).length>0){ return (Date.now()-(o.createdAt||0)) > 120000; }
-     return true;
-   });
-  }
-  
-  $("availContainer").hidden = !liveAvail.length;
-  $("availList").innerHTML = liveAvail.map(([id,o])=>`
-    <div class="card new">
-     <div class="row"><b>طلب #${esc(id.slice(-6))}</b></div>
-     <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
-     <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
-     ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
-     ${buildFinBox(o)}
-     <div style="display:flex; gap:8px; margin-top:10px">
-       <button style="flex:2" onclick="acceptOrder('${id}')">قبول الطلب</button>
-       <button style="flex:1; background:var(--bad)" onclick="rejectOrder('${id}')">رفض</button>
-     </div>
-    </div>`).join("");
-
-  const ac=Object.entries(activeOrders);
-  $("activeContainer").hidden = !ac.length;
-  
-  if(isOnline && !liveAvail.length && !ac.length && currentDebt < debtLimit) {
-     $("waitingScreen").hidden = false;
-  } else {
-     $("waitingScreen").hidden = true;
-  }
-
-  $("activeList").innerHTML = ac.map(([id,o])=>{
-   let actionBtn="", warn="", statusBadge="";
-   const now=Date.now(); const q = privData[id] || {}; 
-   
-   if(o.status==="waiting_store"){
-    statusBadge = `<span class="badge wait">بانتظار موافقة المتجر</span>`;
-    actionBtn=`<div style="text-align:center; padding:15px; background:#fef3c7; color:#b45309; border-radius:8px; font-weight:bold; margin-top:10px">يرجى الانتظار حتى يوافق المتجر على طلبك...</div>`;
+// ===== الإحصائيات والسجل =====
+function drawStats(){
+ try{
+  let debt=0, todayProfit=0, doneCount=0;
+  const todayStart=new Date().setHours(0,0,0,0);
+  for(const id in allMyOrders){
+   const o=allMyOrders[id];
+   if(o.status==="delivered"){
+    doneCount++;
+    debt+=Math.round(Number(o.platformDeliveryCommission)||0)+Math.round(Number(o.storeCommission)||0);
+    if(o.deliveredAt>=todayStart) todayProfit+=Math.round(Number(o.driverProfit)||0);
    }
-   else if(o.status==="accepted"){
-    statusBadge = `<span class="badge">بالطريق للمتجر</span>`;
-    if(o.storeLat && pos.lat){
-      const d=getDist(pos.lat, pos.lng, o.storeLat, o.storeLng);
-      if(d>300) warn=`<p style="color:var(--bad);font-size:12px;margin:4px 0">أنت بعيد عن المتجر (${Math.round(d)}م)</p>`;
-    }
-    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" onclick="updateStep('${id}','arrived_store')">وصلت للمتجر</button>`;
-   } 
-   else if(o.status==="arrived_store"){
-    statusBadge = `<span class="badge">وصل للمتجر</span>`;
-    const canPick = (now - (o.stepAt||0)) > 60000; 
-    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">${canPick?'تم استلام الطلب':'انتظر دقيقة...'}</button>`;
-   }
-   else if(["picked_up","deliver
+  }
+  for(const id in finance){
+   const f=finance[id];
+   if(f.type==="cash_received") debt-=Math.round(Number(f.amount)||0);
+  }
+  if(debt<0) debt=0; currentDebt=debt;
+  $("statDone").textContent=doneCount;
+  $("statDebt").textContent=fmt(debt)+" د.ع";
+  $("statProfit").textContent=fmt(todayProfit)+" د.ع";
+  $("warnBox").hidden=debt<debtLimit;
+  updateStatusUI();
+ }catch(e){ console.log("Stats error",e); }
+}
+
+function drawHistory(){
+ try{
+  if(!$("historyList")||$("historyList").hidden) return;
+  const delivered=Object.entries(allMyOrders)
+   .filter(([id,o])=>o&&o.status==="delivered")
+   .sort((a,b)=>(b[1].deliveredAt||0)-(a[1].deliveredAt||0)).slice(0,50);
+  if(!delivered.length){
+   $("historyList").innerHTML="<p style='text-align:center;color:#64748b;padding:16px'>لا يوجد طلبات مكتملة بعد.</p>";
+   return;
+  }
+  $("historyList").innerHTML=delivered.map(([id,o])=>`
+   <div class="history-item">
+    <div class="row">
+     <b>طلب #${esc(id.slice(-6))}</b>
+     <span style="color:var(--ok);font-weight:800">+${fmt(o.driverProfit||0)} د.ع</span>
+    </div>
+    <div style="font-size:13px;color:#475569;margin:4px 0"><b>${esc(o.storeName||"")}</b> - ${esc(o.area||"")}</div>
+    <div style="font-size:12px;color:#94a3b8">${o.deliveredAt?new Date(o.deliveredAt).toLocaleString("ar-IQ"):""}</div>
+   </div>`).join("");
+ }catch(e){ console.log("History error",e); }
+}
+$("btnHistory").onclick=()=>{
+ const el=$("historyList");
+ el.hidden=!el.hidden;
+ $("btnHistory").textContent=el.hidden?"عرض سجل الطلبات المكتملة":"إ
