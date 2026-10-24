@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Baqubah Delivery | الإدارة</title>
 <style>
-:root{--bg:#f2f5f9;--ink:#172235;--pri:#1769aa;--ok:#218838;--bad:#dc3545;--warn:#bd7200;--line:#e0e6ef}
+:root{--bg:#f2f5f9;--ink:#172235;--pri:#1769aa;--ok:#218838;--bad:#dc3545;--warn:#bd7200;--line:#e0e6ef;--mut:#64748b}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,Tahoma,Arial;background:var(--bg);color:var(--ink)}
 button,input,select,textarea{font:inherit}
@@ -42,6 +42,11 @@ td select{margin:0;width:auto;min-width:140px;padding:6px}
 .tag.g{background:#e6f4ea;color:#176337}.tag.r{background:#fdecea;color:#b42318}.tag.y{background:#fef3c7;color:#b45309}
 a { color: var(--pri); text-decoration: none; font-weight: bold; }
 a:hover { text-decoration: underline; }
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal{background:#fff;border-radius:14px;padding:22px;width:100%;max-width:420px;max-height:90vh;overflow:auto}
+.modal h3{margin-top:0}
+.modal .actions{display:flex;gap:8px;margin-top:8px}
+.modal .actions button{flex:1}
 </style>
 </head>
 <body>
@@ -52,7 +57,7 @@ a:hover { text-decoration: underline; }
 <label>كلمة المرور</label><input id="pw" type="password" required autocomplete="current-password">
 <button type="button" id="btnLogin" style="width:100%;padding:12px">دخول</button>
 </form>
-<p id="le" style="color:#b42318;font-size:14px;min-height:20px;text-align:center;font-weight:600"></p>
+<p id="le" style="color:#b42318;font-size:14px;min-height:20px;text-align:center;font-weight:600;word-break:break-word"></p>
 </section>
 
 <div id="app" hidden>
@@ -178,6 +183,25 @@ a:hover { text-decoration: underline; }
 </div>
 <div id="modalHost"></div>
 
+<!-- كاشف فشل تحميل المكتبات (لازم قبل سكربت الموديول) -->
+<script>
+window.addEventListener("error", function(e){
+  var t = e.target;
+  if (t && t.tagName === "SCRIPT") {
+    document.getElementById("le").textContent = "فشل تحميل المكتبات، تأكد من الإنترنت أو افتح الصفحة من رابط https";
+  }
+}, true);
+window.addEventListener("unhandledrejection", function(e){
+  var el = document.getElementById("le");
+  if (el && !el.textContent) el.textContent = "خطأ: " + (e.reason && (e.reason.code || e.reason.message) || e.reason);
+});
+if (location.protocol === "file:") {
+  document.addEventListener("DOMContentLoaded", function(){
+    document.getElementById("le").textContent = "الصفحة مفتوحة كملف. لازم ترفعها على رابط https حتى يشتغل الدخول.";
+  });
+}
+</script>
+
 <script type="module">
 import {initializeApp,deleteApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
@@ -206,43 +230,77 @@ let users={},orders={},areas={},fin={},pres={},settings={},started=false;
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#ffebee":"#e8f5e9";m.style.color=bad?"#b71c1c":"#176337";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
 const run=async fn=>{try{await fn()}catch(e){say(e.message,1);console.error(e)}};
 
-async function isAdmin(uid){
-  try {
-    const snap = await get(ref(db, "users/"+uid));
-    if(!snap.exists()){
-      const allUsers = await get(ref(db, "users"));
-      if(!allUsers.exists()){
-         await set(ref(db, "users/"+uid), {role:"admin", name:"المدير العام", username:"admin", isActive:true, createdAt:Date.now()});
-         return true;
-      }
+// ===== فحص المدير (يرجع السبب الحقيقي بدل false صامت) =====
+async function checkAdmin(uid){
+  let snap;
+  try{
+    snap = await get(ref(db, "users/"+uid));
+  }catch(e){
+    return {ok:false, reason:"تعذر قراءة بياناتك من قاعدة البيانات ("+(e.code||e.message)+"). راجع Rules."};
+  }
+  if(snap.exists()){
+    const u = snap.val();
+    if(u.role !== "admin") return {ok:false, reason:"هذا الحساب ليس مديراً (role الحالي: "+(u.role||"فارغ")+")."};
+    if(u.isActive === false) return {ok:false, reason:"حساب المدير معطل."};
+    return {ok:true};
+  }
+  // أول مدير: يتسجل فقط إذا جدول users فارغ تماماً
+  try{
+    const all = await get(ref(db, "users"));
+    if(!all.exists()){
+      await set(ref(db, "users/"+uid), {role:"admin", name:"المدير العام", username:"admin", isActive:true, createdAt:Date.now()});
+      return {ok:true};
     }
-    return snap.exists() && snap.val().role === "admin";
-  } catch(e) { return false; }
+  }catch(e){
+    return {ok:false, reason:"الحساب ماله سجل بقاعدة البيانات (users/"+uid+") وتعذر فحص الجدول ("+(e.code||e.message)+")."};
+  }
+  return {ok:false, reason:"الحساب مسجل بالدخول لكن ماله سجل بـ users. أضف users/"+uid+" بـ role = admin من Firebase Console."};
 }
 
+// ===== تسجيل الدخول: الزر يسجل فقط، والباقي يسويه onAuthStateChanged =====
 $("btnLogin").onclick=async ()=>{
- $("le").textContent=""; $("btnLogin").disabled=true; $("btnLogin").textContent="جاري...";
+ const le=$("le"), btn=$("btnLogin");
+ le.textContent="";
+ const email=$("em").value.trim(), pass=$("pw").value;
+ if(!email || !pass){ le.textContent="اكتب البريد وكلمة المرور."; return; }
+ btn.disabled=true; btn.textContent="جاري...";
  try{
-   const cred = await signInWithEmailAndPassword(auth,$("em").value.trim(),$("pw").value);
-   const adm = await isAdmin(cred.user.uid);
-   if(!adm){ await signOut(auth); $("le").textContent="هذا الحساب ليس مديراً."; }
- }catch(err){ $("le").textContent = "خطأ: " + (err.code||err.message); }
- finally{ $("btnLogin").disabled=false; $("btnLogin").textContent="دخول"; }
+   await signInWithEmailAndPassword(auth, email, pass);
+ }catch(err){
+   const c=err.code||"";
+   if(["auth/invalid-credential","auth/user-not-found","auth/wrong-password","auth/invalid-email"].includes(c)) le.textContent="البريد أو كلمة المرور غلط.";
+   else if(c==="auth/network-request-failed") le.textContent="ماكو إنترنت أو الاتصال ضعيف.";
+   else if(c==="auth/too-many-requests") le.textContent="محاولات كثيرة، انتظر شوية وجرب مرة ثانية.";
+   else if(c==="auth/unauthorized-domain") le.textContent="رابط الموقع غير مضاف بـ Firebase (Authorized domains).";
+   else le.textContent="كود الخطأ: "+(c||err.message);
+ }finally{
+   btn.disabled=false; btn.textContent="دخول";
+ }
 };
 
 $("out").onclick=()=>signOut(auth);
+
 onAuthStateChanged(auth, async u=>{
   if(!u){ $("login").hidden=false; $("app").hidden=true; return; }
-  const adm = await isAdmin(u.uid);
-  if(!adm){ $("login").hidden=false; $("app").hidden=true; $("le").textContent="هذا الحساب ليس مديراً."; return; }
-  $("login").hidden=true; $("app").hidden=false; $("le").textContent="";
-  if(!started){started=true; start();}
+  try{
+    const r = await checkAdmin(u.uid);
+    if(!r.ok){
+      $("le").textContent = r.reason;
+      await signOut(auth);
+      return;
+    }
+    $("login").hidden=true; $("app").hidden=false; $("le").textContent="";
+    if(!started){started=true; start();}
+  }catch(e){
+    $("le").textContent = "خطأ: "+(e.code||e.message);
+    try{ await signOut(auth); }catch{}
+  }
 });
 
 function start(){
  const src={users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>settings=v};
- for(const p in src)onValue(ref(db,p),s=>{src[p](s.val()||{});draw()},e=>say("تعذر التحميل: "+e.message,1));
- autoClean();
+ for(const p in src)onValue(ref(db,p),s=>{src[p](s.val()||{});draw()},e=>say("تعذر تحميل "+p+": "+(e.code||e.message),1));
+ setTimeout(()=>run(autoClean), 5000);
 }
 
 $("nav").onclick=e=>{const b=e.target.closest("[data-t]");if(!b)return;
@@ -267,7 +325,7 @@ function draw(){
  $("s2").textContent=fmt(os.filter(o=>!["delivered","cancelled"].includes(o.status)).length);
  $("s3").textContent=fmt(drs.filter(([id,u])=>u.isActive!==false&&online(id)).length);
  $("s4").textContent=fmt(sts.filter(([,u])=>u.isActive!==false).length);
- 
+
  drawOrders();
  drawLiveOrders();
 
@@ -326,51 +384,4 @@ function drawLiveOrders(){
    ["الطلب", "المتجر", "السائق", "رقم السائق", "الحالة", "الوقت"],
    live.map(([id,o]) => {
      let tagClass = "y";
-     if(["accepted", "arrived_store", "picked_up", "delivering"].includes(o.status)) tagClass = "g";
-     
-     const driverName = o.driverName ? `<b>${esc(o.driverName)}</b>` : '<span style="color:#94a3b8">بانتظار سائق</span>';
-     const driverPhone = o.driverPhone ? `<a href="tel:${esc(o.driverPhone)}" dir="ltr">${esc(o.driverPhone)}</a>` : '—';
-     
-     return `<tr>
-       <td>#${esc(id.slice(-6))}</td>
-       <td>${esc(o.storeName)}</td>
-       <td>${driverName}</td>
-       <td style="text-align:left">${driverPhone}</td>
-       <td><span class="tag ${tagClass}">${ST[o.status]}</span></td>
-       <td dir="ltr" style="text-align:right">${new Date(o.createdAt).toLocaleTimeString('ar-IQ')}</td>
-     </tr>`;
-   }),
-   "لا توجد طلبات حية الآن. جميع الطلبات مكتملة أو ملغية."
- );
-}
-
-function drawOrders(){
- const t=$("q").value.trim().toLowerCase(),f=$("f").value;
- const rows=Object.entries(orders).filter(([id,o])=>o&&(!f||o.status===f)&&[id,o.storeName,o.area,o.driverName].join(" ").toLowerCase().includes(t))
-  .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0)).slice(0,150);
- $("orders").innerHTML=table(["الطلب","المتجر","المنطقة","الزبون","المبلغ","الحالة","إجراءات"],rows.map(([id,o])=>
-  `<tr><td>#${esc(id.slice(-6))}</td><td>${esc(o.storeName)}</td><td>${esc(o.area)}</td><td>${esc(o.customerPhone||"—")}</td>
-  <td>${fmt(o.customerTotal)} د.ع</td><td>${ST[o.status]||esc(o.status)}</td>
-  <td><select data-s="${esc(id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${o.status===k?"selected":""}>${v}</option>`).join("")}</select>
-  <button type="button" data-ss="${esc(id)}">حفظ</button>
-  <button type="button" data-del="${esc(id)}" data-kind="order" class="red">حذف</button></td></tr>`),"لا توجد طلبات.");
-}
-$("q").oninput=drawOrders;$("f").onchange=drawOrders;
-
-$("btnAnn").onclick=()=>run(async()=>{ await update(ref(db,"settings"),{announcement:$("ann").value.trim()}); say("تم حفظ الإعلان."); });
-$("btnSet").onclick=()=>run(async()=>{
-  await update(ref(db,"settings"),{
-    driverCommissionPct: Number($("set-com").value),
-    storeCommission: Number($("set-storecom").value),
-    debtLimit: Number($("set-limit").value),
-    deleteOrdersAfterDays: Number($("set-days").value)
-  });
-  say("تم حفظ الإعدادات.");
-});
-
-const closeModal=()=>{$("modalHost").innerHTML=""};
-function modal(title,bodyHTML,onOk,okLabel="حفظ",okClass="grn"){
- $("modalHost").innerHTML=`<div class="modal-bg"><form class="modal" id="mform">
-  <h3>${esc(title)}</h3>${bodyHTML}
-  <div class="actions">
-   <button type="submit" clas
+     if(["accepted", "arrived_store", "picked_up", "de
