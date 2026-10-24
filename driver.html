@@ -202,7 +202,8 @@ function battHint(){
 }
 /* ================================================================= */
 
-const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
+const TTS = isNative ? (window.Capacitor.Plugins||{}).TextToSpeech : null;
+const speak=t=>{try{if(TTS){TTS.stop().catch(()=>{});TTS.speak({text:t,lang:"ar-SA",rate:1,volume:1}).catch(()=>{});return;}const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
 $("btnLogin").onclick=async()=>{
@@ -413,65 +414,4 @@ function drawOrders(){
   let storeBox = `<div class="customer-box" style="background:#f0fdf4; border-color:#bbf7d0; padding:10px;"><b style="color:#166534">هاتف المتجر: <span dir="ltr">${esc(o.storePhone || "غير متوفر")}</span></b>${o.storePhone ? `<div class="btn-group" style="margin-top:4px"><a href="tel:${esc(o.storePhone)}" class="btn-call" style="background:#dcfce7; color:#166534">📞 اتصال بالمتجر</a></div>` : ""}</div>`;
 
   let customerBox = "";
-  if(q.customerPhone && o.status !== "waiting_store") {
-     const waLink = `https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`;
-     customerBox = `<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>${q.customerName?`<div style="margin-bottom:8px;font-size:13px;color:#475569">الاسم: ${esc(q.customerName)}</div>`:""}${q.note?`<div style="margin-bottom:8px;font-size:13px;color:#b45309">ملاحظة: ${esc(q.note)}</div>`:""}<div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a></div></div>`;
-  }
-
-  return `<div class="card ${o.status==='waiting_store'?'waiting':''}">
-   <div class="row"><b>#${esc(id.slice(-6))}</b> ${statusBadge}</div>
-   <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
-   <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
-   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
-   ${storeBox}${buildFinBox(o)}${customerBox}${warn}${actionBtn}
-  </div>`;
- }).join("");
-}
-
-function getDist(lat1, lon1, lat2, lon2){
- if(!lat1||!lat2)return 0;
- const R=6371e3, p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
- const dp=(lat2-lat1)*Math.PI/180, dl=(lon2-lon1)*Math.PI/180;
- const a=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
- return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-window.acceptOrder=async(id,fromNotif)=>{
- const fail=(m)=>{ say(m,1); if(fromNotif) notifyText("الطلب",m); };
- if(currentDebt >= debtLimit) return fail("لا يمكنك قبول الطلبات، لقد تجاوزت سقف الدين");
- if(!isOnline) return fail("يجب أن تكون متصلاً لتقبل الطلب");
- try{
-  const cur=(await get(ref(db,"orders/"+id))).val();
-  if(!cur || cur.driverId || cur.status!=="pending") return fail("تم أخذ هذا الطلب من سائق آخر");
-  await update(ref(db,"orders/"+id),{ driverId:uid, driverName:driver.name, driverPhone:driver.phone||"", status:"waiting_store", stepAt:serverTimestamp(), acceptedAt:Date.now() });
-  say("تم قبول الطلب، بانتظار موافقة المتجر"); speak("تم قبول الطلب، بانتظار موافقة المتجر");
-  if(fromNotif) notifyText("تم قبول الطلب","بانتظار موافقة المتجر");
- }catch(e){ fail("تم أخذه من سائق آخر"); }
-};
-
-window.rejectOrder=async(id)=>{
- try{ await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]: true}); say("تم رفض الطلب."); }
- catch(e){say("فشل الرفض",1);}
-};
-
-window.updateStep=async(id,newStatus)=>{
- const o=activeOrders[id]; if(!o)return;
- if(newStatus==="arrived_store"){
-   if(o.storeLat && pos.lat){
-    const d=getDist(pos.lat,pos.lng,o.storeLat,o.storeLng);
-    if(d>300) return say(`يجب أن تكون قريباً من المتجر (المسافة الحالية ${Math.round(d)}م)`, 1);
-   }
- }
- try{
-  const patch={status:newStatus, stepAt:serverTimestamp()};
-  if(newStatus==="delivered"){
-    const profit=Math.round(o.deliveryFee*0.9);
-    patch.deliveredAt=Date.now(); patch.driverProfit=profit; patch.platformDeliveryCommission=Math.round(o.deliveryFee-profit);
-  }
-  await update(ref(db,"orders/"+id),patch);
-  if(newStatus==="delivered") speak("تم التوصيل بنجاح"); else speak("تم تحديث الحالة");
- }catch(e){say("فشل التحديث",1);}
-};
-</script>
-</body>
-</html>
+  if(q.customerPhone && o.status !== "waiti
