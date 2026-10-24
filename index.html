@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Baqubah Delivery | الإدارة</title>
 <style>
 :root{--bg:#f2f5f9;--ink:#172235;--pri:#1769aa;--ok:#218838;--bad:#dc3545;--warn:#bd7200;--line:#e0e6ef;--mut:#64748b}
@@ -52,36 +51,41 @@ a:hover { text-decoration: underline; }
 </head>
 <body>
 
-<!-- هذا السكربت لازم يبقى أول شي: يلتقط الأخطاء ويفحص بطء/حجب التحميل -->
+<!-- هذا السكربت لازم يبقى أول شي: يعرض تقدم التحميل وأي خطأ حقيقي بدون ما يختفي -->
 <script>
 window.__loaded = false;
+window.__err = false;
+window.__step = "بدء التحميل";
+var __t0 = Date.now();
+
+function setLe(t, isErr){
+  var el = document.getElementById("le");
+  if (!el) return;
+  if (window.__err && !isErr) return;
+  el.textContent = t;
+  el.style.color = isErr ? "#b42318" : "#1769aa";
+  if (isErr) window.__err = true;
+}
+window.setLe = setLe;
 
 window.addEventListener("error", function(e){
-  var el = document.getElementById("le");
-  if(!el) return;
   var t = e.target;
   if (t && t !== window && t.tagName === "SCRIPT") {
-    el.textContent = "فشل تحميل Firebase: " + (t.src || "سكربت الصفحة");
+    setLe("فشل تحميل سكربت: " + (t.src || "الصفحة"), true);
   } else {
-    el.textContent = "خطأ بالصفحة: " + (e.message || "غير معروف") + " (سطر " + e.lineno + ")";
+    setLe("خطأ بالصفحة: " + (e.message || "غير معروف") + " (سطر " + e.lineno + ")", true);
   }
 }, true);
 
 window.addEventListener("unhandledrejection", function(e){
-  var el = document.getElementById("le");
-  if (el) el.textContent = "خطأ: " + (e.reason && (e.reason.code || e.reason.message) || e.reason);
+  setLe("خطأ: " + (e.reason && (e.reason.code || e.reason.message) || e.reason), true);
 });
 
-// بعد 10 ثواني: إذا الصفحة لسه ما انحملت، افحص السبب
-setTimeout(function(){
-  if (window.__loaded) return;
-  var el = document.getElementById("le");
-  if (!el) return;
-  el.textContent = "التحميل تأخر، جاري فحص الاتصال...";
-  fetch("https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js", {mode:"no-cors"})
-    .then(function(){ el.textContent = "gstatic يرد، بس السكربت ما اشتغل. جرب متصفح ثاني."; })
-    .catch(function(){ el.textContent = "gstatic محجوب أو الإنترنت ضعيف. جرب شبكة ثانية."; });
-}, 10000);
+var __tick = setInterval(function(){
+  if (window.__loaded) { clearInterval(__tick); return; }
+  var s = Math.round((Date.now() - __t0) / 1000);
+  setLe("نسخة 5 - " + window.__step + " ... " + s + " ثانية", false);
+}, 1000);
 </script>
 
 <section id="login" class="box">
@@ -91,7 +95,7 @@ setTimeout(function(){
 <label>كلمة المرور</label><input id="pw" type="password" required autocomplete="current-password">
 <button type="button" id="btnLogin" style="width:100%;padding:12px">دخول</button>
 </form>
-<p id="le" style="color:#b42318;font-size:14px;min-height:20px;text-align:center;font-weight:600;word-break:break-word">نسخة 4 - جاري تحميل النظام...</p>
+<p id="le" style="color:#1769aa;font-size:14px;min-height:20px;text-align:center;font-weight:600;word-break:break-word">نسخة 5 - بدء التحميل...</p>
 </section>
 
 <div id="app" hidden>
@@ -218,12 +222,28 @@ setTimeout(function(){
 <div id="modalHost"></div>
 
 <script type="module">
-import {initializeApp,deleteApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import {getAuth,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,push,onValue,remove,get} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+// ===== تحميل المكتبات واحدة واحدة مع إظهار التقدم وسبب الفشل الحقيقي =====
+const BASE = "https://www.gstatic.com/firebasejs/11.6.0/";
+async function load(name){
+  window.__step = "تحميل " + name;
+  try{
+    return await import(BASE + "firebase-" + name + ".js");
+  }catch(e){
+    window.setLe("فشل تحميل " + name + ": " + (e && e.message || e), true);
+    throw e;
+  }
+}
+const AppM = await load("app");
+const AuthM = await load("auth");
+const DbM = await load("database");
+
+const {initializeApp,deleteApp} = AppM;
+const {getAuth,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword,onAuthStateChanged} = AuthM;
+const {getDatabase,ref,set,update,push,onValue,remove,get} = DbM;
 
 // وصلنا هنا يعني المكتبات انحملت
 window.__loaded = true;
+window.__err = false;
 document.getElementById("le").textContent = "";
 
 const cfg = {
@@ -386,6 +406,4 @@ function draw(){
   <td>${esc(f.managerName||"النظام")}</td>
   <td>${esc(f.note)||"—"}</td><td>${new Date(f.createdAt).toLocaleString("ar-IQ")}</td></tr>`),"لا توجد سجلات.");
 
- $("managers").innerHTML=table(["الاسم","البريد الإلكتروني","الصلاحية"],Object.values(users).filter(u=>u&&(u.role==="store_manager"||u.role==="driver_manager")).map(u=>
-  `<tr><td>${esc(u.name)}</td><td dir="ltr">${esc(u.email||u.username)}</td>
-  <td
+ $("managers").innerHTML=table(["الاسم","البريد الإلكتروني","الصلاحية"],Object.values(users).filter
