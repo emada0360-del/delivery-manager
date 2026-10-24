@@ -89,6 +89,11 @@ main{max-width:600px;margin:auto;padding:16px}
 
 <div id="annBox" class="box" style="background:#fff7e0;color:#8a5a00;border:1px solid #fde68a" hidden></div>
 
+<div id="battBox" class="box" style="background:#eef6ff;color:#0b4a7a;border:1px solid #bfdbfe;font-size:13px;line-height:1.7" hidden>
+لضمان وصول إشعارات الطلبات والتطبيق مغلق: افتح إعدادات الموبايل &gt; التطبيقات &gt; Baqubah Driver &gt; البطارية، واختر "بدون قيود".
+<br><button id="battOk" style="padding:6px 14px;margin-top:8px;font-size:12px">تم</button>
+</div>
+
 <div id="availContainer" hidden>
 <h3>الطلبات المتاحة</h3>
 <div id="availList"></div>
@@ -125,6 +130,77 @@ let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
 let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
 let currentDebt = 0;
 let debtLimit = 15000;
+
+/* ========== الإشعارات (تعمل داخل تطبيق الأندرويد فقط) ========== */
+const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const LN = isNative ? (window.Capacitor.Plugins||{}).LocalNotifications : null;
+const notified = new Set();
+let notifReady = false;
+const nid = id => { let h=0; for(const c of String(id)) h=(h*31+c.charCodeAt(0))|0; return Math.abs(h)%2000000000+10; };
+
+async function initNotifs(){
+ if(!LN || notifReady) return;
+ notifReady = true;
+ try{
+  await LN.requestPermissions();
+  await LN.createChannel({id:"orders",name:"طلبات جديدة",description:"إشعار وصول طلب جديد",importance:5,visibility:1,vibration:true,lights:true});
+  await LN.registerActionTypes({types:[{id:"ORDER",actions:[{id:"accept",title:"قبول"},{id:"reject",title:"رفض",destructive:true}]}]});
+  LN.addListener("localNotificationActionPerformed", async ev=>{
+   const id = ev && ev.notification && ev.notification.extra && ev.notification.extra.orderId;
+   if(!id) return;
+   if(ev.actionId==="accept") await window.acceptOrder(id,true);
+   else if(ev.actionId==="reject") await window.rejectOrder(id);
+   try{ await LN.cancel({notifications:[{id:nid(id)}]}); }catch(e){}
+  });
+ }catch(e){ console.log("notif init", e); }
+}
+
+async function notifyOrder(id,o){
+ if(!LN) return;
+ try{
+  await LN.schedule({notifications:[{
+   id:nid(id), title:"طلب جديد",
+   body:(o.storeName||"")+" - "+(o.area||"")+" - توصيل "+fmt(o.deliveryFee)+" د.ع",
+   channelId:"orders", actionTypeId:"ORDER", extra:{orderId:id}, autoCancel:true
+  }]});
+ }catch(e){ console.log("notify", e); }
+}
+
+async function notifyText(title,body){
+ if(!LN) return;
+ try{ await LN.schedule({notifications:[{id:Math.floor(Math.random()*1e9)+10,title,body,channelId:"orders"}]}); }catch(e){}
+}
+
+async function cancelNotif(id){
+ if(!LN) return;
+ try{ await LN.cancel({notifications:[{id:nid(id)}]}); }catch(e){}
+}
+
+function checkNew(){
+ for(const id of [...notified]){
+  if(!availOrders[id]){ notified.delete(id); cancelNotif(id); }
+ }
+ if(!isOnline || currentDebt>=debtLimit) return;
+ const hasActive = Object.keys(activeOrders).length>0;
+ for(const [id,o] of Object.entries(availOrders)){
+  if(notified.has(id) || o.driverId) continue;
+  if(o.rejectedBy && o.rejectedBy[uid]) continue;
+  const age = Date.now()-(o.createdAt||0);
+  if(age>300000) continue;
+  if(hasActive && age<=120000) continue;
+  notified.add(id);
+  notifyOrder(id,o);
+ }
+}
+
+function battHint(){
+ if(!isNative) return;
+ let done=false; try{ done=!!localStorage.getItem("battOk"); }catch(e){}
+ if(done) return;
+ $("battBox").hidden=false;
+ $("battOk").onclick=()=>{ try{localStorage.setItem("battOk","1");}catch(e){} $("battBox").hidden=true; };
+}
+/* ================================================================= */
 
 const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
@@ -164,6 +240,8 @@ function startGPS(){
 
 function start(){
  startGPS();
+ initNotifs();
+ battHint();
  onValue(ref(db,"settings"),s=>{
   settings=s.val()||{}; debtLimit = Number(settings.debtLimit || 15000);
   if(settings.announcement){$("annBox").textContent=settings.announcement;$("annBox").hidden=false;}
@@ -176,6 +254,7 @@ function start(){
    const status = s.val() || {};
    if(Object.keys(activeOrders).length === 0) { isOnline = status.online === true; }
    updateStatusUI();
+   setTimeout(checkNew,300);
  });
 
  onValue(ref(db,".info/connected"),s=>{
@@ -186,7 +265,7 @@ function start(){
  });
 
  onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{ finance=s.val()||{}; drawStats(); });
- onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{ availOrders=s.val()||{}; drawOrders(); });
+ onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{ availOrders=s.val()||{}; checkNew(); drawOrders(); });
 
  onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
   allMyOrders = s.val() || {};
@@ -242,7 +321,7 @@ function toggleStatus(){
  isOnline=!isOnline;
  const pr=ref(db,"presence/"+uid);
  set(pr,{online:isOnline,lastSeen:serverTimestamp()});
- if(isOnline){ startGPS(); speak("أنت الآن متصل"); } else { speak("أنت الآن غير متصل"); }
+ if(isOnline){ startGPS(); speak("أنت الآن متصل"); setTimeout(checkNew,300); } else { speak("أنت الآن غير متصل"); }
 }
 $("btnStatus").addEventListener("click", toggleStatus);
 
@@ -357,13 +436,17 @@ function getDist(lat1, lon1, lat2, lon2){
  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
-window.acceptOrder=async(id)=>{
- if(currentDebt >= debtLimit) return say("لا يمكنك قبول الطلبات، لقد تجاوزت سقف الدين", 1);
- if(!isOnline) return say("يجب أن تكون متصلاً لتقبل الطلب", 1);
+window.acceptOrder=async(id,fromNotif)=>{
+ const fail=(m)=>{ say(m,1); if(fromNotif) notifyText("الطلب",m); };
+ if(currentDebt >= debtLimit) return fail("لا يمكنك قبول الطلبات، لقد تجاوزت سقف الدين");
+ if(!isOnline) return fail("يجب أن تكون متصلاً لتقبل الطلب");
  try{
+  const cur=(await get(ref(db,"orders/"+id))).val();
+  if(!cur || cur.driverId || cur.status!=="pending") return fail("تم أخذ هذا الطلب من سائق آخر");
   await update(ref(db,"orders/"+id),{ driverId:uid, driverName:driver.name, driverPhone:driver.phone||"", status:"waiting_store", stepAt:serverTimestamp(), acceptedAt:Date.now() });
   say("تم قبول الطلب، بانتظار موافقة المتجر"); speak("تم قبول الطلب، بانتظار موافقة المتجر");
- }catch(e){say("تم أخذه من سائق آخر", 1);}
+  if(fromNotif) notifyText("تم قبول الطلب","بانتظار موافقة المتجر");
+ }catch(e){ fail("تم أخذه من سائق آخر"); }
 };
 
 window.rejectOrder=async(id)=>{
