@@ -115,6 +115,7 @@ setTimeout(function(){if(!window.__loaded)showErr("Firebase libs did not load (c
 </script>
 <script type="module">
 window.__loaded=true;
+{const d=document.getElementById("dbg");if(d)d.remove();}
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
@@ -411,5 +412,4 @@ function drawOrders(){
   else if(o.status==="arrived_store"){
    statusBadge = `<span class="badge">وصل للمتجر</span>`;
    const canPick = (now - (o.stepAt||0)) > 60000; 
-   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">${canPick?'تم استلام الطلب':'انتظر دقيقة...'}</button>`;
- 
+   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">
