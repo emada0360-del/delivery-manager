@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Baqubah Delivery | السائق</title>
+<!-- 🔔 كود إشعارات التطبيق -->
+<script>
+window.notifyApp=async(t,b)=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P||!P.LocalNotifications)return;await P.LocalNotifications.createChannel({id:'orders',name:'Orders',importance:5,sound:'default',vibration:true});await P.LocalNotifications.schedule({notifications:[{id:Math.floor(Math.random()*2e9),title:t,body:b,channelId:'orders'}]});}catch(e){}};
+(async()=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P)return;await P.LocalNotifications.requestPermissions();if(P.BackgroundMode){await P.BackgroundMode.enable();}}catch(e){}})();
+</script>
 <style>
 :root{--bg:#f2f5f9;--ink:#172235;--pri:#1769aa;--ok:#218838;--bad:#dc3545;--warn:#bd7200;--line:#e0e6ef}
 *{box-sizing:border-box}
@@ -289,6 +294,16 @@ function drawOrders(){
     return true;
   });
   $("availContainer").hidden = !av.length;
+
+  // 🔔 إشعار عند وصول طلب جديد
+  window.seen = window.seen || new Set();
+  av.forEach(([id,o])=>{
+    if(!window.seen.has(id)){
+      window.seen.add(id);
+      if(window.notifyApp) window.notifyApp('طلب جديد','المتجر: '+(o.storeName||'')+' - '+(o.area||''));
+    }
+  });
+
   $("availList").innerHTML = av.map(([id,o])=>`
    <div class="card new">
     <div class="row"><b>طلب #${esc(id.slice(-6))}</b></div>
@@ -377,20 +392,4 @@ window.updateStep=async(id,newStatus)=>{
  const o=activeOrders[id]; if(!o)return;
  if(newStatus==="arrived_store"){
    if(o.storeLat && pos.lat){
-    const d=getDist(pos.lat,pos.lng,o.storeLat,o.storeLng);
-    if(d>300) return say(`يجب أن تكون قريباً من المتجر (المسافة الحالية ${Math.round(d)}م)`, 1);
-   }
- }
- try{
-  const patch={status:newStatus, stepAt:serverTimestamp()};
-  if(newStatus==="delivered"){
-    const profit=Math.round(o.deliveryFee*0.9);
-    patch.deliveredAt=Date.now(); patch.driverProfit=profit; patch.platformDeliveryCommission=Math.round(o.deliveryFee-profit);
-  }
-  await update(ref(db,"orders/"+id),patch);
-  if(newStatus==="delivered") speak("تم التوصيل بنجاح"); else speak("تم تحديث الحالة");
- }catch(e){say("فشل التحديث",1);}
-};
-</script>
-</body>
-</html>
+    const d=getDi
