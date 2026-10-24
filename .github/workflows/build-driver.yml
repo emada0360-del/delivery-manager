@@ -34,6 +34,23 @@ jobs:
           npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/local-notifications@6
           npx cap add android
 
+      - name: Bundle Firebase into the app
+        working-directory: build
+        run: |
+          npm install firebase@11.6.0 esbuild
+          python3 - <<'PY'
+          import re
+          p = 'www/index.html'
+          html = open(p, encoding='utf-8').read()
+          m = re.search(r'<script type="module">(.*?)</script>', html, re.S)
+          if m:
+              js = re.sub(r'https://www\.gstatic\.com/firebasejs/[0-9.]+/firebase-(\w+)\.js', r'firebase/\1', m.group(1))
+              open('src.js', 'w', encoding='utf-8').write(js)
+              html = html.replace(m.group(0), '<script src="app.js"></script>')
+              open(p, 'w', encoding='utf-8').write(html)
+          PY
+          if [ -f src.js ]; then npx esbuild src.js --bundle --format=iife --outfile=www/app.js; fi
+
       - name: Add background service (driver only)
         if: matrix.app == 'driver'
         working-directory: build
