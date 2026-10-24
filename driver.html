@@ -17,12 +17,19 @@ header h2{margin:0;font-size:18px}
 main{max-width:600px;margin:auto;padding:16px}
 .box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
 
-/* 🟢 الخانات الثلاثة */
+/* الخانات الثلاثة */
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .stat{background:#fff;border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.03)}
 .stat span{font-size:11px;color:#64748b;display:block;margin-bottom:4px;line-height:1.3}
 .stat b{font-size:18px;color:var(--pri)}
 .stat.warn b{color:var(--bad)}
+
+/* 🟢 تصميم شاشة الانتظار */
+.waiting-state { text-align:center; padding:40px 20px; background:#fff; border-radius:16px; box-shadow:0 4px 15px rgba(0,0,0,.03); margin-bottom:16px; border:2px dashed var(--pri); }
+.waiting-state h3 { color:var(--pri); font-size:20px; margin:16px 0 8px; font-weight:800; }
+.waiting-state p { color:#64748b; font-size:14px; margin:0; }
+.radar { width:80px; height:80px; border-radius:50%; background:radial-gradient(circle,var(--pri) 0 15%,#1769aa33 16% 40%,transparent 41%); margin:0 auto; animation:pulse 1.8s infinite; }
+@keyframes pulse { 0% { transform:scale(.85); opacity:.6; } 50% { transform:scale(1.1); opacity:1; } 100% { transform:scale(.85); opacity:.6; } }
 
 .card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;background:#fff;position:relative}
 .card.new{border:2px solid var(--pri);box-shadow:0 0 15px rgba(23,105,170,.15)}
@@ -77,7 +84,6 @@ main{max-width:600px;margin:auto;padding:16px}
 <main>
 <div id="msg"></div>
 
-<!-- الخانات الثلاثة -->
 <div class="grid">
 <div class="stat"><span>الطلبات المكتملة</span><b id="statDone">0</b></div>
 <div class="stat"><span>محفظتي (دين)</span><b id="statDebt">0</b></div>
@@ -94,6 +100,13 @@ main{max-width:600px;margin:auto;padding:16px}
 
 <div id="annBox" class="box" style="background:#fff7e0;color:#8a5a00;border:1px solid #fde68a" hidden></div>
 
+<!-- 🟢 شاشة الانتظار -->
+<div id="waitingScreen" class="waiting-state" hidden>
+  <div class="radar"></div>
+  <h3>انتظر... سوف يصلك طلب قريباً</h3>
+  <p>رجاءً أبقِ التطبيق مفتوحاً لاستقبال الطلبات</p>
+</div>
+
 <div id="availContainer" hidden>
 <h3>الطلبات المتاحة</h3>
 <div id="availList"></div>
@@ -108,7 +121,6 @@ main{max-width:600px;margin:auto;padding:16px}
 </div>
 
 <script type="module">
-// ✅ سيرفر جوجل الرسمي (مستقر وسريع جداً)
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
@@ -135,16 +147,11 @@ let debtLimit = 15000;
 const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
+// 🟢 الدخول البسيط الذي لا يعلق
 $("btnLogin").onclick=async()=>{
  $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
- try{ 
-   let phone = $("un").value.trim();
-   if(!phone.includes("@")) phone = phone + "@baqubah.app";
-   await signInWithEmailAndPassword(auth, phone, $("pw").value); 
- }
- catch(e){ 
-   $("err").textContent = "خطأ: " + (e.code === 'auth/invalid-credential' ? "البيانات غير صحيحة" : e.message); 
- }
+ try{ await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value); }
+ catch(e){ $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة."; }
  finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
 };
 
@@ -154,23 +161,17 @@ $("btnOut").onclick=()=>{
  signOut(auth);
 };
 
-// 🟢 دالة الدخول البسيطة جداً (التي كانت تعمل بسرعة)
 onAuthStateChanged(auth, async u=>{
  if(!u){$("login").hidden=false;$("app").hidden=true;return;}
- try {
-   const snap=await get(ref(db,"users/"+u.uid));
-   const user = snap.val();
-   if(!user || user.role!=="driver" || user.isActive===false){
-    await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
-   }
-   uid=u.uid;driver=user;
-   $("drvName").textContent=user.name;
-   $("login").hidden=true;$("app").hidden=false;
-   start();
- } catch(e) {
-   $("err").textContent = "خطأ في جلب البيانات: " + e.message;
-   await signOut(auth);
+ const snap=await get(ref(db,"users/"+u.uid));
+ const user = snap.val();
+ if(!user || user.role!=="driver" || user.isActive===false){
+  await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
  }
+ uid=u.uid;driver=user;
+ $("drvName").textContent=user.name;
+ $("login").hidden=true;$("app").hidden=false;
+ start();
 });
 
 function startGPS(){
@@ -322,6 +323,10 @@ function drawOrders(){
 
  const ac=Object.entries(activeOrders);
  $("activeContainer").hidden = !ac.length;
+ 
+ // 🟢 إظهار شاشة الانتظار إذا: متصل + لا يوجد طلبات متاحة + لا يوجد طلبات نشطة
+ $("waitingScreen").hidden = !(isOnline && $("availContainer").hidden && !ac.length && currentDebt < debtLimit);
+
  $("activeList").innerHTML = ac.map(([id,o])=>{
   let actionBtn="", warn="", statusBadge="";
   const now=Date.now(); const q = privData[id] || {}; 
@@ -380,25 +385,4 @@ window.acceptOrder=async(id)=>{
  if(!isOnline) return say("يجب أن تكون متصلاً لتقبل الطلب", 1);
  try{
   await update(ref(db,"orders/"+id),{ driverId:uid, driverName:driver.name, driverPhone:driver.phone||"", status:"waiting_store", stepAt:serverTimestamp(), acceptedAt:Date.now() });
-  say("تم قبول الطلب، بانتظار موافقة المتجر"); speak("تم قبول الطلب، بانتظار موافقة المتجر");
- }catch(e){say("تم أخذه من سائق آخر", 1);}
-};
-
-window.rejectOrder=async(id)=>{
- try{ await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]: true}); say("تم رفض الطلب."); }
- catch(e){say("فشل الرفض",1);}
-};
-
-window.updateStep=async(id,newStatus)=>{
- const o=activeOrders[id]; if(!o)return;
- if(newStatus==="arrived_store"){
-   if(o.storeLat && pos.lat){
-    const d=getDist(pos.lat,pos.lng,o.storeLat,o.storeLng);
-    if(d>300) return say(`يجب أن تكون قريباً من المتجر (المسافة الحالية ${Math.round(d)}م)`, 1);
-   }
- }
- try{
-  const patch={status:newStatus, stepAt:serverTimestamp()};
-  if(newStatus==="delivered"){
-    const profit=Math.round(o.deliveryFee*0.9);
-    patch.deliveredAt=Date.now(); patch.driverProfit=profit; pat
+  say("تم قبول الطلب، بانتظار موافقة المتجر"); speak("تم قبول ال
