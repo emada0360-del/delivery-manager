@@ -16,11 +16,14 @@ header{background:#14263d;color:#fff;padding:14px 20px;display:flex;justify-cont
 header h2{margin:0;font-size:18px}
 main{max-width:600px;margin:auto;padding:16px}
 .box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
+
+/* 🟢 الخانات الثلاثة */
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .stat{background:#fff;border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.03)}
 .stat span{font-size:11px;color:#64748b;display:block;margin-bottom:4px;line-height:1.3}
 .stat b{font-size:18px;color:var(--pri)}
 .stat.warn b{color:var(--bad)}
+
 .card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;background:#fff;position:relative}
 .card.new{border:2px solid var(--pri);box-shadow:0 0 15px rgba(23,105,170,.15)}
 .card.waiting{border:2px solid var(--warn);background:#fffbeb}
@@ -35,7 +38,7 @@ main{max-width:600px;margin:auto;padding:16px}
 #login input{width:100%; padding:12px; border:1px solid var(--line); border-radius:8px; outline:none; margin-top:4px; background:#f8fafc; font-size:16px;}
 #login input:focus{border-color:var(--pri); background:#fff;}
 #msg{padding:12px;border-radius:8px;display:none;margin-bottom:12px;font-weight:600;text-align:center;position:sticky;top:70px;z-index:40;box-shadow:0 4px 12px rgba(0,0,0,.1)}
-#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600; margin-top:10px; min-height:20px;}
+#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600; margin-top:10px;}
 [hidden]{display:none!important}
 .badge{background:#e0f2fe;color:#0369a1;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:bold}
 .badge.wait{background:#fef3c7;color:#b45309}
@@ -74,6 +77,7 @@ main{max-width:600px;margin:auto;padding:16px}
 <main>
 <div id="msg"></div>
 
+<!-- الخانات الثلاثة -->
 <div class="grid">
 <div class="stat"><span>الطلبات المكتملة</span><b id="statDone">0</b></div>
 <div class="stat"><span>محفظتي (دين)</span><b id="statDebt">0</b></div>
@@ -104,7 +108,7 @@ main{max-width:600px;margin:auto;padding:16px}
 </div>
 
 <script type="module">
-// ✅ سيرفر جوجل الرسمي
+// ✅ سيرفر جوجل الرسمي (مستقر وسريع جداً)
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
@@ -127,68 +131,19 @@ let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
 let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
 let currentDebt = 0;
 let debtLimit = 15000;
-const notifiedOrders = new Set();
-
-// 🟢 الإشعارات: تعمل فقط داخل الـ APK
-function showNotification(orderId, storeName, area, fee) {
-    try {
-        if (window.cordova && window.cordova.plugins && window.cordova.plugins.notification) {
-            window.cordova.plugins.notification.local.schedule({
-                id: Math.floor(Math.random() * 10000),
-                title: "طلب جديد متوفر!",
-                text: `${storeName} - ${area} - أجرة: ${fee} د.ع`,
-                sound: null,
-                vibrate: true,
-                foreground: true,
-                priority: 2,
-                autoClear: true
-            });
-        } else {
-            // صوت للمتصفح فقط (اختباري)
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            osc.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.4);
-        }
-    } catch(e) { console.log("Notification error", e); }
-}
-
-function checkForNewOrders() {
-    if (!isOnline || currentDebt >= debtLimit) return;
-    const hasActive = Object.keys(activeOrders).length > 0;
-
-    // تنظيف الطلبات التي لم تعد متاحة
-    for (const id of notifiedOrders) {
-        if (!availOrders[id] || availOrders[id].driverId) notifiedOrders.delete(id);
-    }
-
-    for (const [id, o] of Object.entries(availOrders)) {
-        if (notifiedOrders.has(id) || o.driverId) continue;
-        if (o.rejectedBy && o.rejectedBy[uid]) continue;
-        
-        const age = Date.now() - (o.createdAt || 0);
-        if (age > 300000) continue; 
-        if (hasActive && age <= 120000) continue; 
-
-        notifiedOrders.add(id);
-        showNotification(id, o.storeName, o.area, o.deliveryFee);
-    }
-}
 
 const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
-// 🟢 تسجيل الدخول مع مؤقت إنقاذ (Timeout)
 $("btnLogin").onclick=async()=>{
  $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
  try{ 
-   const loginPromise = signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value);
-   const timeoutPromise = new Promise((_,reject)=>setTimeout(()=>reject(new Error("انتهت مهلة الاتصال، تأكد من الإنترنت")), 10000));
-   await Promise.race([loginPromise, timeoutPromise]);
+   let phone = $("un").value.trim();
+   if(!phone.includes("@")) phone = phone + "@baqubah.app";
+   await signInWithEmailAndPassword(auth, phone, $("pw").value); 
  }
  catch(e){ 
-   $("err").textContent = e.message.includes("مهلة") ? e.message : "رقم الهاتف أو كلمة المرور غير صحيحة."; 
+   $("err").textContent = "خطأ: " + (e.code === 'auth/invalid-credential' ? "البيانات غير صحيحة" : e.message); 
  }
  finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
 };
@@ -199,25 +154,22 @@ $("btnOut").onclick=()=>{
  signOut(auth);
 };
 
-// 🟢 جلب البيانات مع مؤقت إنقاذ
+// 🟢 دالة الدخول البسيطة جداً (التي كانت تعمل بسرعة)
 onAuthStateChanged(auth, async u=>{
  if(!u){$("login").hidden=false;$("app").hidden=true;return;}
  try {
-  const getPromise = get(ref(db,"users/"+u.uid));
-  const timeoutPromise = new Promise((_,reject)=>setTimeout(()=>reject(new Error("انتهت مهلة قراءة البيانات")), 10000));
-  const snap = await Promise.race([getPromise, timeoutPromise]);
-
-  const user = snap.val();
-  if(!user || user.role!=="driver" || user.isActive===false){
-   await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
-  }
-  uid=u.uid;driver=user;
-  $("drvName").textContent=user.name;
-  $("login").hidden=true;$("app").hidden=false;
-  start();
+   const snap=await get(ref(db,"users/"+u.uid));
+   const user = snap.val();
+   if(!user || user.role!=="driver" || user.isActive===false){
+    await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
+   }
+   uid=u.uid;driver=user;
+   $("drvName").textContent=user.name;
+   $("login").hidden=true;$("app").hidden=false;
+   start();
  } catch(e) {
-  $("err").textContent = "خطأ: " + e.message;
-  await signOut(auth); // في حال فشل القراءة، نخرجه بأمان
+   $("err").textContent = "خطأ في جلب البيانات: " + e.message;
+   await signOut(auth);
  }
 });
 
@@ -252,12 +204,7 @@ function start(){
  });
 
  onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{ finance=s.val()||{}; drawStats(); });
- 
- onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{ 
-     availOrders=s.val()||{}; 
-     drawOrders(); 
-     checkForNewOrders(); 
- });
+ onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{ availOrders=s.val()||{}; drawOrders(); });
 
  onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
   allMyOrders = s.val() || {};
@@ -313,7 +260,7 @@ function toggleStatus(){
  isOnline=!isOnline;
  const pr=ref(db,"presence/"+uid);
  set(pr,{online:isOnline,lastSeen:serverTimestamp()});
- if(isOnline){ startGPS(); speak("أنت الآن متصل"); checkForNewOrders(); } else { speak("أنت الآن غير متصل"); }
+ if(isOnline){ startGPS(); speak("أنت الآن متصل"); } else { speak("أنت الآن غير متصل"); }
 }
 $("btnStatus").addEventListener("click", toggleStatus);
 
@@ -407,4 +354,51 @@ function drawOrders(){
   let customerBox = "";
   if(q.customerPhone && o.status !== "waiting_store") {
      const waLink = `https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`;
-     customerBox = `<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>${q.customerName?`<div style="margin-bottom:8px;font-size:13px;color:#475569">الاسم: ${esc(q.customerName)}</div>`:""}${q.note?`<div style="margin-bottom:8px;font-size:13px;color:#b45309">ملاحظة: ${esc(q.note)}</div>`:""}<div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class=
+     customerBox = `<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>${q.customerName?`<div style="margin-bottom:8px;font-size:13px;color:#475569">الاسم: ${esc(q.customerName)}</div>`:""}${q.note?`<div style="margin-bottom:8px;font-size:13px;color:#b45309">ملاحظة: ${esc(q.note)}</div>`:""}<div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a></div></div>`;
+  }
+
+  return `<div class="card ${o.status==='waiting_store'?'waiting':''}">
+   <div class="row"><b>#${esc(id.slice(-6))}</b> ${statusBadge}</div>
+   <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
+   <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
+   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
+   ${storeBox}${buildFinBox(o)}${customerBox}${warn}${actionBtn}
+  </div>`;
+ }).join("");
+}
+
+function getDist(lat1, lon1, lat2, lon2){
+ if(!lat1||!lat2)return 0;
+ const R=6371e3, p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
+ const dp=(lat2-lat1)*Math.PI/180, dl=(lon2-lon1)*Math.PI/180;
+ const a=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
+ return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+window.acceptOrder=async(id)=>{
+ if(currentDebt >= debtLimit) return say("لا يمكنك قبول الطلبات، لقد تجاوزت سقف الدين", 1);
+ if(!isOnline) return say("يجب أن تكون متصلاً لتقبل الطلب", 1);
+ try{
+  await update(ref(db,"orders/"+id),{ driverId:uid, driverName:driver.name, driverPhone:driver.phone||"", status:"waiting_store", stepAt:serverTimestamp(), acceptedAt:Date.now() });
+  say("تم قبول الطلب، بانتظار موافقة المتجر"); speak("تم قبول الطلب، بانتظار موافقة المتجر");
+ }catch(e){say("تم أخذه من سائق آخر", 1);}
+};
+
+window.rejectOrder=async(id)=>{
+ try{ await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]: true}); say("تم رفض الطلب."); }
+ catch(e){say("فشل الرفض",1);}
+};
+
+window.updateStep=async(id,newStatus)=>{
+ const o=activeOrders[id]; if(!o)return;
+ if(newStatus==="arrived_store"){
+   if(o.storeLat && pos.lat){
+    const d=getDist(pos.lat,pos.lng,o.storeLat,o.storeLng);
+    if(d>300) return say(`يجب أن تكون قريباً من المتجر (المسافة الحالية ${Math.round(d)}م)`, 1);
+   }
+ }
+ try{
+  const patch={status:newStatus, stepAt:serverTimestamp()};
+  if(newStatus==="delivered"){
+    const profit=Math.round(o.deliveryFee*0.9);
+    patch.deliveredAt=Date.now(); patch.driverProfit=profit; pat
