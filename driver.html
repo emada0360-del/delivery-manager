@@ -17,7 +17,7 @@ header h2{margin:0;font-size:18px}
 main{max-width:600px;margin:auto;padding:16px}
 .box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
 
-/* 🟢 الخانات الثلاثة */
+/* الخانات الثلاثة */
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .stat{background:#fff;border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.03)}
 .stat span{font-size:11px;color:#64748b;display:block;margin-bottom:4px;line-height:1.3}
@@ -33,9 +33,12 @@ main{max-width:600px;margin:auto;padding:16px}
 .status-btn.off{background:#6b7280;color:#fff}
 .status-btn.blocked{background:#9ca3af;color:#fff;cursor:not-allowed}
 .dot{width:10px;height:10px;border-radius:50%;background:#fff;}
-#login{max-width:380px;margin:60px auto}
+#login{max-width:380px;margin:60px auto; text-align: right;}
+#login label{display:block; margin-top:12px; font-weight:600; font-size:14px; color:#475569;}
+#login input{width:100%; padding:12px; border:1px solid var(--line); border-radius:8px; outline:none; margin-top:4px; background:#f8fafc;}
+#login input:focus{border-color:var(--pri); background:#fff;}
 #msg{padding:12px;border-radius:8px;display:none;margin-bottom:12px;font-weight:600;text-align:center;position:sticky;top:70px;z-index:40;box-shadow:0 4px 12px rgba(0,0,0,.1)}
-#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600}
+#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600; margin-top:10px;}
 [hidden]{display:none!important}
 .badge{background:#e0f2fe;color:#0369a1;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:bold}
 .badge.wait{background:#fef3c7;color:#b45309}
@@ -57,9 +60,11 @@ main{max-width:600px;margin:auto;padding:16px}
 <section id="login" class="box">
 <h2 style="text-align:center;margin-top:0">دخول السائق</h2>
 <form id="lf" onsubmit="return false;">
-<label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
-<label>كلمة المرور</label><input id="pw" type="password" required>
-<button type="button" id="btnLogin" style="width:100%;margin-top:10px">دخول</button>
+<label>رقم الهاتف</label>
+<input id="un" type="tel" placeholder="07XXXXXXXXX" required>
+<label>كلمة المرور</label>
+<input id="pw" type="password" required>
+<button type="button" id="btnLogin" style="width:100%;margin-top:20px">دخول</button>
 </form>
 <p id="err"></p>
 </section>
@@ -89,11 +94,6 @@ main{max-width:600px;margin:auto;padding:16px}
 
 <div id="annBox" class="box" style="background:#fff7e0;color:#8a5a00;border:1px solid #fde68a" hidden></div>
 
-<div id="battBox" class="box" style="background:#eef6ff;color:#0b4a7a;border:1px solid #bfdbfe;font-size:13px;line-height:1.7" hidden>
-لضمان وصول إشعارات الطلبات والتطبيق مغلق: افتح إعدادات الموبايل &gt; التطبيقات &gt; Baqubah Driver &gt; البطارية، واختر "بدون قيود".
-<br><button id="battOk" style="padding:6px 14px;margin-top:8px;font-size:12px">تم</button>
-</div>
-
 <div id="availContainer" hidden>
 <h3>الطلبات المتاحة</h3>
 <div id="availList"></div>
@@ -107,19 +107,10 @@ main{max-width:600px;margin:auto;padding:16px}
 </main>
 </div>
 
-<script>
-function showErr(t){var d=document.getElementById("dbg");if(!d){d=document.createElement("div");d.id="dbg";d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;color:#fff;font:12px monospace;padding:8px;direction:ltr;white-space:pre-wrap";document.body.appendChild(d);}d.textContent+=t+"\n";}
-window.addEventListener("error",function(e){showErr("ERR: "+(e.message||"load error")+" "+(e.filename||""));});
-window.addEventListener("unhandledrejection",function(e){showErr("REJ: "+(e.reason&&e.reason.message||e.reason));});
-window.addEventListener("error",function(e){var t=e.target;if(t&&(t.src||t.href)&&t!==window)showErr("RES FAIL: "+(t.src||t.href));},true);
-setTimeout(function(){if(!window.__loaded)showErr("v5 | libs did not load | bundled="+(!!document.querySelector('script[src="app.js"]'))+" | native="+(!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())));},8000);
-</script>
 <script type="module">
-window.__loaded=true;
-{const d=document.getElementById("dbg");if(d)d.remove();}
-import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {initializeApp} from "https://cdn.jsdelivr.net/npm/firebase@11.6.0/firebase-app.js";
+import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://cdn.jsdelivr.net/npm/firebase@11.6.0/firebase-auth.js";
+import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://cdn.jsdelivr.net/npm/firebase@11.6.0/firebase-database.js";
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -139,81 +130,71 @@ let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
 let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
 let currentDebt = 0;
 let debtLimit = 15000;
+const notifiedOrders = new Set(); // 🟢 لمنع تكرار الإشعارات
 
-/* ========== الإشعارات (تعمل داخل تطبيق الأندرويد فقط) ========== */
-const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-const LN = isNative ? (window.Capacitor.Plugins||{}).LocalNotifications : null;
-const notified = new Set();
-let notifReady = false;
-const nid = id => { let h=0; for(const c of String(id)) h=(h*31+c.charCodeAt(0))|0; return Math.abs(h)%2000000000+10; };
-
-async function initNotifs(){
- if(!LN || notifReady) return;
- notifReady = true;
- try{
-  await LN.requestPermissions();
-  await LN.createChannel({id:"orders",name:"طلبات جديدة",description:"إشعار وصول طلب جديد",importance:5,visibility:1,vibration:true,lights:true});
-  await LN.registerActionTypes({types:[{id:"ORDER",actions:[{id:"accept",title:"قبول"},{id:"reject",title:"رفض",destructive:true}]}]});
-  LN.addListener("localNotificationActionPerformed", async ev=>{
-   const id = ev && ev.notification && ev.notification.extra && ev.notification.extra.orderId;
-   if(!id) return;
-   if(ev.actionId==="accept") await window.acceptOrder(id,true);
-   else if(ev.actionId==="reject") await window.rejectOrder(id);
-   try{ await LN.cancel({notifications:[{id:nid(id)}]}); }catch(e){}
-  });
- }catch(e){ console.log("notif init", e); }
+/* 🟢 دوال الإشعارات والصوت */
+function playWebSoundAndVoice() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        osc.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+    } catch(e) {}
+    try {
+        if(window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            const ut = new SpeechSynthesisUtterance("طلب جديد متوفر");
+            ut.lang = "ar-SA";
+            window.speechSynthesis.speak(ut);
+        }
+    } catch(e) {}
 }
 
-async function notifyOrder(id,o){
- if(!LN) return;
- try{
-  await LN.schedule({notifications:[{
-   id:nid(id), title:"طلب جديد",
-   body:(o.storeName||"")+" - "+(o.area||"")+" - توصيل "+fmt(o.deliveryFee)+" د.ع",
-   channelId:"orders", actionTypeId:"ORDER", extra:{orderId:id}, autoCancel:true
-  }]});
- }catch(e){ console.log("notify", e); }
+function showLocalNotification(orderId, storeName, area, fee) {
+    if (window.cordova && cordova.plugins && cordova.plugins.notification) {
+        cordova.plugins.notification.local.schedule({
+            id: orderId,
+            title: "طلب جديد متوفر!",
+            text: `${storeName} - ${area} - التوصيل: ${fee} د.ع`,
+            sound: 'android.resource://com.baqubah.driver/raw/ring', // مسار الصوت
+            foreground: true,
+            vibrate: true,
+            priority: 2,
+            autoClear: true,
+            data: { orderId: orderId }
+        });
+    } else {
+        playWebSoundAndVoice();
+    }
 }
 
-async function notifyText(title,body){
- if(!LN) return;
- try{ await LN.schedule({notifications:[{id:Math.floor(Math.random()*1e9)+10,title,body,channelId:"orders"}]}); }catch(e){}
-}
+function checkForNewOrders() {
+    if (!isOnline || currentDebt >= debtLimit) return;
+    const hasActive = Object.keys(activeOrders).length > 0;
 
-async function cancelNotif(id){
- if(!LN) return;
- try{ await LN.cancel({notifications:[{id:nid(id)}]}); }catch(e){}
-}
+    for (const [id, o] of Object.entries(availOrders)) {
+        if (notifiedOrders.has(id) || o.driverId) continue;
+        if (o.rejectedBy && o.rejectedBy[uid]) continue;
+        
+        const age = Date.now() - (o.createdAt || 0);
+        if (age > 300000) continue; // تجاهل الطلبات القديمة جداً
+        if (hasActive && age <= 120000) continue; // لا نزعج السائق المشغول بطلب جديد إلا بعد دقيقتين
 
-function checkNew(){
- for(const id of [...notified]){
-  if(!availOrders[id]){ notified.delete(id); cancelNotif(id); }
- }
- if(!isOnline || currentDebt>=debtLimit) return;
- const hasActive = Object.keys(activeOrders).length>0;
- for(const [id,o] of Object.entries(availOrders)){
-  if(notified.has(id) || o.driverId) continue;
-  if(o.rejectedBy && o.rejectedBy[uid]) continue;
-  const age = Date.now()-(o.createdAt||0);
-  if(age>300000) continue;
-  if(hasActive && age<=120000) continue;
-  notified.add(id);
-  notifyOrder(id,o);
- }
+        notifiedOrders.add(id);
+        showLocalNotification(id, o.storeName, o.area, o.deliveryFee);
+    }
+    
+    // تنظيف الإشعارات للطلبات التي أُخذت أو انتهت
+    for (const id of [...notifiedOrders]) {
+        if (!availOrders[id] || availOrders[id].driverId) notifiedOrders.delete(id);
+    }
 }
+/* ===================================== */
 
-function battHint(){
- if(!isNative) return;
- let done=false; try{ done=!!localStorage.getItem("battOk"); }catch(e){}
- if(done) return;
- $("battBox").hidden=false;
- $("battOk").onclick=()=>{ try{localStorage.setItem("battOk","1");}catch(e){} $("battBox").hidden=true; };
-}
-/* ================================================================= */
-
-let _ac=null;
-const beep=()=>{try{_ac=_ac||new (window.AudioContext||window.webkitAudioContext)();const o=_ac.createOscillator(),g=_ac.createGain();o.type="sine";o.frequency.value=880;g.gain.value=0.3;o.connect(g);g.connect(_ac.destination);o.start();o.stop(_ac.currentTime+0.25);}catch(e){}};
-const speak=t=>{try{if(!window.speechSynthesis){beep();return;}const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
+const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
 $("btnLogin").onclick=async()=>{
@@ -251,8 +232,6 @@ function startGPS(){
 
 function start(){
  startGPS();
- initNotifs();
- battHint();
  onValue(ref(db,"settings"),s=>{
   settings=s.val()||{}; debtLimit = Number(settings.debtLimit || 15000);
   if(settings.announcement){$("annBox").textContent=settings.announcement;$("annBox").hidden=false;}
@@ -265,7 +244,6 @@ function start(){
    const status = s.val() || {};
    if(Object.keys(activeOrders).length === 0) { isOnline = status.online === true; }
    updateStatusUI();
-   setTimeout(checkNew,300);
  });
 
  onValue(ref(db,".info/connected"),s=>{
@@ -276,7 +254,13 @@ function start(){
  });
 
  onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{ finance=s.val()||{}; drawStats(); });
- onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{ availOrders=s.val()||{}; checkNew(); drawOrders(); });
+ 
+ // 🟢 مراقبة الطلبات وتشغيل الإشعارات
+ onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{ 
+     availOrders=s.val()||{}; 
+     drawOrders(); 
+     checkForNewOrders(); 
+ });
 
  onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
   allMyOrders = s.val() || {};
@@ -332,7 +316,7 @@ function toggleStatus(){
  isOnline=!isOnline;
  const pr=ref(db,"presence/"+uid);
  set(pr,{online:isOnline,lastSeen:serverTimestamp()});
- if(isOnline){ startGPS(); speak("أنت الآن متصل"); setTimeout(checkNew,300); } else { speak("أنت الآن غير متصل"); }
+ if(isOnline){ startGPS(); speak("أنت الآن متصل"); checkForNewOrders(); } else { speak("أنت الآن غير متصل"); }
 }
 $("btnStatus").addEventListener("click", toggleStatus);
 
@@ -410,4 +394,24 @@ function drawOrders(){
    }
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" onclick="updateStep('${id}','arrived_store')">وصلت للمتجر</button>`;
   } 
-  el
+  else if(o.status==="arrived_store"){
+   statusBadge = `<span class="badge">وصل للمتجر</span>`;
+   const canPick = (now - (o.stepAt||0)) > 60000; 
+   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">${canPick?'تم استلام الطلب':'انتظر دقيقة...'}</button>`;
+  }
+  else if(["picked_up","delivering"].includes(o.status)){
+   statusBadge = `<span class="badge">بالطريق للزبون</span>`;
+   const canDel = (now - (o.stepAt||0)) > 300000; 
+   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canDel?'':'disabled'} onclick="updateStep('${id}','delivered')">${canDel?'تم التوصيل للزبون':'انتظر 5 دقائق...'}</button>`;
+  }
+
+  let storeBox = `<div class="customer-box" style="background:#f0fdf4; border-color:#bbf7d0; padding:10px;"><b style="color:#166534">هاتف المتجر: <span dir="ltr">${esc(o.storePhone || "غير متوفر")}</span></b>${o.storePhone ? `<div class="btn-group" style="margin-top:4px"><a href="tel:${esc(o.storePhone)}" class="btn-call" style="background:#dcfce7; color:#166534">📞 اتصال بالمتجر</a></div>` : ""}</div>`;
+
+  let customerBox = "";
+  if(q.customerPhone && o.status !== "waiting_store") {
+     const waLink = `https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`;
+     customerBox = `<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>${q.customerName?`<div style="margin-bottom:8px;font-size:13px;color:#475569">الاسم: ${esc(q.customerName)}</div>`:""}${q.note?`<div style="margin-bottom:8px;font-size:13px;color:#b45309">ملاحظة: ${esc(q.note)}</div>`:""}<div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a></div></div>`;
+  }
+
+  return `<div class="card ${o.status==='waiting_store'?'waiting':''}">
+   <div class="r
