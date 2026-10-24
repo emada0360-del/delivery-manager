@@ -39,7 +39,7 @@ td select{margin:0;width:auto;min-width:140px;padding:6px}
 #msg{padding:12px 16px;margin:16px 20px 0;border-radius:8px;display:none;font-weight:600}
 [hidden]{display:none!important}
 .tag{display:inline-block;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;background:#eef2f7;color:#374151}
-.tag.g{background:#e6f4ea;color:#176337}.tag.r{background:#fdecea;color:#b42318}
+.tag.g{background:#e6f4ea;color:#176337}.tag.r{background:#fdecea;color:#b42318}.tag.y{background:#fef3c7;color:#b45309}
 </style>
 </head>
 <body>
@@ -58,10 +58,12 @@ td select{margin:0;width:auto;min-width:140px;padding:6px}
 <nav id="nav">
 <button type="button" class="on" data-t="t1">الرئيسية</button>
 <button type="button" data-t="t2">الطلبات</button>
+<button type="button" data-t="t9" style="background:#e0f2fe;color:#0369a1">الطلبات الحية</button>
 <button type="button" data-t="t3">السائقون</button>
 <button type="button" data-t="t4">المتاجر</button>
 <button type="button" data-t="t5">المناطق</button>
 <button type="button" data-t="t6">المالية</button>
+<button type="button" data-t="t7">المسؤولون</button> <!-- إرجاع المسؤولين -->
 <button type="button" data-t="t8">الإعدادات</button>
 </nav>
 <div id="msg"></div>
@@ -77,6 +79,14 @@ td select{margin:0;width:auto;min-width:140px;padding:6px}
 <h3>الإعلانات والرسائل</h3>
 <textarea id="ann" rows="3" placeholder="اكتب إعلاناً يظهر لجميع السائقين والمتاجر..."></textarea>
 <button type="button" id="btnAnn" class="grn">حفظ ونشر الإعلان</button>
+</div>
+</section>
+
+<section id="t9" class="tab" hidden>
+<div class="box">
+  <h3 style="margin-top:0; color:var(--pri)">متابعة الطلبات الحية (Live)</h3>
+  <p style="color:#64748b; margin-bottom:16px;">هنا تظهر الطلبات الجارية الآن مع السائق المسؤول عنها.</p>
+  <div id="liveOrders" class="wrap"></div>
 </div>
 </section>
 
@@ -124,6 +134,29 @@ td select{margin:0;width:auto;min-width:140px;padding:6px}
 <div class="box"><h3>سجل الكاش</h3><div id="fin" class="wrap"></div></div>
 </section>
 
+<!-- إرجاع قسم المسؤولين -->
+<section id="t7" class="tab" hidden>
+<div class="box">
+<h3>إضافة مسؤول متاجر (Store Manager)</h3>
+<form id="fm-store">
+<input id="msu" type="email" placeholder="البريد الإلكتروني" required>
+<input id="msn" placeholder="الاسم" required>
+<input id="msp" type="password" placeholder="كلمة المرور (6 أحرف)" required>
+<button type="submit" class="grn">إضافة مسؤول المتاجر</button>
+</form>
+</div>
+<div class="box">
+<h3>إضافة مسؤول سائقين (Driver Manager)</h3>
+<form id="fm-driver">
+<input id="mdu" type="email" placeholder="البريد الإلكتروني" required>
+<input id="mdn" placeholder="الاسم" required>
+<input id="mdp" type="password" placeholder="كلمة المرور (6 أحرف)" required>
+<button type="submit" class="grn">إضافة مسؤول السائقين</button>
+</form>
+</div>
+<div id="managers" class="box wrap"></div>
+</section>
+
 <section id="t8" class="tab" hidden>
 <div class="box">
 <h3>إعدادات عامة</h3>
@@ -166,7 +199,7 @@ let users={},orders={},areas={},fin={},pres={},settings={},started=false;
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#ffebee":"#e8f5e9";m.style.color=bad?"#b71c1c":"#176337";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
 const run=async fn=>{try{await fn()}catch(e){say(e.message,1);console.error(e)}};
 
-// أول كود اشتغل 100% - دخول مباشر
+// تسجيل الدخول (لم نلمسه)
 $("btnLogin").onclick=async ()=>{
  $("le").textContent=""; $("btnLogin").disabled=true; $("btnLogin").textContent="جاري...";
  try{
@@ -213,7 +246,9 @@ function draw(){
  $("s2").textContent=fmt(os.filter(o=>!["delivered","cancelled"].includes(o.status)).length);
  $("s3").textContent=fmt(drs.filter(([id,u])=>u.isActive!==false&&online(id)).length);
  $("s4").textContent=fmt(sts.filter(([,u])=>u.isActive!==false).length);
+ 
  drawOrders();
+ drawLiveOrders();
 
  $("drivers").innerHTML=table(["الاسم","رقم الدخول","مسلّمة","المستحق","إجراءات"],drs.map(([id,u])=>{
   const d=getDebt(id);
@@ -241,6 +276,28 @@ function draw(){
  $("fin").innerHTML=table(["السائق","المبلغ","ملاحظة","التاريخ"],Object.values(fin).filter(Boolean).sort((a,b)=>b.createdAt-a.createdAt).map(f=>
   `<tr><td>${esc(f.userName)}</td><td style="color:var(--ok);font-weight:700">${fmt(f.amount)} د.ع</td>
   <td>${esc(f.note)||"—"}</td><td>${new Date(f.createdAt).toLocaleString("ar-IQ")}</td></tr>`),"لا توجد سجلات.");
+
+ // إرجاع جدول المسؤولين
+ $("managers").innerHTML=table(["الاسم","البريد الإلكتروني","الصلاحية"],Object.values(users).filter(u=>u&&(u.role==="store_manager"||u.role==="driver_manager")).map(u=>
+  `<tr><td>${esc(u.name)}</td><td dir="ltr">${esc(u.email||u.username)}</td>
+  <td>${u.role==="store_manager"?"مسؤول متاجر":"مسؤول سائقين"}</td></tr>`),"لا يوجد مسؤولون.");
+}
+
+// دالة عرض الطلبات الحية
+function drawLiveOrders(){
+ const live = Object.entries(orders).filter(([id,o]) => o && !["delivered", "cancelled"].includes(o.status))
+   .sort((a,b) => (b[1].createdAt||0) - (a[1].createdAt||0));
+ $("liveOrders").innerHTML = table(
+   ["الطلب", "المتجر", "السائق", "رقم السائق", "الحالة"],
+   live.map(([id,o]) => {
+     let tagClass = "y";
+     if(["accepted", "arrived_store", "picked_up", "delivering"].includes(o.status)) tagClass = "g";
+     const driverName = o.driverName ? `<b>${esc(o.driverName)}</b>` : '<span style="color:#94a3b8">بانتظار سائق</span>';
+     const driverPhone = o.driverPhone ? `<a href="tel:${esc(o.driverPhone)}" dir="ltr">${esc(o.driverPhone)}</a>` : '—';
+     return `<tr><td>#${esc(id.slice(-6))}</td><td>${esc(o.storeName)}</td><td>${driverName}</td>
+       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]}</span></td></tr>`;
+   }), "لا توجد طلبات حية الآن."
+ );
 }
 
 function drawOrders(){
@@ -308,34 +365,4 @@ async function addUser(role,username,name,pass,extra={}){
  try{
   const email = username.includes("@") ? username : username+"@baqubah.app";
   const c=await createUserWithEmailAndPassword(getAuth(sec),email,pass);
-  await set(ref(db,"users/"+c.user.uid),{role,username,name,email,mapUrl:(extra.mapUrl||"").trim(),isActive:true,createdAt:Date.now()});
- }finally{await deleteApp(sec)}
-}
-
-$("fd").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("driver",$("du").value,$("dn").value,$("dp").value);e.target.reset();say("تمت إضافة السائق.")})};
-$("fs").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("store",$("su").value,$("sn").value,$("sp").value,{mapUrl:$("sm").value});e.target.reset();say("تمت إضافة المتجر.")})};
-$("fa").onsubmit=e=>{e.preventDefault();run(async()=>{
- const name=$("an").value.trim(),fee=Number($("af").value);
- if(!name||!Number.isSafeInteger(fee)||fee<0)throw Error("بيانات غير صحيحة.");
- await set(push(ref(db,"areas")),{name,fee,isActive:true,createdAt:Date.now()});e.target.reset();say("تمت إضافة المنطقة.")})};
-
-$("cb").onclick=()=>run(async()=>{
- const id=$("cd").value,amount=Number($("ca").value);
- if(!id||!Number.isSafeInteger(amount)||amount<=0)throw Error("اختر سائقاً وأدخل مبلغاً صحيحاً.");
- if(!(await confirmBox("تأكيد تسجيل الكاش؟")))return;
- await set(push(ref(db,"finance")),{type:"cash_received",userId:id,userName:users[id].name,amount,note:$("cn").value.trim(),createdAt:Date.now()});
- $("ca").value="";$("cn").value="";say("تم تسجيل الكاش.")});
-
-async function autoClean(){
- const days = Number(settings.deleteOrdersAfterDays || 30);
- if(!days)return;
- const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
- const snap = await get(ref(db, "orders"));
- if(!snap.exists())return;
- const updates = {};
- snap.forEach(c=>{ if(c.val().createdAt < cutoff && ["delivered","cancelled"].includes(c.val().status)) updates[c.key]=null; });
- if(Object.keys(updates).length) await update(ref(db,"orders"),updates);
-}
-</script>
-</body>
-</html>
+  await set(ref(db,"users/"+c.user.uid),{role,username,name,email,mapUrl:(e
