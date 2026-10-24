@@ -195,21 +195,18 @@ let users={},orders={},areas={},fin={},pres={},settings={},started=false;
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#ffebee":"#e8f5e9";m.style.color=bad?"#b71c1c":"#176337";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
 const run=async fn=>{try{await fn()}catch(e){say(e.message,1);console.error(e)}};
 
-// دالة التحقق المعدلة (تحولك لمدير تلقائياً إذا لم تكن موجوداً)
 async function isAdmin(uid){
   try {
     const snap = await get(ref(db, "users/"+uid));
-    if(snap.exists() && snap.val().role === "admin") return true;
     if(!snap.exists()){
-       await set(ref(db, "users/"+uid), {role:"admin", name:"المدير العام", username:"admin", isActive:true, createdAt:Date.now()});
-       return true;
+      const allUsers = await get(ref(db, "users"));
+      if(!allUsers.exists()){
+         await set(ref(db, "users/"+uid), {role:"admin", name:"المدير العام", username:"admin", isActive:true, createdAt:Date.now()});
+         return true;
+      }
     }
-    return false;
-  } catch(e) { 
-    // إذا حدث خطأ في القواعد، نرجع true مؤقتاً لتجنب التعليق (سنصلحه لاحقاً)
-    console.warn("DB Error", e);
-    return true; 
-  }
+    return snap.exists() && snap.val().role === "admin";
+  } catch(e) { return false; }
 }
 
 $("btnLogin").onclick=async ()=>{
@@ -363,4 +360,4 @@ document.addEventListener("click",e=>{
   else if(d.del){
     const kind=d.kind||(users[d.del]?(users[d.del].role==="driver"?"driver":"store"):"area");
     const label=kind==="order"?`الطلب #${d.del.slice(-6)}`:(kind==="area"?`المنطقة ${areas[d.del].name}`:users[d.del].name);
-    if
+    if(await confirmBox(`حذف ${label} نهائياً؟`)){ await remove(ref(db, kind==="order"?"orders/"+d.del:(kind==="area"?"are
