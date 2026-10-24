@@ -3,17 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<meta name="theme-color" content="#14263d">
 <title>Baqubah Delivery | السائق</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🛵</text></svg>">
 <style>
 :root{--bg:#f2f5f9;--ink:#172235;--pri:#1769aa;--ok:#218838;--bad:#dc3545;--warn:#bd7200;--line:#e0e6ef}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box}
 body{margin:0;font-family:system-ui,Tahoma,Arial;background:var(--bg);color:var(--ink);padding-bottom:50px}
 button,input,select{font:inherit}
 button{border:0;border-radius:8px;padding:12px 16px;background:var(--pri);color:#fff;cursor:pointer;font-weight:700;transition:.15s}
 button:hover{filter:brightness(1.1)}
-button:active{transform:scale(.98)}
 button:disabled{opacity:.5;cursor:not-allowed}
 button.bad{background:var(--bad)}
 input{width:100%;padding:12px;border:1.5px solid #ccd5e2;border-radius:10px;background:#fff;margin:6px 0 14px;outline:none;font-size:16px}
@@ -23,7 +20,6 @@ header{background:#14263d;color:#fff;padding:14px 20px;display:flex;justify-cont
 header h2{margin:0;font-size:18px}
 main{max-width:600px;margin:auto;padding:16px}
 .box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
-h3{margin:16px 0 10px;font-size:17px}
 
 .stats-list{background:#fff;border-radius:16px;padding:16px 20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
 .stat-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px dashed #e2e8f0;font-weight:700;font-size:15px}
@@ -73,34 +69,6 @@ h3{margin:16px 0 10px;font-size:17px}
 </head>
 <body>
 
-<!-- يعرض تقدم التحميل وأي خطأ حقيقي (مهم إذا كان الإنترنت ضعيف) -->
-<script>
-window.__loaded = false;
-window.__err = false;
-var __t0 = Date.now();
-function setLe(t, isErr){
-  var el = document.getElementById("err");
-  if (!el) return;
-  if (window.__err && !isErr) return;
-  el.textContent = t;
-  el.style.color = isErr ? "#dc3545" : "#1769aa";
-  if (isErr) window.__err = true;
-}
-window.addEventListener("error", function(e){
-  var t = e.target;
-  if (t && t !== window && t.tagName === "SCRIPT") setLe("فشل تحميل سكربت: " + (t.src || "الصفحة"), true);
-  else setLe("خطأ بالصفحة: " + (e.message || "غير معروف") + " (سطر " + e.lineno + ")", true);
-}, true);
-window.addEventListener("unhandledrejection", function(e){
-  console.log("unhandled", e.reason);
-});
-var __tick = setInterval(function(){
-  if (window.__loaded) { clearInterval(__tick); return; }
-  var s = Math.round((Date.now() - __t0) / 1000);
-  if (s >= 3) setLe("جاري تحميل النظام ... " + s + " ثانية", false);
-}, 1000);
-</script>
-
 <section id="login" class="box">
 <h2 style="text-align:center;margin-top:0">دخول السائق</h2>
 <form id="lf" onsubmit="return false;">
@@ -108,7 +76,7 @@ var __tick = setInterval(function(){
 <label>كلمة المرور</label><input id="pw" type="password" autocomplete="current-password" required>
 <button type="button" id="btnLogin" style="width:100%;margin-top:6px">دخول</button>
 </form>
-<p id="err"></p>
+<p id="err" style="color:#1769aa">جاري تحميل النظام...</p>
 </section>
 
 <div id="app" hidden>
@@ -163,12 +131,11 @@ var __tick = setInterval(function(){
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp,runTransaction} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp,runTransaction} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
-// وصلنا هنا يعني المكتبات انحملت
-window.__loaded = true;
-window.__err = false;
-document.getElementById("err").textContent = "";
+// إذا وصلنا هنا يعني المكتبات انحملت
+document.getElementById("err").textContent="";
+document.getElementById("err").style.color="";
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -193,7 +160,7 @@ let knownAvail=new Set(), firstAvail=true;
 let wl=null, wlBusy=false;
 
 const on=(q,cb,eb)=>{ unsubs.push(onValue(q,cb,eb)); };
-const pct=()=>{ const p=Number(settings.driverCommissionPct); return (isFinite(p)&&settings.driverCommissionPct!==undefined&&settings.driverCommissionPct!==null)?p/100:0.1; };
+const pct=()=>{ const raw=settings.driverCommissionPct; const p=Number(raw); return (raw!==undefined&&raw!==null&&isFinite(p))?p/100:0.1; };
 const storeCom=()=>Number(settings.storeCommission||500);
 
 // ===== صوت واهتزاز وتنبيه =====
@@ -432,4 +399,37 @@ function drawHistory(){
 $("btnHistory").onclick=()=>{
  const el=$("historyList");
  el.hidden=!el.hidden;
- $("btnHistory").textContent=el.hidden?"عرض سجل الطلبات المكتملة":"إ
+ $("btnHistory").textContent=el.hidden?"عرض سجل الطلبات المكتملة":"إخفاء السجل";
+ if(!el.hidden) drawHistory();
+};
+
+// ===== حالة الاتصال =====
+function toggleStatus(){
+ const hasActive=Object.keys(activeOrders).length>0;
+ if(isOnline){
+  if(hasActive) return say("لا يمكنك الإغلاق ولديك طلبات نشطة",1);
+ }else if(currentDebt>=debtLimit){
+  return say("لا يمكنك الاتصال، لقد تجاوزت سقف الدين",1);
+ }
+ isOnline=!isOnline;
+ set(ref(db,"presence/"+uid),{online:isOnline,lastSeen:serverTimestamp()}).catch(()=>say("تعذر تحديث الحالة، تأكد من الإنترنت",1));
+ if(isOnline){ startGPS(); speak("أنت الآن متصل"); } else speak("أنت الآن غير متصل");
+ updateStatusUI(); drawOrders();
+}
+$("btnStatus").addEventListener("click",toggleStatus);
+
+function updateStatusUI(){
+ const hasActive=Object.keys(activeOrders).length>0;
+ const btn=$("btnStatus");
+ if(currentDebt>=debtLimit && !hasActive){
+  isOnline=false; btn.className="status-btn blocked"; $("statusTxt").textContent="محظور (تجاوزت سقف الدين)"; syncWake(); return;
+ }
+ if(hasActive){
+  isOnline=true; btn.className="status-btn on"; $("statusTxt").textContent="متصل (لديك طلب نشط)"; syncWake(); return;
+ }
+ if(isOnline){ btn.className="status-btn on"; $("statusTxt").textContent="متصل (متاح للطلبات)"; }
+ else { btn.className="status-btn off"; $("statusTxt").textContent="غير متصل (مغلق)"; }
+ syncWake();
+}
+
+// ===== عرض الطلبات ==
