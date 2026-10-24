@@ -17,12 +17,18 @@ header h2{margin:0;font-size:18px}
 main{max-width:600px;margin:auto;padding:16px}
 .box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
 
-/* 🟢 تم التعديل: 3 أعمدة بدل 2 */
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .stat{background:#fff;border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.03)}
 .stat span{font-size:11px;color:#64748b;display:block;margin-bottom:4px;line-height:1.3}
 .stat b{font-size:18px;color:var(--pri)}
 .stat.warn b{color:var(--bad)}
+
+/* 🟢 تصميم شاشة الانتظار (الرادار) */
+.waiting-state { text-align:center; padding:40px 20px; background:#fff; border-radius:16px; box-shadow:0 4px 15px rgba(0,0,0,.03); margin-bottom:16px; border:2px dashed var(--pri); }
+.waiting-state h3 { color:var(--pri); font-size:20px; margin:16px 0 8px; font-weight:800; }
+.waiting-state p { color:#64748b; font-size:14px; margin:0; }
+.radar { width:80px; height:80px; border-radius:50%; background:radial-gradient(circle,var(--pri) 0 15%,#1769aa33 16% 40%,transparent 41%); margin:0 auto; animation:pulse 1.8s infinite; }
+@keyframes pulse { 0% { transform:scale(.85); opacity:.6; } 50% { transform:scale(1.1); opacity:1; } 100% { transform:scale(.85); opacity:.6; } }
 
 .card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;background:#fff;position:relative}
 .card.new{border:2px solid var(--pri);box-shadow:0 0 15px rgba(23,105,170,.15)}
@@ -72,7 +78,6 @@ main{max-width:600px;margin:auto;padding:16px}
 <main>
 <div id="msg"></div>
 
-<!-- 🟢 تم التعديل: 3 صناديق -->
 <div class="grid">
 <div class="stat"><span>الطلبات المكتملة</span><b id="statDone">0</b></div>
 <div class="stat"><span>محفظتي (دين)</span><b id="statDebt">0</b></div>
@@ -88,6 +93,13 @@ main{max-width:600px;margin:auto;padding:16px}
 </button>
 
 <div id="annBox" class="box" style="background:#fff7e0;color:#8a5a00;border:1px solid #fde68a" hidden></div>
+
+<!-- 🟢 إضافة شاشة الانتظار هنا -->
+<div id="waitingScreen" class="waiting-state" hidden>
+  <div class="radar"></div>
+  <h3>انتظر... سوف يصلك طلب قريباً</h3>
+  <p>رجاءً أبقِ التطبيق مفتوحاً لاستقبال الطلبات</p>
+</div>
 
 <div id="availContainer" hidden>
 <h3>الطلبات المتاحة</h3>
@@ -213,7 +225,6 @@ function fetchPrivateData(){
  });
 }
 
-// 🟢 تم التعديل: إضافة عدد الطلبات المكتملة
 function drawStats() {
     let debt = 0; let todayProfit = 0; let doneCount = 0;
     const todayStart = new Date().setHours(0,0,0,0);
@@ -305,6 +316,14 @@ function drawOrders(){
 
  const ac=Object.entries(activeOrders);
  $("activeContainer").hidden = !ac.length;
+ 
+ // 🟢 التعديل الوحيد هنا: إظهار/إخفاء شاشة الانتظار
+ if(isOnline && !availOrdersCount() && !ac.length && currentDebt < debtLimit) {
+    $("waitingScreen").hidden = false;
+ } else {
+    $("waitingScreen").hidden = true;
+ }
+
  $("activeList").innerHTML = ac.map(([id,o])=>{
   let actionBtn="", warn="", statusBadge="";
   const now=Date.now(); const q = privData[id] || {}; 
@@ -350,6 +369,16 @@ function drawOrders(){
  }).join("");
 }
 
+// دالة مساعدة لحساب عدد الطلبات المتاحة (لتستخدم في شاشة الانتظار)
+function availOrdersCount() {
+    return Object.entries(availOrders).filter(([id,o])=>{
+        if(o.driverId) return false; 
+        if(o.rejectedBy && o.rejectedBy[uid]) return false; 
+        if(Object.keys(activeOrders).length>0){ return (Date.now()-(o.createdAt||0)) > 120000; }
+        return true;
+    }).length;
+}
+
 function getDist(lat1, lon1, lat2, lon2){
  if(!lat1||!lat2)return 0;
  const R=6371e3, p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
@@ -363,33 +392,4 @@ window.acceptOrder=async(id)=>{
  if(!isOnline) return say("يجب أن تكون متصلاً لتقبل الطلب", 1);
  try{
   await update(ref(db,"orders/"+id),{ driverId:uid, driverName:driver.name, driverPhone:driver.phone||"", status:"waiting_store", stepAt:serverTimestamp(), acceptedAt:Date.now() });
-  say("تم قبول الطلب، بانتظار موافقة المتجر"); speak("تم قبول الطلب، بانتظار موافقة المتجر");
- }catch(e){say("تم أخذه من سائق آخر", 1);}
-};
-
-window.rejectOrder=async(id)=>{
- try{ await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]: true}); say("تم رفض الطلب."); }
- catch(e){say("فشل الرفض",1);}
-};
-
-window.updateStep=async(id,newStatus)=>{
- const o=activeOrders[id]; if(!o)return;
- if(newStatus==="arrived_store"){
-   if(o.storeLat && pos.lat){
-    const d=getDist(pos.lat,pos.lng,o.storeLat,o.storeLng);
-    if(d>300) return say(`يجب أن تكون قريباً من المتجر (المسافة الحالية ${Math.round(d)}م)`, 1);
-   }
- }
- try{
-  const patch={status:newStatus, stepAt:serverTimestamp()};
-  if(newStatus==="delivered"){
-    const profit=Math.round(o.deliveryFee*0.9);
-    patch.deliveredAt=Date.now(); patch.driverProfit=profit; patch.platformDeliveryCommission=Math.round(o.deliveryFee-profit);
-  }
-  await update(ref(db,"orders/"+id),patch);
-  if(newStatus==="delivered") speak("تم التوصيل بنجاح"); else speak("تم تحديث الحالة");
- }catch(e){say("فشل التحديث",1);}
-};
-</script>
-</body>
-</html>
+  say("تم قبول الطلب، بانتظار
