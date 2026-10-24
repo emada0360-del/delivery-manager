@@ -39,7 +39,7 @@ td select{margin:0;width:auto;min-width:140px;padding:6px}
 #msg{padding:12px 16px;margin:16px 20px 0;border-radius:8px;display:none;font-weight:600}
 [hidden]{display:none!important}
 .tag{display:inline-block;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;background:#eef2f7;color:#374151}
-.tag.g{background:#e6f4ea;color:#176337}.tag.r{background:#fdecea;color:#b42318}
+.tag.g{background:#e6f4ea;color:#176337}.tag.r{background:#fdecea;color:#b42318}.tag.y{background:#fef3c7;color:#b45309}
 </style>
 </head>
 <body>
@@ -58,11 +58,11 @@ td select{margin:0;width:auto;min-width:140px;padding:6px}
 <nav id="nav">
 <button type="button" class="on" data-t="t1">الرئيسية</button>
 <button type="button" data-t="t2">الطلبات</button>
+<button type="button" data-t="t9" style="background:#e0f2fe;color:#0369a1">الطلبات الحية</button>
 <button type="button" data-t="t3">السائقون</button>
 <button type="button" data-t="t4">المتاجر</button>
 <button type="button" data-t="t5">المناطق</button>
 <button type="button" data-t="t6">المالية</button>
-<button type="button" data-t="t7">المسؤولون</button>
 <button type="button" data-t="t8">الإعدادات</button>
 </nav>
 <div id="msg"></div>
@@ -81,6 +81,14 @@ td select{margin:0;width:auto;min-width:140px;padding:6px}
 </div>
 </section>
 
+<section id="t9" class="tab" hidden>
+<div class="box">
+  <h3 style="margin-top:0; color:var(--pri)">متابعة الطلبات الحية (Live)</h3>
+  <p style="color:#64748b; margin-bottom:16px;">هنا تظهر الطلبات الجارية الآن مع السائق المسؤول عنها.</p>
+  <div id="liveOrders" class="wrap"></div>
+</div>
+</section>
+
 <section id="t2" class="tab" hidden>
 <div class="box">
 <input id="q" placeholder="بحث بالمتجر أو المنطقة أو رقم الطلب">
@@ -91,21 +99,19 @@ td select{margin:0;width:auto;min-width:140px;padding:6px}
 
 <section id="t3" class="tab" hidden>
 <form id="fd" class="box"><h3>إضافة سائق جديد</h3>
-<input id="du" placeholder="رقم الهاتف (سيكون هو username للدخول)" required>
+<input id="du" placeholder="رقم الهاتف (للدخول)" required>
 <input id="dn" placeholder="اسم السائق" required>
-<input id="dh" type="tel" placeholder="رقم الهاتف للتواصل (اختياري)">
-<input id="dp" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)" required>
+<input id="dp" type="password" placeholder="كلمة المرور (6 أحرف)" required>
 <button type="submit" class="grn">إضافة السائق</button></form>
 <div id="drivers" class="box wrap"></div>
 </section>
 
 <section id="t4" class="tab" hidden>
 <form id="fs" class="box"><h3>إضافة متجر جديد</h3>
-<input id="su" placeholder="رقم الهاتف (سيكون هو username للدخول)" required>
+<input id="su" placeholder="رقم الهاتف (للدخول)" required>
 <input id="sn" placeholder="اسم المتجر" required>
-<input id="sh" type="tel" placeholder="رقم هاتف المتجر (اختياري)">
-<input id="sm" placeholder="رابط موقع المتجر على غوغل ماب (اختياري)">
-<input id="sp" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)" required>
+<input id="sm" placeholder="رابط غوغل ماب (اختياري)">
+<input id="sp" type="password" placeholder="كلمة المرور (6 أحرف)" required>
 <button type="submit" class="grn">إضافة المتجر</button></form>
 <div id="stores" class="box wrap"></div>
 </section>
@@ -113,7 +119,7 @@ td select{margin:0;width:auto;min-width:140px;padding:6px}
 <section id="t5" class="tab" hidden>
 <form id="fa" class="box"><h3>إضافة منطقة</h3>
 <input id="an" placeholder="اسم المنطقة" required>
-<input id="af" type="number" min="0" step="250" placeholder="أجرة التوصيل بالدينار" required>
+<input id="af" type="number" min="0" step="250" placeholder="أجرة التوصيل" required>
 <button type="submit" class="grn">إضافة المنطقة</button></form>
 <div id="areas" class="box wrap"></div>
 </section>
@@ -121,41 +127,15 @@ td select{margin:0;width:auto;min-width:140px;padding:6px}
 <section id="t6" class="tab" hidden>
 <div class="box"><h3>تسجيل كاش مستلم من سائق</h3>
 <select id="cd"></select>
-<input id="ca" type="number" min="1" step="1" placeholder="المبلغ بالدينار">
+<input id="ca" type="number" min="1" placeholder="المبلغ">
 <input id="cn" placeholder="ملاحظة (اختياري)">
 <button id="cb" class="grn">تسجيل الكاش</button></div>
 <div class="box"><h3>سجل الكاش</h3><div id="fin" class="wrap"></div></div>
 </section>
 
-<section id="t7" class="tab" hidden>
-<div class="box">
-<h3>إضافة مسؤول متاجر (Store Manager)</h3>
-<form id="fm-store">
-<input id="msu" type="email" placeholder="البريد الإلكتروني" required>
-<input id="msn" placeholder="الاسم" required>
-<input id="msp" type="password" placeholder="كلمة المرور (6 أحرف)" required>
-<button type="submit" class="grn">إضافة مسؤول المتاجر</button>
-</form>
-</div>
-<div class="box">
-<h3>إضافة مسؤول سائقين (Driver Manager)</h3>
-<form id="fm-driver">
-<input id="mdu" type="email" placeholder="البريد الإلكتروني" required>
-<input id="mdn" placeholder="الاسم" required>
-<input id="mdp" type="password" placeholder="كلمة المرور (6 أحرف)" required>
-<button type="submit" class="grn">إضافة مسؤول السائقين</button>
-</form>
-</div>
-<div id="managers" class="box wrap"></div>
-</section>
-
 <section id="t8" class="tab" hidden>
 <div class="box">
 <h3>إعدادات عامة</h3>
-<label>عمولة المنصة من الكروة (%)</label>
-<input id="set-com" type="number" min="0" max="100" step="1" value="10">
-<label>عمولة المتجر (دينار)</label>
-<input id="set-storecom" type="number" min="0" step="100" value="500">
 <label>حد الدين الأقصى لتعطيل السائق (دينار)</label>
 <input id="set-limit" type="number" min="0" step="1000" value="15000">
 <label>حذف الطلبات القديمة تلقائياً بعد (أيام)</label>
@@ -195,35 +175,22 @@ let users={},orders={},areas={},fin={},pres={},settings={},started=false;
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#ffebee":"#e8f5e9";m.style.color=bad?"#b71c1c":"#176337";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
 const run=async fn=>{try{await fn()}catch(e){say(e.message,1);console.error(e)}};
 
-async function isAdmin(uid){
-  try {
-    const snap = await get(ref(db, "users/"+uid));
-    if(!snap.exists()){
-      const allUsers = await get(ref(db, "users"));
-      if(!allUsers.exists()){
-         await set(ref(db, "users/"+uid), {role:"admin", name:"المدير العام", username:"admin", isActive:true, createdAt:Date.now()});
-         return true;
-      }
-    }
-    return snap.exists() && snap.val().role === "admin";
-  } catch(e) { return false; }
-}
-
+// 🟢 تسجيل دخول مباشر بدون أي شروط معقدة (مثل أول كود اشتغل)
 $("btnLogin").onclick=async ()=>{
  $("le").textContent=""; $("btnLogin").disabled=true; $("btnLogin").textContent="جاري...";
  try{
-   const cred = await signInWithEmailAndPassword(auth,$("em").value.trim(),$("pw").value);
-   const adm = await isAdmin(cred.user.uid);
-   if(!adm){ await signOut(auth); $("le").textContent="هذا الحساب ليس مديراً."; }
- }catch(err){ $("le").textContent = "خطأ: " + (err.code||err.message); }
+   await signInWithEmailAndPassword(auth,$("em").value.trim(),$("pw").value);
+ }catch(err){ 
+   $("le").textContent = "خطأ: " + (err.code === 'auth/invalid-credential' ? "الإيميل أو الباسوورد غلط" : err.message); 
+ }
  finally{ $("btnLogin").disabled=false; $("btnLogin").textContent="دخول"; }
 };
 
 $("out").onclick=()=>signOut(auth);
+
+// 🟢 بمجرد أن ينجح الدخول، تفتح اللوحة فوراً
 onAuthStateChanged(auth, async u=>{
   if(!u){ $("login").hidden=false; $("app").hidden=true; return; }
-  const adm = await isAdmin(u.uid);
-  if(!adm){ $("login").hidden=false; $("app").hidden=true; $("le").textContent="هذا الحساب ليس مديراً."; return; }
   $("login").hidden=true; $("app").hidden=false; $("le").textContent="";
   if(!started){started=true; start();}
 });
@@ -256,63 +223,61 @@ function draw(){
  $("s2").textContent=fmt(os.filter(o=>!["delivered","cancelled"].includes(o.status)).length);
  $("s3").textContent=fmt(drs.filter(([id,u])=>u.isActive!==false&&online(id)).length);
  $("s4").textContent=fmt(sts.filter(([,u])=>u.isActive!==false).length);
+ 
  drawOrders();
+ drawLiveOrders();
 
- $("drivers").innerHTML=table(["الاسم","الهاتف (الدخول)","الاتصال","مسلّمة","المستحق","الحالة","إجراءات"],drs.map(([id,u])=>{
+ $("drivers").innerHTML=table(["الاسم","رقم الدخول","مسلّمة","المستحق","إجراءات"],drs.map(([id,u])=>{
   const d=getDebt(id);
   return `<tr><td><b>${esc(u.name)}</b></td><td dir="ltr">${esc(u.username)}</td>
-  <td><span class="dot ${online(id)?"on":""}"></span>${online(id)?"متصل":"غير متصل"}</td>
-  <td>${deliveredOrders(id).length}</td><td class="${d>=15000?"warn":""}">${fmt(d)} د.ع</td>
-  <td>${u.isActive===false?'<span class="tag r">معطل</span>':'<span class="tag g">مفعل</span>'}</td>
-  <td><button type="button" data-ed="${esc(id)}">تعديل</button>
-  <button type="button" data-tg="${esc(id)}" class="${u.isActive===false?"grn":"org"}">${u.isActive===false?"تفعيل":"تعطيل"}</button>
+  <td>${deliveredOrders(id).length}</td><td class="${d>=15000?"warn":""}">${fmt(d)}</td>
+  <td><button type="button" data-tg="${esc(id)}" class="${u.isActive===false?"grn":"org"}">${u.isActive===false?"تفعيل":"تعطيل"}</button>
   <button type="button" data-zp="${esc(id)}" class="grn" ${d<=0?"disabled":""}>تصفير</button>
   <button type="button" data-del="${esc(id)}" class="red">حذف</button></td></tr>`}),"لا يوجد سائقون.");
 
- $("stores").innerHTML=table(["الاسم","الهاتف (الدخول)","الخريطة","الطلبات","الحالة","إجراءات"],sts.map(([id,u])=>
+ $("stores").innerHTML=table(["الاسم","رقم الدخول","الخريطة","إجراءات"],sts.map(([id,u])=>
   `<tr><td><b>${esc(u.name)}</b></td><td dir="ltr">${esc(u.username)}</td>
-  <td>${mapLink(u.mapUrl)}</td><td>${os.filter(o=>o.storeId===id).length}</td>
-  <td>${u.isActive===false?'<span class="tag r">معطل</span>':'<span class="tag g">مفعل</span>'}</td>
-  <td><button type="button" data-es="${esc(id)}">تعديل</button>
-  <button type="button" data-tg="${esc(id)}" class="${u.isActive===false?"grn":"org"}">${u.isActive===false?"تفعيل":"تعطيل"}</button>
+  <td>${mapLink(u.mapUrl)}</td>
+  <td><button type="button" data-tg="${esc(id)}" class="${u.isActive===false?"grn":"org"}">${u.isActive===false?"تفعيل":"تعطيل"}</button>
   <button type="button" data-del="${esc(id)}" class="red">حذف</button></td></tr>`),"لا توجد متاجر.");
 
- $("areas").innerHTML=table(["المنطقة","أجرة التوصيل","الحالة","إجراءات"],Object.entries(areas).map(([id,a])=>
-  `<tr><td><b>${esc(a.name)}</b></td><td>${fmt(a.fee)} د.ع</td><td>${a.isActive===false?'<span class="tag r">معطلة</span>':'<span class="tag g">مفعلة</span>'}</td>
-  <td><button type="button" data-ea="${esc(id)}">تعديل</button>
-  <button type="button" data-ta="${esc(id)}" class="org">${a.isActive===false?"تفعيل":"تعطيل"}</button>
+ $("areas").innerHTML=table(["المنطقة","أجرة التوصيل","إجراءات"],Object.entries(areas).map(([id,a])=>
+  `<tr><td><b>${esc(a.name)}</b></td><td>${fmt(a.fee)} د.ع</td>
+  <td><button type="button" data-ta="${esc(id)}" class="org">${a.isActive===false?"تفعيل":"تعطيل"}</button>
   <button type="button" data-del="${esc(id)}" data-kind="area" class="red">حذف</button></td></tr>`),"لا توجد مناطق.");
 
  const keep=$("cd").value;
  $("cd").innerHTML=drs.map(([id,u])=>`<option value="${esc(id)}">${esc(u.name)} (${esc(u.username)})</option>`).join("");
  if(keep)$("cd").value=keep;
 
- $("fin").innerHTML=table(["السائق","المبلغ","المسؤول","ملاحظة","التاريخ"],Object.values(fin).filter(Boolean).sort((a,b)=>b.createdAt-a.createdAt).slice(0,200).map(f=>
+ $("fin").innerHTML=table(["السائق","المبلغ","ملاحظة","التاريخ"],Object.values(fin).filter(Boolean).sort((a,b)=>b.createdAt-a.createdAt).map(f=>
   `<tr><td>${esc(f.userName)}</td><td style="color:var(--ok);font-weight:700">${fmt(f.amount)} د.ع</td>
-  <td>${esc(f.managerName||"النظام")}</td>
   <td>${esc(f.note)||"—"}</td><td>${new Date(f.createdAt).toLocaleString("ar-IQ")}</td></tr>`),"لا توجد سجلات.");
+}
 
- $("managers").innerHTML=table(["الاسم","البريد الإلكتروني","الصلاحية"],Object.values(users).filter(u=>u&&(u.role==="store_manager"||u.role==="driver_manager")).map(u=>
-  `<tr><td>${esc(u.name)}</td><td dir="ltr">${esc(u.email||u.username)}</td>
-  <td>${u.role==="store_manager"?"مسؤول متاجر":"مسؤول سائقين"}</td></tr>`),"لا يوجد مسؤولون.");
-
- if(!$("set-com").dataset.loaded && settings.driverCommissionPct!==undefined){
-   $("set-com").value=settings.driverCommissionPct;
-   $("set-storecom").value=settings.storeCommission||500;
-   $("set-limit").value=settings.debtLimit||15000;
-   $("set-days").value=settings.deleteOrdersAfterDays||30;
-   $("ann").value=settings.announcement||"";
-   $("set-com").dataset.loaded="1";
- }
+// 🟢 دالة عرض الطلبات الحية
+function drawLiveOrders(){
+ const live = Object.entries(orders).filter(([id,o]) => o && !["delivered", "cancelled"].includes(o.status))
+   .sort((a,b) => (b[1].createdAt||0) - (a[1].createdAt||0));
+ $("liveOrders").innerHTML = table(
+   ["الطلب", "المتجر", "السائق", "رقم السائق", "الحالة"],
+   live.map(([id,o]) => {
+     let tagClass = "y";
+     if(["accepted", "arrived_store", "picked_up", "delivering"].includes(o.status)) tagClass = "g";
+     const driverName = o.driverName ? `<b>${esc(o.driverName)}</b>` : '<span style="color:#94a3b8">بانتظار سائق</span>';
+     const driverPhone = o.driverPhone ? `<a href="tel:${esc(o.driverPhone)}" dir="ltr">${esc(o.driverPhone)}</a>` : '—';
+     return `<tr><td>#${esc(id.slice(-6))}</td><td>${esc(o.storeName)}</td><td>${driverName}</td>
+       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]}</span></td></tr>`;
+   }), "لا توجد طلبات حية الآن."
+ );
 }
 
 function drawOrders(){
  const t=$("q").value.trim().toLowerCase(),f=$("f").value;
  const rows=Object.entries(orders).filter(([id,o])=>o&&(!f||o.status===f)&&[id,o.storeName,o.area,o.driverName].join(" ").toLowerCase().includes(t))
-  .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0)).slice(0,150);
- $("orders").innerHTML=table(["الطلب","المتجر","المنطقة","الزبون","المبلغ","الحالة","إجراءات"],rows.map(([id,o])=>
-  `<tr><td>#${esc(id.slice(-6))}</td><td>${esc(o.storeName)}</td><td>${esc(o.area)}</td><td>${esc(o.customerPhone||"—")}</td>
-  <td>${fmt(o.customerTotal)} د.ع</td><td>${ST[o.status]||esc(o.status)}</td>
+  .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0)).slice(0,100);
+ $("orders").innerHTML=table(["الطلب","المتجر","المنطقة","الحالة","إجراءات"],rows.map(([id,o])=>
+  `<tr><td>#${esc(id.slice(-6))}</td><td>${esc(o.storeName)}</td><td>${esc(o.area)}</td><td>${ST[o.status]||esc(o.status)}</td>
   <td><select data-s="${esc(id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${o.status===k?"selected":""}>${v}</option>`).join("")}</select>
   <button type="button" data-ss="${esc(id)}">حفظ</button>
   <button type="button" data-del="${esc(id)}" data-kind="order" class="red">حذف</button></td></tr>`),"لا توجد طلبات.");
@@ -321,12 +286,7 @@ $("q").oninput=drawOrders;$("f").onchange=drawOrders;
 
 $("btnAnn").onclick=()=>run(async()=>{ await update(ref(db,"settings"),{announcement:$("ann").value.trim()}); say("تم حفظ الإعلان."); });
 $("btnSet").onclick=()=>run(async()=>{
-  await update(ref(db,"settings"),{
-    driverCommissionPct: Number($("set-com").value),
-    storeCommission: Number($("set-storecom").value),
-    debtLimit: Number($("set-limit").value),
-    deleteOrdersAfterDays: Number($("set-days").value)
-  });
+  await update(ref(db,"settings"),{ debtLimit: Number($("set-limit").value), deleteOrdersAfterDays: Number($("set-days").value) });
   say("تم حفظ الإعدادات.");
 });
 
@@ -334,10 +294,8 @@ const closeModal=()=>{$("modalHost").innerHTML=""};
 function modal(title,bodyHTML,onOk,okLabel="حفظ",okClass="grn"){
  $("modalHost").innerHTML=`<div class="modal-bg"><form class="modal" id="mform">
   <h3>${esc(title)}</h3>${bodyHTML}
-  <div class="actions">
-   <button type="submit" class="${okClass}">${esc(okLabel)}</button>
-   <button type="button" class="gray" id="mcancel">إلغاء</button>
-  </div></form></div>`;
+  <div class="actions"><button type="submit" class="${okClass}">${esc(okLabel)}</button><button type="button" class="gray" id="mcancel">إلغاء</button></div>
+  </form></div>`;
  $("mcancel").onclick=closeModal;
  $("modalHost").querySelector(".modal-bg").onclick=e=>{if(e.target.classList.contains("modal-bg"))closeModal()};
  $("mform").onsubmit=async e=>{e.preventDefault();try{await onOk()}catch(err){say(err.message,1)}};
@@ -353,11 +311,46 @@ document.addEventListener("click",e=>{
   if(d.ss){ if(await confirmBox("تغيير حالة الطلب؟")){await update(ref(db,"orders/"+d.ss),{status:document.querySelector(`select[data-s="${CSS.escape(d.ss)}"]`).value});say("تم التحديث.")} }
   else if(d.tg){ const u=users[d.tg]; await update(ref(db,"users/"+d.tg),{isActive:u.isActive===false}); say("تم التحديث."); }
   else if(d.ta){ const a=areas[d.ta]; await update(ref(db,"areas/"+d.ta),{isActive:a.isActive===false}); say("تم التحديث."); }
-  else if(d.ed){ editUser(d.ed,"driver"); }
-  else if(d.es){ editUser(d.es,"store"); }
-  else if(d.ea){ editArea(d.ea); }
   else if(d.zp){ resetWallet(d.zp); }
   else if(d.del){
     const kind=d.kind||(users[d.del]?(users[d.del].role==="driver"?"driver":"store"):"area");
-    const label=kind==="order"?`الطلب #${d.del.slice(-6)}`:(kind==="area"?`المنطقة ${areas[d.del].name}`:users[d.del].name);
-    if(await confirmBox(`حذف ${label} نهائياً؟`)){ await remove(ref(db, kind==="order"?"orders/"+d.del:(kind==="area"?"are
+    const label=kind==="order"?`الطلب`:(kind==="area"?`المنطقة`:(users[d.del]?users[d.del].name:""));
+    if(await confirmBox(`حذف ${label} نهائياً؟`)){ await remove(ref(db, kind==="order"?"orders/"+d.del:(kind==="area"?"areas/"+d.del:"users/"+d.del))); say("تم الحذف."); }
+  }
+ });
+});
+
+async function resetWallet(id){
+ const d=getDebt(id);
+ if(d<=0)return say("لا يوجد مستحق.");
+ if(!(await confirmBox(`تسجيل سداد كامل لمبلغ ${fmt(d)} د.ع للسائق "${users[id].name}"؟`)))return;
+ await push(ref(db,"finance"),{type:"cash_received",userId:id,userName:users[id].name,amount:d,note:"تصفير المحفظة",createdAt:Date.now()});
+ say("تم تصفير المحفظة.");
+}
+
+async function addUser(role,username,name,pass,extra={}){
+ username=username.trim().toLowerCase();
+ if(!/^[a-z0-9._-]+$/.test(username) && !username.includes("@"))throw Error("رقم المستخدم: حروف إنجليزية وأرقام فقط.");
+ if(pass.length<6)throw Error("كلمة المرور 6 أحرف على الأقل.");
+ if(Object.values(users).some(u=>u&&u.username===username))throw Error("رقم المستخدم مستخدم مسبقاً.");
+ const sec=initializeApp(cfg,"sec"+Date.now());
+ try{
+  const email = username.includes("@") ? username : username+"@baqubah.app";
+  const c=await createUserWithEmailAndPassword(getAuth(sec),email,pass);
+  await set(ref(db,"users/"+c.user.uid),{role,username,name,email,phone:(extra.phone||"").trim(),mapUrl:(extra.mapUrl||"").trim(),isActive:true,createdAt:Date.now()});
+ }finally{await deleteApp(sec)}
+}
+
+$("fd").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("driver",$("du").value,$("dn").value,$("dp").value);e.target.reset();say("تمت إضافة السائق.")})};
+$("fs").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("store",$("su").value,$("sn").value,$("sp").value,{mapUrl:$("sm").value});e.target.reset();say("تمت إضافة المتجر.")})};
+$("fa").onsubmit=e=>{e.preventDefault();run(async()=>{
+ const name=$("an").value.trim(),fee=Number($("af").value);
+ if(!name||!Number.isSafeInteger(fee)||fee<0)throw Error("بيانات غير صحيحة.");
+ await set(push(ref(db,"areas")),{name,fee,isActive:true,createdAt:Date.now()});e.target.reset();say("تمت إضافة المنطقة.")})};
+
+$("cb").onclick=()=>run(async()=>{
+ const id=$("cd").value,amount=Number($("ca").value);
+ if(!id||!Number.isSafeInteger(amount)||amount<=0)throw Error("اختر سائقاً وأدخل مبلغاً صحيحاً.");
+ if(!(await confirmBox("تأكيد تسجيل الكاش؟")))return;
+ await set(push(ref(db,"finance")),{type:"cash_received",userId:id,userName:users[id].name,amount,note:$("cn").value.trim(),createdAt:Date.now()});
+ 
