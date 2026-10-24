@@ -416,4 +416,111 @@ function drawOrders(){
 
   if(o.status==="waiting_store"){
    statusBadge = `<span class="badge wait">بانتظار موافقة المتجر</span>`;
-   actionBtn=`<div style="text-align:center; padding:16px; background:#fef3c7; color:#b45309; border-radius:12px; font-weight:800; margin-top:16px">يرجى الانتظا
+   actionBtn=`<div style="text-align:center; padding:16px; background:#fef3c7; color:#b45309; border-radius:12px; font-weight:800; margin-top:16px">يرجى الانتظار حتى يوافق المتجر...</div>`;
+  }
+  else if(o.status==="accepted"){
+   statusBadge = `<span class="badge acc">بالطريق للمتجر</span>`;
+   if(o.storeLat && pos.lat){
+     const d=getDist(pos.lat, pos.lng, o.storeLat, o.storeLng);
+     if(d>300) warn=`<p style="color:var(--bad);font-size:13px;font-weight:800;margin:8px 0;text-align:center">أنت بعيد عن المتجر (${Math.round(d)}م)</p>`;
+   }
+   actionBtn=`<button style="width:100%;margin-top:16px;background:var(--ok)" onclick="updateStep('${esc(id)}','arrived_store')">وصلت للمتجر</button>`;
+  }
+  else if(o.status==="arrived_store"){
+   statusBadge = `<span class="badge acc">وصل للمتجر</span>`;
+   const canPick = (now - (o.stepAt||0)) > 60000;
+   actionBtn=`<button style="width:100%;margin-top:16px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${esc(id)}','picked_up')">${canPick?'تم استلام الطلب':'انتظر دقيقة...'}</button>`;
+  }
+  else if(["picked_up","delivering"].includes(o.status)){
+   statusBadge = `<span class="badge acc">بالطريق للزبون</span>`;
+   const canDel = (now - (o.stepAt||0)) > 300000;
+   actionBtn=`<button style="width:100%;margin-top:16px;background:var(--ok)" ${canDel?'':'disabled'} onclick="updateStep('${esc(id)}','delivered')">${canDel?'تم التوصيل للزبون':'انتظر 5 دقائق...'}</button>`;
+  }
+
+  let storeBox = `<div class="info-box"><div><b>هاتف المتجر</b><span>${esc(o.storePhone||"غير متوفر")}</span></div>${o.storePhone?`<div class="btn-group"><a href="tel:${esc(o.storePhone)}" class="btn-sm btn-call">📞 اتصال</a></div>`:""}</div>`;
+
+  let customerBox = "";
+  if(q.customerPhone && o.status !== "waiting_store") {
+     const waLink = `https://wa.me/964${String(q.customerPhone).replace(/^0/,"")}?text=${encodeURIComponent("مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك.")}`;
+     customerBox = `<div class="info-box blue"><div><b>هاتف الزبون</b><span>${esc(q.customerPhone)}</span>${q.note?`<br><span style="color:var(--warn);font-size:12px;font-weight:700">ملاحظة: ${esc(q.note)}</span>`:""}</div><div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-sm btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class="btn-sm btn-wa">🟢 واتساب</a></div></div>`;
+  }
+
+  return `<div class="card ${o.status==='waiting_store'?'waiting':''}">
+   <div class="card-header"><b>طلب #${esc(id.slice(-6))}</b>${statusBadge}</div>
+   <p style="margin:6px 0;font-size:14px;font-weight:700">المتجر: ${esc(o.storeName)}</p>
+   <p style="margin:6px 0;font-size:14px;font-weight:700">المنطقة: ${esc(o.area)}</p>
+   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر</a>`:""}
+   ${storeBox}${buildFinBox(o)}${customerBox}
+   ${warn}${actionBtn}
+  </div>`;
+ }).join("");
+}
+
+function getDist(lat1, lon1, lat2, lon2){
+ if(!lat1||!lat2)return 0;
+ const R=6371e3, p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
+ const dp=(lat2-lat1)*Math.PI/180, dl=(lon2-lon1)*Math.PI/180;
+ const a=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
+ return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// قبول الطلب بـ Transaction لمنع القبول المزدوج
+window.acceptOrder=async(id)=>{
+ if(currentDebt >= debtLimit) return say("لا يمكنك قبول الطلبات، لقد تجاوزت سقف الدين", 1);
+ if(!isOnline) return say("يجب أن تكون متصلاً لتقبل الطلب", 1);
+
+ try{
+  const result = await runTransaction(ref(db, "orders/"+id), (order) => {
+    if (order && order.status === "pending" && !order.driverId) {
+      order.driverId = uid;
+      order.driverName = driver.name;
+      order.driverPhone = driver.phone || "";
+      order.status = "waiting_store";
+      order.stepAt = Date.now();
+      order.acceptedAt = Date.now();
+      return order;
+    } else {
+      return; // يلغي العملية إذا كان الطلب مأخوذاً
+    }
+  });
+
+  if(result.committed) {
+    say("تم قبول الطلب، بانتظار موافقة المتجر"); speak("تم قبول الطلب، بانتظار موافقة المتجر");
+  } else {
+    say("عذراً، تم أخذ هذا الطلب من قبل سائق آخر", 1);
+  }
+ }catch(e){say("خطأ في الاتصال، حاول مجدداً", 1);}
+};
+
+window.rejectOrder=async(id)=>{
+ try{ await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]: true}); say("تم رفض الطلب."); }
+ catch(e){say("فشل الرفض",1);}
+};
+
+window.updateStep=async(id,newStatus)=>{
+ const o=activeOrders[id]; if(!o)return;
+
+ if(newStatus==="arrived_store"){
+   if(!pos.lat) return say("الرجاء تشغيل تحديد الموقع (GPS) لتأكيد الوصول", 1);
+   if(o.storeLat && pos.lat){
+    const d=getDist(pos.lat,pos.lng,o.storeLat,o.storeLng);
+    if(d>300) return say(`يجب أن تكون قريباً من المتجر (المسافة الحالية ${Math.round(d)}م)`, 1);
+   }
+ }
+
+ try{
+  const patch={status:newStatus, stepAt:Date.now()};
+  if(newStatus==="delivered"){
+    const profit=Math.round(o.deliveryFee*0.9);
+    patch.deliveredAt=Date.now();
+    patch.driverProfit=profit;
+    patch.platformDeliveryCommission=Math.round(o.deliveryFee-profit);
+    patch.storeCommission=Number(settings.storeCommission || 500);
+  }
+  await update(ref(db,"orders/"+id),patch);
+  if(newStatus==="delivered") speak("تم التوصيل بنجاح"); else speak("تم تحديث الحالة");
+ }catch(e){say("فشل التحديث",1);}
+};
+</script>
+</body>
+</html>
