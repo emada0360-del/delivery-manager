@@ -4,6 +4,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - role: driver
@@ -28,8 +29,9 @@ jobs:
           mkdir app && cd app
           mkdir www && echo '<html></html>' > www/index.html
           npm init -y
-          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/local-notifications@6 @anuradev/capacitor-background-mode
-          cat > capacitor.config.json <<EOF
+          npm i --legacy-peer-deps @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/local-notifications@6
+          npm i --legacy-peer-deps @anuradev/capacitor-background-mode || echo "background plugin skipped"
+          cat > capacitor.config.json <<CFG
           {
             "appId": "${{ matrix.id }}",
             "appName": "${{ matrix.name }}",
@@ -37,10 +39,9 @@ jobs:
             "server": {
               "url": "https://emada0360-del.github.io/delivery-manager/${{ matrix.page }}",
               "cleartext": false
-            },
-            "android": { "allowMixedContent": false }
+            }
           }
-          EOF
+          CFG
           npx cap add android
           npx cap sync android
       - name: Add permissions
