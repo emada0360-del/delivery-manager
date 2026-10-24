@@ -60,18 +60,33 @@ jobs:
           package com.baqubah.driver;
 
           import android.content.Intent;
+          import android.content.pm.PackageManager;
           import android.os.Build;
           import android.os.Bundle;
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
-            @Override
-            public void onCreate(Bundle savedInstanceState) {
-              super.onCreate(savedInstanceState);
+            private void startSvc() {
               try {
                 Intent i = new Intent(this, OrderService.class);
                 if (Build.VERSION.SDK_INT >= 26) startForegroundService(i); else startService(i);
               } catch (Exception e) {}
+            }
+
+            @Override
+            public void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              if (Build.VERSION.SDK_INT >= 33
+                  && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 77);
+              }
+              startSvc();
+            }
+
+            @Override
+            public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+              super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+              if (requestCode == 77) startSvc();
             }
           }
           EOF
@@ -98,16 +113,22 @@ jobs:
             @Override
             public void onCreate() {
               super.onCreate();
-              String ch = "svc";
-              NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
               if (Build.VERSION.SDK_INT >= 26) {
-                nm.createNotificationChannel(new NotificationChannel(ch, "Order service", NotificationManager.IMPORTANCE_LOW));
+                NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+                nm.createNotificationChannel(new NotificationChannel("svc", "Order service", NotificationManager.IMPORTANCE_LOW));
               }
+              PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+              wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "baqubah:orders");
+              wl.acquire();
+            }
+
+            @Override
+            public int onStartCommand(Intent intent, int flags, int startId) {
               Intent open = new Intent(this, MainActivity.class);
               PendingIntent pi = PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-              Notification.Builder b = (Build.VERSION.SDK_INT >= 26) ? new Notification.Builder(this, ch) : new Notification.Builder(this);
+              Notification.Builder b = (Build.VERSION.SDK_INT >= 26) ? new Notification.Builder(this, "svc") : new Notification.Builder(this);
               Notification n = b.setContentTitle("Baqubah Delivery")
-                .setContentText("Waiting for new orders")
+                .setContentText("賲鬲氐賱 - 亘丕賳鬲馗丕乇 丕賱胤賱亘丕鬲 丕賱噩丿賷丿丞")
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentIntent(pi)
                 .setOngoing(true)
@@ -117,13 +138,8 @@ jobs:
               } else {
                 startForeground(1, n);
               }
-              PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
-              wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "baqubah:orders");
-              wl.acquire();
+              return START_STICKY;
             }
-
-            @Override
-            public int onStartCommand(Intent intent, int flags, int startId) { return START_STICKY; }
 
             @Override
             public void onDestroy() {
