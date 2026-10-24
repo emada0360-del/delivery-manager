@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>إدارة المتاجر | Baqubah Delivery</title>
+<style>
+:root{--bg:#f2f5f9;--ink:#172235;--pri:#1769aa;--ok:#218838;--bad:#dc3545;--warn:#bd7200;--line:#e0e6ef}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Tahoma,Arial;background:var(--bg);color:var(--ink)}
+button,input,select{font:inherit}
+button{border:0;border-radius:8px;padding:10px 14px;background:var(--pri);color:#fff;cursor:pointer;font-weight:700;transition:.15s}
+button:hover{filter:brightness(1.1)}
+button:disabled{opacity:.5;cursor:not-allowed}
+input{width:100%;padding:12px;border:1px solid #ccd5e2;border-radius:8px;background:#fff;margin:6px 0 14px;outline:none}
+input:focus{border-color:var(--pri);box-shadow:0 0 0 3px #1769aa22}
+header{background:#14263d;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
+header h2{margin:0;font-size:18px}
+main{max-width:1100px;margin:auto;padding:20px}
+.box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.02)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-bottom:20px}
+.grid .box{margin:0;text-align:center}
+.grid strong{display:block;font-size:26px;margin-top:8px;color:var(--pri)}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:800px;font-size:14px}
+th,td{text-align:right;padding:12px;border-bottom:1px solid #edf0f4;vertical-align:middle}
+th{background:#f8fafc;font-weight:700;color:#475569}
+tr:hover td{background:#fafcff}
+td button{margin:2px;padding:7px 10px;font-size:12px;border-radius:6px}
+.red{background:var(--bad)}.grn{background:var(--ok)}.org{background:var(--warn)}.gray{background:#6b7280}
+.warn{color:#b42318;font-weight:bold}
+#login{max-width:400px;margin:80px auto}
+#msg{padding:12px 16px;margin:16px 20px 0;border-radius:8px;display:none;font-weight:600}
+[hidden]{display:none!important}
+.tag{display:inline-block;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;background:#eef2f7;color:#374151}
+.tag.g{background:#e6f4ea;color:#176337}.tag.r{background:#fdecea;color:#b42318}
+a.map-link{color:var(--pri);text-decoration:none;font-weight:bold;font-size:13px}
+a.map-link:hover{text-decoration:underline}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(10,20,35,.6);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;backdrop-filter:blur(3px)}
+.modal{background:#fff;border-radius:16px;padding:24px;max-width:400px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,.2)}
+.modal h3{margin:0 0 16px;font-size:18px}
+.modal label{font-size:13px;color:#475569;display:block;margin-top:8px;font-weight:600}
+.modal .actions{display:flex;gap:10px;margin-top:24px}
+.modal .actions button{flex:1;padding:12px}
+</style>
+</head>
+<body>
+
+<section id="login" class="box">
+<h2 style="text-align:center;margin-top:0">دخول مسؤول المتاجر</h2>
+<form id="lf" onsubmit="return false;">
+<label>البريد الإلكتروني</label><input id="em" type="email" required>
+<label>كلمة المرور</label><input id="pw" type="password" required>
+<button type="button" id="btnLogin" style="width:100%;padding:12px">دخول</button>
+</form>
+<p id="le" style="color:#b42318;font-size:14px;min-height:20px;text-align:center;font-weight:600"></p>
+</section>
+
+<div id="app" hidden>
+<header><h2>إدارة المتاجر</h2><button id="out" class="red" type="button">خروج</button></header>
+<div id="msg"></div>
+<main>
+  
+  <!-- الإحصائيات -->
+  <div class="grid">
+    <div class="box">إجمالي المتاجر<strong id="s1">0</strong></div>
+    <div class="box">المتاجر المفعّلة<strong id="s2">0</strong></div>
+    <div class="box">المتاجر المعطّلة<strong id="s3">0</strong></div>
+    <div class="box">إجمالي الطلبات<strong id="s4">0</strong></div>
+  </div>
+
+  <!-- إضافة متجر -->
+  <form id="fs" class="box"><h3>إضافة متجر جديد</h3>
+    <input id="su" placeholder="رقم الهاتف (للدخول)" required>
+    <input id="sn" placeholder="اسم المتجر" required>
+    <input id="sm" placeholder="رابط موقع المتجر على غوغل ماب (اختياري)">
+    <input id="sp" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)" required>
+    <button type="submit" class="grn">إضافة المتجر</button>
+  </form>
+
+  <!-- جدول المتاجر -->
+  <div class="box">
+    <h3>قائمة المتاجر</h3>
+    <input id="search" placeholder="بحث بالاسم أو رقم الهاتف..." style="margin-bottom:16px">
+    <div id="stores" class="wrap"></div>
+  </div>
+
+</main>
+</div>
+
+<div id="modalHost"></div>
+
+<script type="module">
+import {initializeApp,deleteApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import {getAuth,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import {getDatabase,ref,set,update,push,onValue,remove,get} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+
+const cfg = {
+  apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
+  authDomain: "baqubah-delivery-e729e.firebaseapp.com",
+  databaseURL: "https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",
+  projectId: "baqubah-delivery-e729e",
+  storageBucket: "baqubah-delivery-e729e.firebasestorage.app",
+  messagingSenderId: "450084520701",
+  appId: "1:450084520701:web:719e2040338540ce36f494"
+};
+
+const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n||0).toLocaleString("en-US");
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+let users={}, orders={}, manager=null, started=false;
+
+function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#ffebee":"#e8f5e9";m.style.color=bad?"#b71c1c":"#176337";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
+const run=async fn=>{try{await fn()}catch(e){say(e.message,1);console.error(e)}};
+
+// تسجيل الدخول
+$("btnLogin").onclick=async ()=>{
+ $("le").textContent=""; $("btnLogin").disabled=true; $("btnLogin").textContent="جاري...";
+ try{
+   await signInWithEmailAndPassword(auth,$("em").value.trim(),$("pw").value);
+ }catch(err){ $("le").textContent = "خطأ: " + (err.code||err.message); }
+ finally{ $("btnLogin").disabled=false; $("btnLogin").textContent="دخول"; }
+};
+
+$("out").onclick=()=>signOut(auth);
+
+onAuthStateChanged(auth, async u=>{
+  if(!u){ $("login").hidden=false; $("app").hidden=true; return; }
+  try {
+    const snap = await get(ref(db, "users/"+u.uid));
+    const user = snap.val();
+    // التحقق من الصلاحية
+    if(!user || (user.role !== "store_manager" && user.role !== "admin")) {
+      await signOut(auth);
+      $("le").textContent = "هذا الحساب لا يملك صلاحية إدارة المتاجر.";
+      return;
+    }
+    manager = user;
+    $("login").hidden=true; $("app").hidden=false; $("le").textContent="";
+    if(!started){started=true; start();}
+  } catch(e) {
+    $("le").textContent = "خطأ في جلب البيانات: " + e.message;
+    await signOut(auth);
+  }
+});
+
+function start(){
+  onValue(ref(db,"users"), s=>{ users=s.val()||{}; draw(); }, e=>console.log(e));
+  onValue(ref(db,"orders"), s=>{ orders=s.val()||{}; draw(); }, e=>console.log(e));
+}
+
+// رسم الواجهة
+function draw(){
+  const sts = Object.entries(users).filter(([,u])=>u&&u.role==="store");
+  const os = Object.values(orders).filter(Boolean);
+  const activeStores = sts.filter(([,u])=>u.isActive!==false);
+  const inactiveStores = sts.filter(([,u])=>u.isActive===false);
+  
+  // الإحصائيات
+  $("s1").textContent = sts.length;
+  $("s2").textContent = activeStores.length;
+  $("s3").textContent = inactiveStores.length;
+  $("s4").textContent = os.length;
+
+  // الجدول
+  const q = $("search").value.trim().toLowerCase();
+  const filtered = sts.filter(([id,u]) => [u.name, u.username].join(" ").toLowerCase().includes(q));
+
+  const mapLink = url => {
+    if(!url) return "—";
+    const u = String(url).trim();
+    return /^https?:\/\//i.test(u) ? `<a href="${esc(u)}" target="_blank" class="map-link">فتح الخريطة ↗</a>` : esc(u);
+  };
+
+  const table = (rows) => rows.length ? `<table><thead><tr>
+    <th>اسم المتجر</th><th>رقم الهاتف</th><th>الخريطة</th><th>الطلبات</th><th>الحالة</th><th>إجراءات</th>
+  </tr></thead><tbody>${rows.join("")}</tbody></table>` : `<p style="text-align:center;color:#6b7280">لا توجد متاجر.</p>`;
+
+  $("stores").innerHTML = table(filtered.map(([id,u])=>{
+    const storeOrdersCount = os.filter(o=>o.storeId===id).length;
+    return `<tr>
+      <td><b>${esc(u.name)}</b></td>
+      <td dir="ltr" style="text-align:left">${esc(u.username)}</td>
+      <td>${mapLink(u.mapUrl)}</td>
+      <td>${storeOrdersCount}</td>
+      <td>${u.isActive===false?'<span class="tag r">معطل</span>':'<span class="tag g">مفعل</span>'}</td>
+      <td>
+        <button type="button" data-edit="${esc(id)}" class="gray">تعديل</button>
+        <button type="button" data-toggle="${esc(id)}" class="${u.isActive===false?"grn":"org"}">${u.isActive===false?"تفعيل":"تعطيل"}</button>
+        <button type="button" data-del="${esc(id)}" class="red">حذف</button>
+      </td>
+    </tr>`;
+  }));
+}
+$("search").oninput=draw;
+
+// إضافة متجر
+$("fs").onsubmit=e=>{
+  e.preventDefault();
+  run(async()=>{
+    const phone = $("su").value.trim();
+    const name = $("sn").value.trim();
+    const pass = $("sp").value;
+    const mapUrl = $("sm").value.trim();
+    
+    if(!/^[a-z0-9._-]+$/.test(phone) && !phone.includes("@")) throw Error("رقم الهاتف غير صالح.");
+    if(pass.length < 6) throw Error("كلمة المرور 6 أحرف على الأقل.");
+    if(Object.values(users).some(u=>u&&u.username===phone)) throw Error("رقم الهاتف مستخدم مسبقاً.");
+
+    const sec = initializeApp(cfg, "sec" + Date.now());
+    try {
+      const email = phone.includes("@") ? phone : phone + "@baqubah.app";
+      const c = await createUserWithEmailAndPassword(getAuth(sec), email, pass);
+      await set(ref(db, "users/"+c.user.uid), {
+        role: "store", username: phone, name, email, mapUrl, isActive: true, createdAt: Date.now()
+      });
+      $("fs").reset();
+      say("تم إضافة المتجر بنجاح.");
+    } finally {
+      await deleteApp(sec);
+    }
+  });
+};
+
+// النوافذ المنبثقة
+const closeModal=()=>{$("modalHost").innerHTML=""};
+function modal(title,bodyHTML,onOk,okLabel="حفظ",okClass="grn"){
+ $("modalHost").innerHTML=`<div class="modal-bg"><form class="modal" id="mform">
+  <h3>${esc(title)}</h3>${bodyHTML}
+  <div class="actions">
+   <button type="submit" class="${okClass}">${esc(okLabel)}</button>
+   <button type="button" class="gray" id="mcancel">إلغاء</button>
+  </div></form></div>`;
+ $("mcancel").onclick=closeModal;
+ $("modalHost").querySelector(".modal-bg").onclick=e=>{if(e.target.classList.contains("modal-bg"))closeModal()};
+ $("mform").onsubmit=async e=>{e.preventDefault();try{await onOk()}catch(err){say(err.message,1)}};
+}
+const confirmBox=text=>new Promise(res=>{
+ modal("تأكيد",`<p style="margin:0;line-height:1.7">${esc(text)}</p>`,async()=>{closeModal();res(true)},"نعم","red");
+ $("mcancel").onclick=()=>{closeModal();res(false)};
+});
+
+// الأزرار
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b||b.disabled||b.type==="submit")return;
+  const d=b.dataset;
+  
+  run(async()=>{
+    if(d.toggle){
+      const u = users[d.toggle];
+      await update(ref(db, "users/"+d.toggle), {isActive: u.isActive===false});
+      say("تم تحديث الحالة.");
+    }
+    else if(d.del){
+      if(await confirmBox(`حذف المتجر "${users[d.del].name}" نهائياً؟`)) {
+        await remove(ref(db, "users/"+d.del));
+        say("تم الحذف.");
+      }
+    }
+    else if(d.edit){
+      const u = users[d.edit];
+      modal("تعديل بيانات المتجر", `
+        <label>اسم المتجر</label><input id="eu-n" value="${esc(u.name)}" required>
+        <label>رابط غوغل ماب</label><input id="eu-m" value="${esc(u.mapUrl||"")}" placeholder="https://...">
+        <label>رقم الهاتف (لا يمكن تغييره)</label><input value="${esc(u.username)}" disabled>
+        <label>كلمة مرور جديدة (اتركه فارغاً لعدم التغيير)</label><input id="eu-p" type="password" minlength="6" placeholder="6 أحرف على الأقل">
+      `, async()=>{
+        const name = $("eu-n").value.trim();
+        if(!name) throw Error("أدخل الاسم.");
+        const patch = {
+          name: name,
+          mapUrl: $("eu-m").value.trim()
+        };
+        const pass = $("eu-p").value;
+        if(pass) {
+          if(pass.length < 6) throw Error("كلمة المرور 6 أحرف على الأقل.");
+          patch.resetPasswordRequest = {value: pass, at: Date.now()};
+        }
+        await update(ref(db, "users/"+d.edit), patch);
+        closeModal(); say("تم حفظ التعديلات.");
+      });
+    }
+  });
+});
+</script>
+</body>
+</html>
