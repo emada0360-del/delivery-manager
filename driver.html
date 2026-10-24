@@ -53,7 +53,7 @@ main{max-width:600px;margin:auto;padding:16px}
 </head>
 <body>
 
-<!-- عنصر الصوت لتنبيه الطلبات الجديدة داخل الـ APK -->
+<!-- عنصر الصوت لتنبيه الطلبات الجديدة -->
 <audio id="alertSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
 <section id="login" class="box">
@@ -122,7 +122,6 @@ window.__loaded=true;
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
-import { LocalNotifications } from '@capacitor/local-notifications';
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -143,32 +142,33 @@ let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
 let currentDebt = 0;
 let debtLimit = 15000;
 
-/* ========== إدارة الإشعارات المحلية ========== */
+/* ========== إدارة الإشعارات (آمنة للويب وللـ APK) ========== */
 const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const LN = isNative ? (window.Capacitor.Plugins||{}).LocalNotifications : null;
 const notified = new Set();
 let notifReady = false;
 const nid = id => { let h=0; for(const c of String(id)) h=(h*31+c.charCodeAt(0))|0; return Math.abs(h)%2000000000+10; };
 
 async function initNotifs(){
- if(!isNative || notifReady) return;
+ if(!LN || notifReady) return;
  notifReady = true;
  try{
-  await LocalNotifications.requestPermissions();
-  await LocalNotifications.createChannel({id:"orders",name:"طلبات جديدة",description:"إشعار وصول طلب جديد",importance:5,visibility:1,vibration:true,lights:true});
-  LocalNotifications.addListener("localNotificationActionPerformed", async ev=>{
+  await LN.requestPermissions();
+  await LN.createChannel({id:"orders",name:"طلبات جديدة",description:"إشعار وصول طلب جديد",importance:5,visibility:1,vibration:true,lights:true});
+  LN.addListener("localNotificationActionPerformed", async ev=>{
    const id = ev && ev.notification && ev.notification.extra && ev.notification.extra.orderId;
    if(!id) return;
    if(ev.actionId==="accept") await window.acceptOrder(id,true);
    else if(ev.actionId==="reject") await window.rejectOrder(id);
-   try{ await LocalNotifications.cancel({notifications:[{id:nid(id)}]}); }catch(e){}
+   try{ await LN.cancel({notifications:[{id:nid(id)}]}); }catch(e){}
   });
  }catch(e){ console.log("notif init", e); }
 }
 
 async function notifyOrder(id,o){
- if(!isNative) return;
+ if(!LN) return;
  try{
-  await LocalNotifications.schedule({notifications:[{
+  await LN.schedule({notifications:[{
    id:nid(id), title:"طلب جديد 🚨",
    body:(o.storeName||"")+" - "+(o.area||"")+" - توصيل "+fmt(o.deliveryFee)+" د.ع",
    channelId:"orders", extra:{orderId:id}, autoCancel:true
@@ -177,13 +177,13 @@ async function notifyOrder(id,o){
 }
 
 async function notifyText(title,body){
- if(!isNative) return;
- try{ await LocalNotifications.schedule({notifications:[{id:Math.floor(Math.random()*1e9)+10,title,body,channelId:"orders"}]}); }catch(e){}
+ if(!LN) return;
+ try{ await LN.schedule({notifications:[{id:Math.floor(Math.random()*1e9)+10,title,body,channelId:"orders"}]}); }catch(e){}
 }
 
 async function cancelNotif(id){
- if(!isNative) return;
- try{ await LocalNotifications.cancel({notifications:[{id:nid(id)}]}); }catch(e){}
+ if(!LN) return;
+ try{ await LN.cancel({notifications:[{id:nid(id)}]}); }catch(e){}
 }
 
 function checkNew(){
@@ -212,7 +212,7 @@ function battHint(){
 }
 /* ================================================================= */
 
-// دالة الصوت الآمنة والمضمونة داخل الـ APK
+// دالة الصوت الآمنة والمضمونة
 const speak = t => {
   try {
     const audio = document.getElementById("alertSound");
@@ -422,4 +422,4 @@ function drawOrders(){
   else if(o.status==="arrived_store"){
    statusBadge = `<span class="badge">وصل للمتجر</span>`;
    const canPick = (now - (o.stepAt||0)) > 60000; 
-   actionBtn=`<button style="width:100
+   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">${canPick?'تم استلام الطلب':'ا
