@@ -68,7 +68,7 @@ main { max-width: 600px; margin: auto; padding: 20px 16px; }
 #msg { padding: 12px; border-radius: 12px; margin-bottom: 16px; font-weight: 700; text-align: center; display: none; }
 #login { max-width: 400px; margin: 10vh auto; padding: 30px; background: #fff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
 #login h2 { text-align: center; color: var(--pri); margin-top: 0; font-size: 24px; }
-#err { color: var(--bad); text-align: center; font-size: 14px; font-weight: 700; min-height: 20px; margin-top: 10px; line-height: 1.5; }
+#err { color: var(--bad); text-align: center; font-size: 14px; font-weight: 700; min-height: 20px; margin-top: 10px; line-height: 1.5; word-break: break-word; }
 [hidden] { display: none !important; }
 .action-row { display: flex; gap: 10px; margin-top: 16px; }
 .action-row button { flex: 1; }
@@ -125,6 +125,25 @@ main { max-width: 600px; margin: auto; padding: 20px 16px; }
 </main>
 </div>
 
+<!-- كاشف فشل تحميل المكتبات (لازم قبل سكربت الموديول) -->
+<script>
+window.addEventListener("error", function(e){
+  var t = e.target;
+  if (t && t.tagName === "SCRIPT") {
+    document.getElementById("err").textContent = "فشل تحميل المكتبات، تأكد من الإنترنت أو افتح الصفحة من رابط https";
+  }
+}, true);
+window.addEventListener("unhandledrejection", function(e){
+  var el = document.getElementById("err");
+  if (el && !el.textContent) el.textContent = "خطأ: " + (e.reason && (e.reason.code || e.reason.message) || e.reason);
+});
+if (location.protocol === "file:") {
+  document.addEventListener("DOMContentLoaded", function(){
+    document.getElementById("err").textContent = "الصفحة مفتوحة كملف. لازم ترفعها على رابط https حتى يشتغل الدخول.";
+  });
+}
+</script>
+
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
@@ -147,27 +166,68 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 let uid=null, driver=null, settings={}, isOnline=false, pos={lat:null,lng:null};
 let availOrders={}, activeOrders={}, allMyOrders={}, finance={}, privData={};
 let currentDebt = 0, debtLimit = 15000;
+let started = false;
 
 const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";u.rate=1;S.speak(u);}catch{}}
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
-// 1. معالجة تسجيل الدخول بدون تعليق
+// ===== توحيد صيغة رقم الهاتف =====
+const normPhone=p=>{
+  p=String(p||"").replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g,"");
+  if(p.startsWith("00964")) p=p.slice(5);
+  else if(p.startsWith("964")) p=p.slice(3);
+  if(p && !p.startsWith("0")) p="0"+p;
+  return p;
+};
+
+// ===== تسجيل الدخول =====
+// يجرب أكثر من صيغة للإيميل لأن الحساب ممكن انسوّى بصيغة مختلفة
 $("btnLogin").onclick=async()=>{
- $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
- try{ 
-   let phone = $("un").value.trim();
-   // تحويل الأرقام العربية إن وجدت
-   phone = phone.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
-   await signInWithEmailAndPassword(auth,phone+"@baqubah.app",$("pw").value); 
- }
- catch(e){ 
-   if(e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password') {
-      $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة."; 
-   } else {
-      $("err").textContent="خطأ: " + e.message; 
+ const err=$("err"), btn=$("btnLogin");
+ err.textContent="";
+ const phone=normPhone($("un").value);
+ const pass=$("pw").value;
+ if(!phone || !pass){ err.textContent="اكتب رقم الهاتف وكلمة المرور."; return; }
+
+ btn.disabled=true; btn.textContent="جاري...";
+
+ const noZero=phone.slice(1);
+ const candidates=[...new Set([phone, noZero, "964"+noZero])];
+
+ let lastErr=null;
+ try{
+  for(const c of candidates){
+   try{
+     await signInWithEmailAndPassword(auth, c+"@baqubah.app", pass);
+     lastErr=null;
+     break;
+   }catch(e){
+     lastErr=e;
+     // أخطاء ما إلها علاقة بصيغة الرقم: نوقف التجربة
+     if(["auth/network-request-failed","auth/too-many-requests","auth/user-disabled","auth/operation-not-allowed","auth/api-key-not-valid.-please-pass-a-valid-api-key.","auth/invalid-api-key","auth/unauthorized-domain"].includes(e.code)) break;
    }
+  }
+  if(lastErr) throw lastErr;
+ }catch(e){
+  const code=e.code||"";
+  let msg;
+  if(["auth/invalid-credential","auth/user-not-found","auth/wrong-password","auth/invalid-email"].includes(code)){
+    msg="الرقم أو كلمة المرور غلط.";
+  }else if(code==="auth/network-request-failed"){
+    msg="ماكو إنترنت أو الاتصال ضعيف.";
+  }else if(code==="auth/too-many-requests"){
+    msg="محاولات كثيرة، انتظر شوية وجرب مرة ثانية.";
+  }else if(code==="auth/user-disabled"){
+    msg="هذا الحساب معطل.";
+  }else if(code==="auth/unauthorized-domain"){
+    msg="رابط الموقع غير مضاف بـ Firebase (Authorized domains).";
+  }else{
+    msg="كود الخطأ: "+(code||e.message);
+  }
+  err.textContent=msg;
+ }finally{
+  btn.disabled=false; btn.textContent="تسجيل الدخول";
  }
- finally{$("btnLogin").disabled=false;$("btnLogin").textContent="تسجيل الدخول";}
 };
 
 $("btnOut").onclick=()=>{
@@ -176,24 +236,27 @@ $("btnOut").onclick=()=>{
  signOut(auth);
 };
 
-// 2. جلب بيانات المستخدم مع منع التعليق
+// ===== جلب بيانات المستخدم بعد الدخول =====
 onAuthStateChanged(auth, async u=>{
  if(!u){$("login").hidden=false;$("app").hidden=true;return;}
- 
+
  try {
   const snap=await get(ref(db,"users/"+u.uid));
   const user = snap.val();
-  
+
   if(!user || user.role!=="driver" || user.isActive===false){
    await signOut(auth);
-   $("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
+   $("err").textContent = !user
+     ? "الحساب مسجل بالدخول لكن ماكو بيانات له بقاعدة البيانات (users/"+u.uid+")."
+     : (user.role!=="driver" ? "هذا الحساب مو سائق (role لازم يكون driver)." : "هذا الحساب معطل.");
+   return;
   }
   uid=u.uid;driver=user;
   $("drvName").textContent=user.name;
   $("login").hidden=true;$("app").hidden=false;
-  start();
+  if(!started){ started=true; start(); }
  } catch(e) {
-  $("err").textContent="خطأ في قاعدة البيانات (ربما الصلاحيات): " + e.message;
+  $("err").textContent="خطأ بقراءة قاعدة البيانات (غالباً الصلاحيات Rules): " + (e.code||e.message);
   await signOut(auth);
  }
 });
@@ -279,11 +342,13 @@ function drawStats() {
 
 function toggleStatus(){
  if(currentDebt >= debtLimit) return say("لا يمكنك الاتصال، لقد تجاوزت سقف الدين", 1);
- if(!isOnline && Object.keys(activeOrders).length>0) return say("لا يمكنك الإغلاق ولديك طلبات نشطة", 1);
+ if(isOnline && Object.keys(activeOrders).length>0) return say("لا يمكنك الإغلاق ولديك طلبات نشطة", 1);
  isOnline=!isOnline;
  const pr=ref(db,"presence/"+uid);
  set(pr,{online:isOnline,lastSeen:serverTimestamp()});
  if(isOnline){ startGPS(); speak("أنت الآن متصل"); } else { speak("أنت الآن غير متصل"); }
+ updateStatusUI();
+ drawOrders();
 }
 $("btnStatus").addEventListener("click", toggleStatus);
 
@@ -320,11 +385,11 @@ function buildFinBox(o) {
 }
 
 function drawOrders(){
- if(!isOnline || currentDebt >= debtLimit){ $("availContainer").hidden = true; } 
+ if(!isOnline || currentDebt >= debtLimit){ $("availContainer").hidden = true; }
  else {
   const av=Object.entries(availOrders).filter(([id,o])=>{
-    if(o.driverId) return false; 
-    if(o.rejectedBy && o.rejectedBy[uid]) return false; 
+    if(o.driverId) return false;
+    if(o.rejectedBy && o.rejectedBy[uid]) return false;
     if(Object.keys(activeOrders).length>0){ return (Date.now()-(o.createdAt||0)) > 120000; }
     return true;
   });
@@ -337,8 +402,8 @@ function drawOrders(){
     ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر</a>`:""}
     ${buildFinBox(o)}
     <div class="action-row">
-      <button style="flex:2" onclick="acceptOrder('${id}')">قبول الطلب</button>
-      <button style="flex:1; background:var(--bad); box-shadow:none;" onclick="rejectOrder('${id}')">رفض</button>
+      <button style="flex:2" onclick="acceptOrder('${esc(id)}')">قبول الطلب</button>
+      <button style="flex:1; background:var(--bad); box-shadow:none;" onclick="rejectOrder('${esc(id)}')">رفض</button>
     </div>
    </div>`).join("");
  }
@@ -347,39 +412,8 @@ function drawOrders(){
  $("activeContainer").hidden = !ac.length;
  $("activeList").innerHTML = ac.map(([id,o])=>{
   let actionBtn="", warn="", statusBadge="";
-  const now=Date.now(); const q = privData[id] || {}; 
-  
+  const now=Date.now(); const q = privData[id] || {};
+
   if(o.status==="waiting_store"){
    statusBadge = `<span class="badge wait">بانتظار موافقة المتجر</span>`;
-   actionBtn=`<div style="text-align:center; padding:16px; background:#fef3c7; color:#b45309; border-radius:12px; font-weight:800; margin-top:16px">يرجى الانتظار حتى يوافق المتجر...</div>`;
-  }
-  else if(o.status==="accepted"){
-   statusBadge = `<span class="badge acc">بالطريق للمتجر</span>`;
-   if(o.storeLat && pos.lat){
-     const d=getDist(pos.lat, pos.lng, o.storeLat, o.storeLng);
-     if(d>300) warn=`<p style="color:var(--bad);font-size:13px;font-weight:800;margin:8px 0;text-align:center">أنت بعيد عن المتجر (${Math.round(d)}م)</p>`;
-   }
-   actionBtn=`<button style="width:100%;margin-top:16px;background:var(--ok)" onclick="updateStep('${id}','arrived_store')">وصلت للمتجر</button>`;
-  } 
-  else if(o.status==="arrived_store"){
-   statusBadge = `<span class="badge acc">وصل للمتجر</span>`;
-   const canPick = (now - (o.stepAt||0)) > 60000; 
-   actionBtn=`<button style="width:100%;margin-top:16px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">${canPick?'تم استلام الطلب':'انتظر دقيقة...'}</button>`;
-  }
-  else if(["picked_up","delivering"].includes(o.status)){
-   statusBadge = `<span class="badge acc">بالطريق للزبون</span>`;
-   const canDel = (now - (o.stepAt||0)) > 300000; 
-   actionBtn=`<button style="width:100%;margin-top:16px;background:var(--ok)" ${canDel?'':'disabled'} onclick="updateStep('${id}','delivered')">${canDel?'تم التوصيل للزبون':'انتظر 5 دقائق...'}</button>`;
-  }
-
-  let storeBox = `<div class="info-box"><div><b>هاتف المتجر</b><span>${esc(o.storePhone||"غير متوفر")}</span></div>${o.storePhone?`<div class="btn-group"><a href="tel:${esc(o.storePhone)}" class="btn-sm btn-call">📞 اتصال</a></div>`:""}</div>`;
-
-  let customerBox = "";
-  if(q.customerPhone && o.status !== "waiting_store") {
-     const waLink = `https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك.`;
-     customerBox = `<div class="info-box blue"><div><b>هاتف الزبون</b><span>${esc(q.customerPhone)}</span>${q.note?`<br><span style="color:var(--warn);font-size:12px;font-weight:700">ملاحظة: ${esc(q.note)}</span>`:""}</div><div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-sm btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class="btn-sm btn-wa">🟢 واتساب</a></div></div>`;
-  }
-
-  return `<div class="card ${o.status==='waiting_store'?'waiting':''}">
-   <div class="card-header"><b>طلب #${esc(id.slice(-6))}</b>${statusBadge}</div>
-   <p style="margin:6px 0;
+   actionBtn=`<div style="text-align:center; padding:16px; background:#fef3c7; color:#b45309; border-radius:12px; font-weight:800; margin-top:16px">يرجى الانتظا
