@@ -16,16 +16,14 @@ header{background:#14263d;color:#fff;padding:14px 20px;display:flex;justify-cont
 header h2{margin:0;font-size:18px}
 main{max-width:600px;margin:auto;padding:16px}
 .box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
+
+/* 🟢 الخانات الثلاثة */
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .stat{background:#fff;border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.03)}
 .stat span{font-size:11px;color:#64748b;display:block;margin-bottom:4px;line-height:1.3}
 .stat b{font-size:18px;color:var(--pri)}
 .stat.warn b{color:var(--bad)}
-.waiting-state{text-align:center;padding:40px 20px;background:#fff;border-radius:16px;box-shadow:0 4px 15px rgba(0,0,0,.03);margin-bottom:16px;border:2px dashed var(--pri)}
-.waiting-state h3{color:var(--pri);font-size:20px;margin:16px 0 8px;font-weight:800}
-.waiting-state p{color:#64748b;font-size:14px;margin:0}
-.radar{width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,var(--pri) 0 15%,#1769aa33 16% 40%,transparent 41%);margin:0 auto;animation:pulse 1.8s infinite}
-@keyframes pulse{0%{transform:scale(.85);opacity:.6}50%{transform:scale(1.1);opacity:1}100%{transform:scale(.85);opacity:.6}}
+
 .card{border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;background:#fff;position:relative}
 .card.new{border:2px solid var(--pri);box-shadow:0 0 15px rgba(23,105,170,.15)}
 .card.waiting{border:2px solid var(--warn);background:#fffbeb}
@@ -41,17 +39,17 @@ main{max-width:600px;margin:auto;padding:16px}
 [hidden]{display:none!important}
 .badge{background:#e0f2fe;color:#0369a1;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:bold}
 .badge.wait{background:#fef3c7;color:#b45309}
-.fin-box{background:#f8fafc;border-radius:8px;padding:10px;margin:10px 0;font-size:13px;border:1px solid #e2e8f0}
-.fin-row{display:flex;justify-content:space-between;margin-bottom:6px}
-.fin-row:last-child{margin-bottom:0;border-top:1px dashed #cbd5e1;padding-top:6px;margin-top:6px;font-weight:bold;}
-.debt-box{background:#fff1f2;border-radius:8px;padding:10px;margin:10px 0;font-size:13px;border:1px solid #fecdd3}
-.customer-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px;margin:10px 0;text-align:center}
-.customer-box b{font-size:14px;color:#1e3a8a;display:block;margin-bottom:8px}
-.btn-group{display:flex;gap:8px}
-.btn-group a{flex:1;padding:10px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:13px;display:flex;justify-content:center;align-items:center;gap:5px}
-.btn-call{background:#e0e7ff;color:#3730a3}
-.btn-wa{background:#dcfce7;color:#166534}
-.map-link{display:inline-block;background:#e0f2fe;color:#0369a1;padding:6px 12px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:bold;margin-top:6px;margin-bottom:10px}
+.fin-box { background:#f8fafc; border-radius:8px; padding:10px; margin:10px 0; font-size:13px; border:1px solid #e2e8f0; }
+.fin-row { display:flex; justify-content:space-between; margin-bottom:6px; }
+.fin-row:last-child { margin-bottom:0; border-top:1px dashed #cbd5e1; padding-top:6px; margin-top:6px; font-weight:bold;}
+.debt-box { background:#fff1f2; border-radius:8px; padding:10px; margin:10px 0; font-size:13px; border:1px solid #fecdd3; }
+.customer-box { background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin:10px 0; text-align:center; }
+.customer-box b { font-size:14px; color:#1e3a8a; display:block; margin-bottom:8px; }
+.btn-group { display:flex; gap:8px; }
+.btn-group a { flex:1; padding:10px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:13px; display:flex; justify-content:center; align-items:center; gap:5px; }
+.btn-call { background:#e0e7ff; color:#3730a3; }
+.btn-wa { background:#dcfce7; color:#166534; }
+.map-link { display:inline-block; background:#e0f2fe; color:#0369a1; padding:6px 12px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:bold; margin-top:6px; margin-bottom:10px;}
 </style>
 </head>
 <body>
@@ -74,6 +72,7 @@ main{max-width:600px;margin:auto;padding:16px}
 <main>
 <div id="msg"></div>
 
+<!-- الخانات الثلاثة -->
 <div class="grid">
 <div class="stat"><span>الطلبات المكتملة</span><b id="statDone">0</b></div>
 <div class="stat"><span>محفظتي (دين)</span><b id="statDebt">0</b></div>
@@ -89,12 +88,6 @@ main{max-width:600px;margin:auto;padding:16px}
 </button>
 
 <div id="annBox" class="box" style="background:#fff7e0;color:#8a5a00;border:1px solid #fde68a" hidden></div>
-
-<div id="waitingScreen" class="waiting-state" hidden>
-  <div class="radar"></div>
-  <h3>انتظر... سوف يصلك طلب قريباً</h3>
-  <p>رجاءً أبقِ التطبيق مفتوحاً لاستقبال الطلبات</p>
-</div>
 
 <div id="availContainer" hidden>
 <h3>الطلبات المتاحة</h3>
@@ -279,9 +272,9 @@ function buildFinBox(o) {
         <div class="fin-row" style="color:#16a34a"><span>ربحك الصافي (الكروة):</span> <b>${fmt(profit)} د.ع</b></div>
     </div>
     <div class="debt-box">
-        <div class="fin-row" style="color:#b42318;margin-bottom:2px"><span>عمولة المنصة (10%):</span> <b>${fmt(platformCom)} د.ع</b></div>
-        <div class="fin-row" style="color:#b42318;margin-bottom:2px"><span>عمولة المتجر (ثابتة):</span> <b>${fmt(storeCom)} د.ع</b></div>
-        <div class="fin-row" style="color:#b42318;border-top:1px solid #fecdd3;padding-top:4px;margin-top:4px"><span>سيضاف لدينك:</span> <b>${fmt(platformCom + storeCom)} د.ع</b></div>
+        <div class="fin-row" style="color:#b42318; margin-bottom:2px"><span>عمولة المنصة (10%):</span> <b>${fmt(platformCom)} د.ع</b></div>
+        <div class="fin-row" style="color:#b42318; margin-bottom:2px"><span>عمولة المتجر (ثابتة):</span> <b>${fmt(storeCom)} د.ع</b></div>
+        <div class="fin-row" style="color:#b42318; border-top:1px solid #fecdd3; padding-top:4px; margin-top:4px"><span>سيضاف لدينك:</span> <b>${fmt(platformCom + storeCom)} د.ع</b></div>
     </div>`;
 }
 
@@ -302,31 +295,27 @@ function drawOrders(){
     <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
     ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
     ${buildFinBox(o)}
-    <div style="display:flex;gap:8px;margin-top:10px">
+    <div style="display:flex; gap:8px; margin-top:10px">
       <button style="flex:2" onclick="acceptOrder('${id}')">قبول الطلب</button>
-      <button class="red" style="flex:1;background:var(--bad)" onclick="rejectOrder('${id}')">رفض</button>
+      <button class="red" style="flex:1; background:var(--bad)" onclick="rejectOrder('${id}')">رفض</button>
     </div>
    </div>`).join("");
  }
 
  const ac=Object.entries(activeOrders);
  $("activeContainer").hidden = !ac.length;
- 
- // 🟢 إظهار شاشة الانتظار إذا: متصل + لا يوجد طلبات متاحة + لا يوجد طلبات نشطة
- $("waitingScreen").hidden = !(isOnline && $("availContainer").hidden && !ac.length && currentDebt < debtLimit);
-
  $("activeList").innerHTML = ac.map(([id,o])=>{
   let actionBtn="", warn="", statusBadge="";
   const now=Date.now(); const q = privData[id] || {}; 
   
   if(o.status==="waiting_store"){
    statusBadge = `<span class="badge wait">بانتظار موافقة المتجر</span>`;
-   actionBtn=`<div style="text-align:center;padding:15px;background:#fef3c7;color:#b45309;border-radius:8px;font-weight:bold;margin-top:10px">يرجى الانتظار حتى يوافق المتجر على طلبك...</div>`;
+   actionBtn=`<div style="text-align:center; padding:15px; background:#fef3c7; color:#b45309; border-radius:8px; font-weight:bold; margin-top:10px">يرجى الانتظار حتى يوافق المتجر على طلبك...</div>`;
   }
   else if(o.status==="accepted"){
    statusBadge = `<span class="badge">بالطريق للمتجر</span>`;
    if(o.storeLat && pos.lat){
-     const d=getDist(pos.lat,pos.lng,o.storeLat,o.storeLng);
+     const d=getDist(pos.lat, pos.lng, o.storeLat, o.storeLng);
      if(d>300) warn=`<p style="color:var(--bad);font-size:12px;margin:4px 0">أنت بعيد عن المتجر (${Math.round(d)}م)</p>`;
    }
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" onclick="updateStep('${id}','arrived_store')">وصلت للمتجر</button>`;
@@ -342,7 +331,7 @@ function drawOrders(){
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canDel?'':'disabled'} onclick="updateStep('${id}','delivered')">${canDel?'تم التوصيل للزبون':'انتظر 5 دقائق...'}</button>`;
   }
 
-  let storeBox = `<div class="customer-box" style="background:#f0fdf4;border-color:#bbf7d0;padding:10px"><b style="color:#166534">هاتف المتجر: <span dir="ltr">${esc(o.storePhone || "غير متوفر")}</span></b>${o.storePhone ? `<div class="btn-group" style="margin-top:4px"><a href="tel:${esc(o.storePhone)}" class="btn-call" style="background:#dcfce7;color:#166534">📞 اتصال بالمتجر</a></div>` : ""}</div>`;
+  let storeBox = `<div class="customer-box" style="background:#f0fdf4; border-color:#bbf7d0; padding:10px;"><b style="color:#166534">هاتف المتجر: <span dir="ltr">${esc(o.storePhone || "غير متوفر")}</span></b>${o.storePhone ? `<div class="btn-group" style="margin-top:4px"><a href="tel:${esc(o.storePhone)}" class="btn-call" style="background:#dcfce7; color:#166534">📞 اتصال بالمتجر</a></div>` : ""}</div>`;
 
   let customerBox = "";
   if(q.customerPhone && o.status !== "waiting_store") {
@@ -392,4 +381,14 @@ window.updateStep=async(id,newStatus)=>{
  }
  try{
   const patch={status:newStatus, stepAt:serverTimestamp()};
-  if(new
+  if(newStatus==="delivered"){
+    const profit=Math.round(o.deliveryFee*0.9);
+    patch.deliveredAt=Date.now(); patch.driverProfit=profit; patch.platformDeliveryCommission=Math.round(o.deliveryFee-profit);
+  }
+  await update(ref(db,"orders/"+id),patch);
+  if(newStatus==="delivered") speak("تم التوصيل بنجاح"); else speak("تم تحديث الحالة");
+ }catch(e){say("فشل التحديث",1);}
+};
+</script>
+</body>
+</html>
