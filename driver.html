@@ -111,7 +111,8 @@ main{max-width:600px;margin:auto;padding:16px}
 function showErr(t){var d=document.getElementById("dbg");if(!d){d=document.createElement("div");d.id="dbg";d.style.cssText="position:fixed;top:0;left:0;right:0;z-index:9999;background:#b91c1c;color:#fff;font:12px monospace;padding:8px;direction:ltr;white-space:pre-wrap";document.body.appendChild(d);}d.textContent+=t+"\n";}
 window.addEventListener("error",function(e){showErr("ERR: "+(e.message||"load error")+" "+(e.filename||""));});
 window.addEventListener("unhandledrejection",function(e){showErr("REJ: "+(e.reason&&e.reason.message||e.reason));});
-setTimeout(function(){if(!window.__loaded)showErr("Firebase libs did not load (check internet)");},8000);
+window.addEventListener("error",function(e){var t=e.target;if(t&&(t.src||t.href)&&t!==window)showErr("RES FAIL: "+(t.src||t.href));},true);
+setTimeout(function(){if(!window.__loaded)showErr("v5 | libs did not load | bundled="+(!!document.querySelector('script[src="app.js"]'))+" | native="+(!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())));},8000);
 </script>
 <script type="module">
 window.__loaded=true;
@@ -409,7 +410,4 @@ function drawOrders(){
    }
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" onclick="updateStep('${id}','arrived_store')">وصلت للمتجر</button>`;
   } 
-  else if(o.status==="arrived_store"){
-   statusBadge = `<span class="badge">وصل للمتجر</span>`;
-   const canPick = (now - (o.stepAt||0)) > 60000; 
-   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canPick?'':'disabled'} onclick="updateStep('${id}','picked_up')">
+  el
