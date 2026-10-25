@@ -4,15 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Baqubah Delivery | السائق</title>
+<!-- 🔔 كود إشعارات التطبيق (متوافق مع APK و Capacitor) -->
+<script>
+window.notifyApp=async(t,b)=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P||!P.LocalNotifications)return;await P.LocalNotifications.createChannel({id:'orders',name:'Orders',importance:5,sound:'default',vibration:true});await P.LocalNotifications.schedule({notifications:[{id:Math.floor(Math.random()*2e9),title:t,body:b,channelId:'orders'}]});}catch(e){}};
+(async()=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P)return;await P.LocalNotifications.requestPermissions();if(P.BackgroundMode){await P.BackgroundMode.enable();}}catch(e){}})();
+</script>
 <style>
 :root{--bg:#f2f5f9;--ink:#172235;--pri:#1769aa;--ok:#218838;--bad:#dc3545;--warn:#bd7200;--line:#e0e6ef}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,Tahoma,Arial;background:var(--bg);color:var(--ink);padding-bottom:50px}
 button,input{font:inherit}
-button{border:0;border-radius:10px;padding:12px 16px;background:var(--pri);color:#fff;cursor:pointer;font-weight:700}
-button:disabled{opacity:.5;cursor:not-allowed}
+button{border:0;border-radius:10px;padding:12px 16px;background:var(--pri);color:#fff;cursor:pointer;font-weight:700;transition:.15s}
+button:hover{filter:brightness(1.1)}
+button:disabled{opacity:.5;cursor:not-allowed;background:#94a3b8!important}
 input{width:100%;padding:12px;border:1px solid #ccd5e2;border-radius:10px;margin:8px 0 16px;outline:none;background:#fff}
-header{background:#14263d;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
+input:focus{border-color:var(--pri);box-shadow:0 0 0 3px #1769aa22}
+header{background:#14263d;color:#fff;padding:14px 20px;padding-top:calc(14px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50;box-shadow:0 2px 10px rgba(0,0,0,.1)}
 header h2{margin:0;font-size:18px}
 main{max-width:600px;margin:auto;padding:16px}
 .box{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
@@ -22,12 +29,12 @@ main{max-width:600px;margin:auto;padding:16px}
 .grid .box strong{display:block;font-size:20px;color:var(--pri)}
 .row{display:flex;gap:10px;margin-top:12px}
 .row button{flex:1}
-.red{background:var(--bad)}
+.grn{background:var(--ok)}.gry{background:#64748b}.red{background:var(--bad)}
 .ord p{margin:6px 0;font-size:14px}
 .warn{background:#fff3cd;color:#7a5200;padding:12px;border-radius:12px;margin-bottom:16px;font-weight:600;font-size:14px;border:1px solid #ffeeba}
 #login{max-width:380px;margin:60px auto}
-#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600}
-#msg{padding:12px;border-radius:10px;margin-bottom:16px;display:none;font-weight:600;text-align:center;background:#dcfce7;color:#15803d}
+#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600;margin-top:8px}
+#msg{padding:12px;border-radius:10px;margin-bottom:16px;display:none;font-weight:600;text-align:center;background:#dcfce7;color:#15803d;box-shadow:0 4px 12px rgba(0,0,0,.05)}
 [hidden]{display:none!important}
 .badge{padding:5px 10px;border-radius:6px;font-size:12px;font-weight:bold;display:inline-block}
 .badge.wait{background:#fef3c7;color:#b45309}
@@ -48,9 +55,9 @@ main{max-width:600px;margin:auto;padding:16px}
 <body>
 <section id="login" class="box">
 <h2 style="text-align:center;margin-top:0">دخول السائق</h2>
-<form id="lf" onsubmit="return false;">
-<label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
-<label>كلمة المرور</label><input id="pw" type="password" required>
+<form id="lf">
+<label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required autocomplete="username">
+<label>كلمة المرور</label><input id="pw" type="password" required autocomplete="current-password">
 <button id="lb" style="width:100%;margin-top:8px">دخول</button>
 </form>
 <p id="err"></p>
@@ -64,8 +71,8 @@ main{max-width:600px;margin:auto;padding:16px}
 <main>
 <div id="msg"></div>
 <div id="bn" class="warn" hidden></div>
-<div id="off" class="warn" style="background:#fdecea;color:#a61b1b" hidden>لا يوجد اتصال بالإنترنت.</div>
-<div id="dw" class="warn" style="background:#fdecea;color:#a61b1b" hidden>المستحق عليك للمنصة وصل <b id="lm">15,000</b> د.ع أو أكثر.</div>
+<div id="off" class="warn" style="background:#fdecea;color:#a61b1b;border-color:#f5c2c7" hidden>لا يوجد اتصال بالإنترنت. ما راح توصلك طلبات جديدة.</div>
+<div id="dw" class="warn" style="background:#fdecea;color:#a61b1b;border-color:#f5c2c7" hidden>المستحق عليك للمنصة وصل <b id="lm">15,000</b> د.ع أو أكثر. ما تكدر تستلم طلبات جديدة لحد ما تسدد للإدارة.</div>
 
 <div class="grid">
 <div class="box"><span>المستحق عليّ (دين)</span><strong id="debt" style="color:var(--bad)">0</strong></div>
@@ -76,13 +83,17 @@ main{max-width:600px;margin:auto;padding:16px}
 </div>
 
 <div class="box">
-  <h3 style="margin-top:0;margin-bottom:12px;font-size:16px">📦 الطلبات المتاحة</h3>
+  <h3 style="margin-top:0;margin-bottom:12px;font-size:16px;color:#14263d">📦 الطلبات المتاحة</h3>
   <div id="av"></div>
 </div>
 
 <div class="box">
-  <h3 style="margin-top:0;margin-bottom:12px;font-size:16px">🛵 طلباتي الحالية</h3>
+  <h3 style="margin-top:0;margin-bottom:12px;font-size:16px;color:#14263d">🛵 طلباتي الحالية</h3>
   <div id="my"></div>
+</div>
+
+<div class="box" style="background:#f8fafc;font-size:13px;color:#64748b">
+  <p style="margin:0;line-height:1.6">💡 ربحك 90% من أجرة التوصيل. المنصة 10% وعمولة المتجر ثابتة، تُحسب في المستحق عليك. الإدارة تسجل المبالغ النقدية التي تسددها.</p>
 </div>
 </main>
 </div>
@@ -97,7 +108,7 @@ const cfg={
  authDomain:"baqubah-delivery-e729e.firebaseapp.com",
  databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",
  projectId:"baqubah-delivery-e729e",
- storageBucket:"baqubah-delivery-e729e.appspot.com",
+ storageBucket:"baqubah-delivery-e729e.firebasestorage.app",
  messagingSenderId:"450084520701",
  appId:"1:450084520701:web:719e2040338540ce36f494"
 };
@@ -106,13 +117,70 @@ const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-let uid=null,driverData=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},pend={},mine={},cash={},privData={},settings={},stops=[];
+let uid=null,driverData=null,lim=15000,maxA=3,blocked=false,orders={},pend={},mine={},cash={},privData={},settings={},stops=[];
+let pos={lat:null,lng:null},gpsId=null;
+let alarmTimer = null;
 
-$("lb").onclick=async()=>{
+// 🔔 نظام التنبيهات الصوتية المتكررة والإشعارات تماماً مثل المتجر
+function playBeep() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+        if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    } catch(e) {}
+}
+
+function checkDriverAlarm(avOrders) {
+    const canGet = !blocked && avOrders.length > 0;
+    if (canGet) {
+        if (!alarmTimer) {
+            playBeep();
+            if (window.notifyApp) window.notifyApp('طلب توصيل جديد متاح!', 'افتح التطبيق لقبول الطلب');
+            alarmTimer = setInterval(playBeep, 5000); // يتكرر كل 5 ثوانٍ
+        }
+    } else {
+        if (alarmTimer) {
+            clearInterval(alarmTimer);
+            alarmTimer = null;
+        }
+    }
+}
+
+function startGPS(){
+ if(!navigator.geolocation||gpsId!==null)return;
+ gpsId=navigator.geolocation.watchPosition(
+  p=>{pos.lat=p.coords.latitude;pos.lng=p.coords.longitude;draw();},
+  e=>console.log("GPS Error",e),
+  {enableHighAccuracy:true}
+ );
+}
+
+function getDist(la1,lo1,la2,lo2){
+ if(!la1||!la2)return 0;
+ const R=6371e3,p1=la1*Math.PI/180,p2=la2*Math.PI/180,dp=(la2-la1)*Math.PI/180,dl=(lo2-lo1)*Math.PI/180;
+ const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+ return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
+
+/* 🟢 تسجيل الدخول السريع والمضمون */
+$("lf").onsubmit=async e=>{
+ e.preventDefault();
  $("err").textContent="";$("lb").disabled=true;$("lb").textContent="جاري...";
  try{
   await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value);
- }catch(e){
+ }catch(er){
   $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة.";
   $("lb").disabled=false;$("lb").textContent="دخول";
  }
@@ -120,36 +188,51 @@ $("lb").onclick=async()=>{
 
 onAuthStateChanged(auth,async u=>{
  if(!u){show(false);return}
- let me;try{me=(await get(ref(db,"users/"+u.uid))).val()}catch{me={}}
- uid=u.uid;driverData=me||{};$("nm").textContent=driverData.name||driverData.username||"سائق";
+ uid=u.uid;
+ try{
+  const snap=await get(ref(db,"users/"+u.uid));
+  driverData=snap.val()||{};
+ }catch{driverData={};}
+ $("nm").textContent=driverData.name||driverData.username||"سائق";
  show(true);start();
 });
 
 function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on)clear()}
-function clear(){stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};seen=null}
+function clear(){
+ stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};
+ if(alarmTimer){clearInterval(alarmTimer);alarmTimer=null;}
+ if(gpsId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(gpsId);gpsId=null;}
+}
 
 function start(){
- clear();
+ clear();startGPS();
  const pr=ref(db,"presence/"+uid);
  stops.push(onValue(ref(db,".info/connected"),s=>{
   $("off").hidden=s.val()===true;
   if(s.val()===true)onDisconnect(pr).set({online:false,lastSeen:serverTimestamp()}).then(()=>set(pr,{online:true,lastSeen:serverTimestamp()}));
  }));
  
- stops.push(onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{pend=s.val()||{};merge()},e=>say("خطأ: "+e.message)));
- stops.push(onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{mine=s.val()||{};merge()},e=>say("خطأ: "+e.message)));
+ stops.push(onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{pend=s.val()||{};merge()},e=>say("خطأ تحميل الطلبات: "+e.message)));
+ stops.push(onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{mine=s.val()||{};merge()},e=>say("خطأ تحميل طلباتك: "+e.message)));
+ 
  stops.push(onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{cash=s.val()||{};draw()},()=>{}));
  stops.push(onValue(ref(db,"settings"),s=>{settings=s.val()||{};lim=Number(settings.debtLimit)||15000;maxA=Number(settings.maxActive)||3;$("bn").textContent=settings.announcement||"";$("bn").hidden=!settings.announcement;draw()},()=>{}));
 }
 
-function merge(){orders={...pend,...mine};draw();fetchPrivateData();}
+function merge(){
+ orders={...pend,...mine};
+ draw();
+ fetchPrivateData();
+}
 
 function fetchPrivateData(){
  const ids=Object.keys(mine);
  if(!ids.length)return;
  ids.forEach(id=>{
   if(privData[id])return;
-  get(ref(db,"orderPrivate/"+id)).then(snap=>{if(snap.exists()){privData[id]=snap.val();draw()}});
+  get(ref(db,"orderPrivate/"+id)).then(snap=>{
+   if(snap.exists()){privData[id]=snap.val();draw()}
+  });
  });
 }
 
@@ -158,7 +241,12 @@ function buildFinBox(o) {
     const payStore = Math.round(o.itemPrice - storeCom);
     const collectCustomer = Math.round(o.customerTotal);
     const profit = Math.round(o.deliveryFee * 0.9);
-    return `<div class="fin-box"><div class="fin-row" style="color:#dc3545"><span>تدفع للمتجر:</span> <b>${fmt(payStore)} د.ع</b></div><div class="fin-row" style="color:#1769aa"><span>تستلم من الزبون:</span> <b>${fmt(collectCustomer)} د.ع</b></div><div class="fin-row" style="color:#16a34a"><span>ربحك الصافي:</span> <b>${fmt(profit)} د.ع</b></div></div>`;
+    return `
+    <div class="fin-box">
+        <div class="fin-row" style="color:#dc3545"><span>تدفع للمتجر:</span> <b>${fmt(payStore)} د.ع</b></div>
+        <div class="fin-row" style="color:#1769aa"><span>تستلم من الزبون:</span> <b>${fmt(collectCustomer)} د.ع</b></div>
+        <div class="fin-row" style="color:#16a34a"><span>ربحك الصافي (الكروة):</span> <b>${fmt(profit)} د.ع</b></div>
+    </div>`;
 }
 
 function draw(){
@@ -167,6 +255,9 @@ function draw(){
  const my=all.filter(([,o])=>o.driverId===uid&&!["delivered","cancelled"].includes(o.status));
  const dn=all.filter(([,o])=>o.driverId===uid&&o.status==="delivered");
  
+ // 🔔 فحص التنبيهات والأصوات عند وجود طلبات متاحة
+ checkDriverAlarm(av);
+
  const debt=dn.reduce((s,[,o])=>{
   const storeCom = Number(o.storeCommission !== undefined ? o.storeCommission : (settings.storeCommission || 500));
   return s + (o.platformDeliveryCommission||0) + storeCom;
@@ -182,72 +273,106 @@ function draw(){
  const t0=new Date().setHours(0,0,0,0),full=my.length>=maxA;
  $("td").textContent=fmt(dn.filter(([,o])=>o.deliveredAt>=t0).reduce((s,[,o])=>s+(o.driverProfit||0),0))+" د.ع";
 
- $("av").innerHTML=blocked?"<p style='color:var(--bad);text-align:center;font-weight:bold'>الاستلام متوقف لحد تسديد المستحق.</p>":(full?'<p class="warn">وصلت للحد الأقصى من الطلبات النشطة.</p>':"")+(av.length?av.map(([id,o])=>`<div class="box ord" style="margin-bottom:12px;box-shadow:none;border:1px solid #e2e8f0"><b>طلب #${esc(id.slice(-6))}</b><p><b>المتجر:</b> ${esc(o.storeName)}</p><p><b>المنطقة:</b> ${esc(o.area)}</p>${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}${buildFinBox(o)}<div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول الطلب</button><button class="red" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):"<p style='color:#94a3b8;text-align:center;margin:10px 0'>لا توجد طلبات متاحة.</p>");
+ $("av").innerHTML=blocked?"<p style='color:var(--bad);text-align:center;font-weight:bold'>الاستلام متوقف لحد تسديد المستحق.</p>":(full?'<p class="warn">وصلت للحد الأقصى ('+maxA+') من الطلبات النشطة. سلّم طلب حتى تكدر تقبل غيره.</p>':"")+(av.length?av.map(([id,o])=>`<div class="box ord" style="margin-bottom:12px;box-shadow:none;border:1px solid #e2e8f0"><b>طلب #${esc(id.slice(-6))}</b>
+  <p><b>المتجر:</b> ${esc(o.storeName)}</p><p><b>المنطقة:</b> ${esc(o.area)}</p>
+  ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
+  ${buildFinBox(o)}
+  <div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول الطلب</button><button class="red" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):"<p style='color:#94a3b8;text-align:center;margin:10px 0'>لا توجد طلبات متاحة حالياً.</p>";
+
+ const now = Date.now();
 
  $("my").innerHTML=my.length?my.map(([id,o])=>{
   const q=privData[id]||{};
-  let actionBtn="", statusBadge="";
+  let actionBtn="", statusBadge="", distWarn="";
+  const stepTime = o.stepAt || o.acceptedAt || 0;
+  const elapsedSec = Math.floor((now - stepTime) / 1000);
   
   if(o.status==="waiting_store"){
    statusBadge=`<span class="badge wait">بانتظار موافقة المتجر</span>`;
    actionBtn=`<div style="text-align:center; padding:12px; background:#fef3c7; color:#b45309; border-radius:10px; font-weight:bold; margin-top:10px">يرجى الانتظار حتى يوافق المتجر على طلبك...</div>`;
   } else if(o.status==="accepted"){
    statusBadge=`<span class="badge acc">بالطريق للمتجر</span>`;
+   
+   if(o.storeLat && pos.lat){
+    const dist = Math.round(getDist(pos.lat, pos.lng, o.storeLat, o.storeLng));
+    if(dist > 500){
+     distWarn = `<div style="color:var(--bad);font-size:12px;margin:6px 0;font-weight:bold">📍 أنت بعيد عن المتجر (${dist} متر). يجب أن تكون ضمن 500 متر لتضغط وصول.</div>`;
+    }
+   }
+   
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="arrived_store" data-id="${esc(id)}">وصلت للمتجر</button>`;
   } else if(o.status==="arrived_store"){
    statusBadge=`<span class="badge acc">وصل للمتجر</span>`;
-   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="picked_up" data-id="${esc(id)}">تم استلام الطلب</button>`;
+   
+   const waitSec = 60; // دقيقة واحدة
+   const remaining = waitSec - elapsedSec;
+   if(remaining > 0){
+    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" disabled>انتظر استلام الطلب (${remaining} ثانية)</button>`;
+   } else {
+    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="picked_up" data-id="${esc(id)}">تم استلام الطلب</button>`;
+   }
   } else if(["picked_up","delivering"].includes(o.status)){
    statusBadge=`<span class="badge acc">بالطريق للزبون</span>`;
-   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="delivered" data-id="${esc(id)}">تأكيد التوصيل للزبون</button>`;
+   
+   const waitSec = 300; // 5 دقائق
+   const remaining = waitSec - elapsedSec;
+   if(remaining > 0){
+    const remMin = Math.floor(remaining / 60);
+    const remSec = remaining % 60;
+    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" disabled>انتظر للتوصيل (${remMin}:${remSec<10?'0':''}${remSec} دقيقة)</button>`;
+   } else {
+    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="delivered" data-id="${esc(id)}">تأكيد التوصيل للزبون</button>`;
+   }
   }
 
   let storeBox = `<div style="background:#f1f5ff;padding:10px;border-radius:8px;margin:10px 0;font-size:13px"><b>هاتف المتجر:</b> <span dir="ltr">${esc(o.storePhone||"غير متوفر")}</span>${o.storePhone?` | <a href="tel:${esc(o.storePhone)}" style="color:var(--pri);font-weight:bold">📞 اتصال</a>`:""}</div>`;
+  
   let customerBox = "";
   if(q.customerPhone && o.status !== "waiting_store"){
    const waLink=`https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`;
    customerBox=`<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>${q.customerName?`<div style="margin-bottom:4px;font-size:12px">الاسم: ${esc(q.customerName)}</div>`:""}${q.note?`<div style="margin-bottom:6px;font-size:12px;color:#b45309">ملاحظة: ${esc(q.note)}</div>`:""}<div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a></div></div>`;
   }
 
-  return `<div class="box ord" style="margin-bottom:12px;box-shadow:none;border:1px solid #e2e8f0"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>طلب #${esc(id.slice(-6))}</b> ${statusBadge}</div><p><b>المتجر:</b> ${esc(o.storeName)}</p><p><b>المنطقة:</b> ${esc(o.area)}</p>${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}${storeBox}${buildFinBox(o)}${customerBox}${actionBtn}</div>`;
- }).join(""):"<p style='color:#94a3b8;text-align:center;margin:10px 0'>ما عندك طلبات حالياً.</p>";
+  return `<div class="box ord" style="margin-bottom:12px;box-shadow:none;border:1px solid #e2e8f0">
+   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>طلب #${esc(id.slice(-6))}</b> ${statusBadge}</div>
+   <p><b>المتجر:</b> ${esc(o.storeName)}</p><p><b>المنطقة:</b> ${esc(o.area)}</p>
+   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
+   ${storeBox}${buildFinBox(o)}${customerBox}${distWarn}${actionBtn}
+  </div>`;
+ }).join(""):"<p style='color:#94a3b8;text-align:center;margin:10px 0'>ما عندك طلبات قيد التنفيذ حالياً.</p>";
 }
 
+// تحديث العدادات التنازلية كل ثانية
+setInterval(()=>{if(uid)draw();},1000);
+
 async function act(e){
- const b=e.target.closest("button[data-a]");if(!b)return;
+ const b=e.target.closest("button[data-a]");if(!b||b.disabled)return;
  const a=b.dataset.a, id=b.dataset.id, r=ref(db,"orders/"+id);
  try{
   if(a==="accept"){
    if(blocked){say("الاستلام متوقف لحد تسديد المستحق.");return}
-   if(Object.values(orders).filter(o=>o&&o.driverId===uid&&!["delivered","cancelled"].includes(o.status)).length>=maxA){say("وصلت للحد الأقصى.");return}
-   const snap=await get(r);const order=snap.val();
-   if(!order||order.driverId||order.status!=="pending")return say("الطلب غير متاح.");
-   await update(r,{driverId:uid,driverName:driverData.name||driverData.username||"سائق",driverPhone:driverData.phone||"",status:"waiting_store",stepAt:serverTimestamp(),acceptedAt:Date.now()});
+   if(Object.values(orders).filter(o=>o&&o.driverId===uid&&!["delivered","cancelled"].includes(o.status)).length>=maxA){say("وصلت للحد الأقصى من الطلبات النشطة.");return}
+   
+   const snap = await get(r);
+   const order = snap.val();
+   if(!order || order.driverId || order.status !== "pending"){
+    return say("سبقك سائق آخر أو الطلب لم يعد متاحاً.");
+   }
+   
+   await update(r,{
+    driverId: uid,
+    driverName: driverData ? (driverData.name || driverData.username) : "سائق",
+    driverPhone: driverData ? (driverData.phone || "") : "",
+    status: "waiting_store",
+    stepAt: serverTimestamp(),
+    acceptedAt: Date.now()
+   });
    say("تم قبول الطلب، بانتظار موافقة المتجر.");
   }else if(a==="reject"){
-   await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]:true});say("تم رفض الطلب.");
-  }else if(["arrived_store","picked_up","delivered"].includes(a)){
-   if(a==="delivered"&&!confirm("تأكيد تسليم الطلب للزبون؟"))return;
-   const snap=await get(r);const o=snap.val();
-   if(!o||o.driverId!==uid)return say("خطأ في البيانات.");
-   const patch={status:a,stepAt:serverTimestamp()};
-   if(a==="delivered"){
-    const fee=Math.max(0,Math.round(Number(o.deliveryFee)||0)),p=Math.round(fee*0.9);
-    patch.deliveredAt=Date.now();patch.driverProfit=p;patch.platformDeliveryCommission=fee-p;patch.storeCommission=Number(o.storeCommission||settings.storeCommission||500);
-   }
-   await update(r,patch);
-   say(a==="delivered"?"تم التوصيل بنجاح!":"تم تحديث الحالة.");
-  }
- }catch(err){say("خطأ: "+err.message)}
-}
-
-$("av").onclick=act;$("my").onclick=act;
-
-async function logout(){
- if(uid){try{await set(ref(db,"presence/"+uid),{online:false,lastSeen:serverTimestamp()})}catch{}}
- clear();await signOut(auth);
-}
-$("out").onclick=logout;
-</script>
-</body>
-</html>
+   await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]: true});
+   say("تم رفض الطلب.");
+  }else if(a==="arrived_store"){
+   const snap = await get(r);
+   const o = snap.val();
+   if(!o || o.driverId !== uid) return say("خطأ في بيانات الطلب.");
+ 
