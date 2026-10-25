@@ -53,11 +53,11 @@ main{max-width:600px;margin:auto;padding:16px}
 <body>
 <section id="login" class="box">
 <h2 style="text-align:center;margin-top:0">دخول السائق</h2>
-<!-- 🟢 الـ Form الأصلي البسيط المعتمد في الكود القديم -->
-<form id="lf">
+<!-- 🟢 نفس طريقة المتجر: Form بـ onsubmit ومطابقة للأزرار -->
+<form id="lf" onsubmit="return false;">
 <label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
 <label>كلمة المرور</label><input id="pw" type="password" required>
-<button id="lb" type="submit" style="width:100%;margin-top:8px">دخول</button>
+<button type="button" id="lb" style="width:100%;margin-top:8px">دخول</button>
 </form>
 <p id="err"></p>
 </section>
@@ -168,12 +168,17 @@ function getDist(la1,lo1,la2,lo2){
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
-/* 🟢 طريقة الدخول الأصلية عبر الـ onsubmit للـ form تماماً مثل الكود القديم */
-$("lf").onsubmit = async (e) => {
- e.preventDefault();
+/* 🟢 ربط زر الدخول تماماً مثل تطبيق المتجر الناجح */
+$("lb").onclick = async () => {
+ const uVal = $("un").value.trim();
+ const pVal = $("pw").value;
+ if(!uVal || !pVal) {
+  $("err").textContent="أدخل رقم الهاتف وكلمة المرور.";
+  return;
+ }
  $("err").textContent="";$("lb").disabled=true;$("lb").textContent="جاري...";
  try{
-  await signInWithEmailAndPassword(auth, $("un").value.trim()+"@baqubah.app", $("pw").value);
+  await signInWithEmailAndPassword(auth, uVal+"@baqubah.app", pVal);
  }catch(er){
   $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة.";
   $("lb").disabled=false;$("lb").textContent="دخول";
@@ -343,4 +348,4 @@ async function act(e){
    const elapsedSec = Math.floor((Date.now() - (o.stepAt || 0)) / 1000);
    if(elapsedSec < 300) return say(`انتظر ${Math.ceil((300 - elapsedSec)/60)} دقيقة إضافية.`);
    const fee=Math.max(0,Math.round(Number(o.deliveryFee)||0)),p=Math.round(fee*0.9);
-   await update(r,{status:"delivered",stepAt:Date.now(),deliveredAt:Date.now(),driverProfit:p,platformDeliveryCommission:fee-p,storeCommission:Number(o.storeCo
+   await update(r,{status:"delivered",stepAt:Dat
