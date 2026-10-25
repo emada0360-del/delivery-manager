@@ -137,20 +137,28 @@ const beep=()=>{try{wake();const o=AC.createOscillator(),g=AC.createGain();o.con
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
-/* 🟢 طريقة الدخول القديمة السريعة والمضمونة */
+/* 🟢 كود تسجيل الدخول الأصلي البسيط المضمون */
 $("lb").onclick=async()=>{
  $("err").textContent="";$("lb").disabled=true;$("lb").textContent="جاري...";
- try{await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value)}
- catch(e){$("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة."}
- finally{$("lb").disabled=false;$("lb").textContent="دخول"}
+ try{
+  await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value);
+ }catch(e){
+  $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة.";
+  $("lb").disabled=false;$("lb").textContent="دخول";
+ }
 };
 
 onAuthStateChanged(auth,async u=>{
  if(!u){show(false);return}
- let me;try{me=(await get(ref(db,"users/"+u.uid))).val()}catch{await signOut(auth);$("err").textContent="تعذّر تحميل الحساب. تأكد من الإنترنت.";return}
- if(!me||me.role!=="driver"){await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له.";return}
- if(me.isActive===false){await signOut(auth);$("err").textContent="حسابك معطّل. راجع الإدارة.";return}
- uid=u.uid;driverData=me;$("nm").textContent=me.name||me.username;show(true);start();
+ uid=u.uid;
+ try{
+  const snap = await get(ref(db,"users/"+u.uid));
+  driverData = snap.val() || {};
+ }catch(e){ driverData = {}; }
+ 
+ $("nm").textContent=driverData.name||driverData.username||"سائق";
+ show(true);
+ start();
 });
 
 function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on)clear()}
@@ -172,7 +180,6 @@ function start(){
  
  stops.push(onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{cash=s.val()||{};draw()},()=>{}));
  stops.push(onValue(ref(db,"settings"),s=>{settings=s.val()||{};lim=Number(settings.debtLimit)||15000;maxA=Number(settings.maxActive)||3;$("bn").textContent=settings.announcement||"";$("bn").hidden=!settings.announcement;draw()},()=>{}));
- stops.push(onValue(ref(db,"users/"+uid),s=>{const u=s.val();if(!u||u.isActive===false)logout()}));
 }
 
 function merge(){
@@ -358,4 +365,13 @@ async function act(e){
    if(!o || o.driverId !== uid) return say("خطأ في بيانات الطلب.");
    
    const elapsedSec = Math.floor((Date.now() - (o.stepAt || 0)) / 1000);
-   if(elapsed
+   if(elapsedSec < 300){
+    const remainingSec = 300 - elapsedSec;
+    return say(`انتظر ${Math.ceil(remainingSec / 60)} دقيقة إضافية قبل تأكيد التسليم.`);
+   }
+   
+   const fee=Math.max(0,Math.round(Number(o.deliveryFee)||0)), p=Math.round(fee*0.9);
+   const patch={
+    status: "delivered",
+    stepAt: Date.now(),
+    delivered
