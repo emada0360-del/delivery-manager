@@ -68,7 +68,6 @@ details[open] summary { margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; 
 <div id="off" class="warn" style="background:#fdecea;color:#a61b1b" hidden>لا يوجد اتصال بالإنترنت. ما راح توصلك طلبات جديدة.</div>
 <div id="dw" class="warn" style="background:#fdecea;color:#a61b1b" hidden>المستحق عليك للمنصة وصل <b id="lm">15,000</b> د.ع أو أكثر. ما تكدر تستلم طلبات جديدة لحد ما تسدد للمدير.</div>
 
-<!-- قائمة منسدلة تجمع مربعات الإحصائيات والسجل -->
 <details class="box" style="padding:10px 14px;">
 <summary>📊 تفاصيل وسجل السائق (المستحق والأرباح)</summary>
 <div class="grid">
@@ -112,30 +111,34 @@ const ST={accepted:"تم قبول الطلب",arrived_store:"وصلت للمتج
 const STEP={arrive:["accepted","arrived_store"],pick:["arrived_store","picked_up"],go:["picked_up","delivering"],done:["delivering","delivered"]};
 const BTN={accepted:["arrive","وصلت للمتجر"],arrived_store:["pick","استلمت الطلب"],picked_up:["go","انطلقت للتوصيل"],delivering:["done","تأكيد التسليم"]};
 let uid=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},pend={},mine={},cash={},privData={},stops=[],busy=false;
-let AC=null;const wake=()=>{try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch{}};
+let AC=null, alertTimer=null;
+const wake=()=>{try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch{}};
 document.addEventListener("click",wake);document.addEventListener("touchstart",wake,{passive:true});
 
-async function sendNotification(title, body) {
+// 🔔 تشغيل صوت Beep واهتزاز متكرر لوجود طلب متاح
+function playOrderAlert() {
   try {
     wake();
     const o=AC.createOscillator(),g=AC.createGain();
     o.connect(g);g.connect(AC.destination);
-    o.frequency.value=880;g.gain.value=.4;
-    o.start();o.stop(AC.currentTime+.35);
-    if(navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
-  } catch(e){}
-  try {
-    const P = window.Capacitor && window.Capacitor.Plugins;
-    if (P && P.LocalNotifications) {
-      await P.LocalNotifications.schedule({ notifications: [{ id: Math.floor(Math.random() * 100000), title: title, body: body, sound: 'default' }] });
-    } else if ("Notification" in window && Notification.permission === "granted") {
-      new Notification(title, { body: body });
-    }
+    o.frequency.value=750;g.gain.value=0.3;
+    o.start();o.stop(AC.currentTime+.25);
+    if(navigator.vibrate) navigator.vibrate([200, 100, 200]);
   } catch(e){}
 }
 
-if ("Notification" in window && Notification.permission === "default") {
-  Notification.requestPermission();
+function checkAvailableAlert(hasAvailable) {
+  if (hasAvailable) {
+    if (!alertTimer) {
+      playOrderAlert();
+      alertTimer = setInterval(playOrderAlert, 3000); // يتكرر كل 3 ثوانٍ
+    }
+  } else {
+    if (alertTimer) {
+      clearInterval(alertTimer);
+      alertTimer = null;
+    }
+  }
 }
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
@@ -156,7 +159,7 @@ onAuthStateChanged(auth,async u=>{
  bg("start",{uid:u.uid,apiKey:cfg.apiKey,refreshToken:u.refreshToken,dbUrl:cfg.databaseURL});
 });
 function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on){clear();bg("stop")}}
-function clear(){stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};seen=null}
+function clear(){stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};seen=null;if(alertTimer){clearInterval(alertTimer);alertTimer=null;}}
 
 function start(){
  clear();
@@ -204,6 +207,10 @@ function draw(){
  const av=all.filter(([,o])=>o.status==="pending"&&!o.driverId&&!(o.rejectedBy&&o.rejectedBy[uid]));
  const my=all.filter(([,o])=>o.driverId===uid&&!["delivered","cancelled"].includes(o.status));
  const dn=all.filter(([,o])=>o.driverId===uid&&o.status==="delivered");
+ 
+ // تشغيل/إيقاف تنبيه الطلبات المتاحة
+ checkAvailableAlert(av.length > 0);
+
  const debt=dn.reduce((s,[,o])=>s+(o.platformDeliveryCommission||0)+(o.storeCommission||0),0)
   +Object.values(cash).filter(f=>f&&f.type==="archive").reduce((s,f)=>s+f.amount,0)
   -Object.values(cash).filter(f=>f&&f.type==="cash_received").reduce((s,f)=>s+f.amount,0);
@@ -215,7 +222,7 @@ function draw(){
  
  if(seen && !blocked && !full && av.some(([id])=>!seen.has(id))){
    const newOrder = av.find(([id])=>!seen.has(id))[1];
-   sendNotification("🚨 طلب توصيل جديد!", `من متجر: ${newOrder.storeName || 'جديد'} - منطقة: ${newOrder.area || ''}`);
+   // إشعار إضافي
  }
  seen=new Set(av.map(([id])=>id));
 
@@ -276,22 +283,85 @@ function draw(){
  }).join(""):`<div class="empty-msg">ما عندك طلبات قيد التنفيذ حالياً.</div>`;
 }
 
+// دالة لحساب المسافة بين نقطتين جغرافيتين (بالمتر)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // نصف قطر الأرض بالمتر
+  const φ1 = lat1 * Math.PI/180;
+  const φ2 = lat2 * Math.PI/180;
+  const Δφ = (lat2-lat1) * Math.PI/180;
+  const Δλ = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// استخراج خط الطول والعرض من رابط خرائط جوجل
+function extractCoordinatesFromUrl(url) {
+  if (!url) return null;
+  const match = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) || url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (match) {
+    return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
+  }
+  return null;
+}
+
+// التحقق من موقع السائق (300 متر) قبل تأكيد الوصول للمتجر
+async function checkDriverDistance(orderData) {
+  return new Promise((resolve) => {
+    const storeCoords = extractCoordinatesFromUrl(orderData.storeMapUrl);
+    if (!storeCoords) {
+      // إذا لم يتوفر رابط إحداثيات واضح، نسمح بالوصول لتجنب تعطل العمل
+      resolve(true);
+      return;
+    }
+    if (!navigator.geolocation) {
+      say("خدمة تحديد الموقع غير متوفرة في جهازك.");
+      resolve(true); // السماح في حال عدم دعم المتصفح
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const driverLat = position.coords.latitude;
+        const driverLng = position.coords.longitude;
+        const distance = calculateDistance(driverLat, driverLng, storeCoords.lat, storeCoords.lng);
+        if (distance <= 300) {
+          resolve(true);
+        } else {
+          say(`عذراً، يجب أن تكون على مسافة 300 متر أو أقل من المتجر (المسافة الحالية: ${Math.round(distance)} متر).`);
+          resolve(false);
+        }
+      },
+      (error) => {
+        say("تعذّر تحديد موقعك الحالي. تأكد من تشغيل الـ GPS.");
+        resolve(true); // السماح في حال تعذر الحصول على الموقع
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  });
+}
+
 async function act(e){
  const b=e.target.closest("button[data-a]");if(!b||busy)return;
- const a=b.dataset.a,r=ref(db,"orders/"+b.dataset.id);busy=true;
+ const a=b.dataset.a, orderId=b.dataset.id, r=ref(db,"orders/"+orderId); busy=true;
  try{
   let x,ok;
   if(a==="accept"){
    if(blocked){say("الاستلام متوقف لحد تسديد المستحق.");return}
    if(Object.values(orders).filter(o=>o&&o.driverId===uid&&!["delivered","cancelled"].includes(o.status)).length>=maxA){say("وصلت للحد الأقصى من الطلبات النشطة.");return}
-   x=await runTransaction(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.driverId=uid;o.status="accepted";o.acceptedAt=Date.now();return o}});
+   x=await runTransaction(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.driverId=uid;o.status="waiting_store";o.acceptedAt=Date.now();return o}});
    ok=x.committed&&x.snapshot.val()?.driverId===uid;
-   say(ok?"تم قبول الطلب.":"سبقك سائق آخر أو الطلب لم يعد متاحاً.");
+   say(ok?"تم إرسال طلب القبول للمتجر، بانتظار موافقته.":"سبقك سائق آخر أو الطلب لم يعد متاحاً.");
   }else if(a==="reject"){
    x=await runTransaction(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.rejectedBy=o.rejectedBy||{};o.rejectedBy[uid]=true;return o}});
    say(x.committed&&x.snapshot.val()?.rejectedBy?.[uid]?"تم رفض الطلب.":"تعذّر رفض الطلب.");
   }else if(STEP[a]){
-   if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟")))return;
+   if(a==="arrive"){
+     // 📍 التحقق من المسافة (300 متر) قبل تأكيد الوصول للمتجر
+     const orderData = orders[orderId];
+     const canProceed = await checkDriverDistance(orderData);
+     if(!canProceed) { busy=false; return; }
+   }
+   if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟"))) { busy=false; return; }
    const [from,to]=STEP[a];
    x=await runTransaction(r,o=>{
     if(o===null)return o;
