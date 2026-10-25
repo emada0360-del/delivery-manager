@@ -42,7 +42,6 @@ main{max-width:600px;margin:auto;padding:16px}
 #err{color:var(--bad);font-size:13px;text-align:center;font-weight:600}
 [hidden]{display:none!important}
 
-/* 🟢 تصميم قائمة البحث عن المناطق */
 .search-dropdown { position: relative; margin-bottom: 14px; }
 .search-dropdown input { margin: 0; padding-right: 40px; background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'%3E%3C/line%3E%3C/svg%3E") no-repeat left 12px center; }
 .dropdown-list { display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #fff; border: 1px solid var(--line); border-radius: 8px; max-height: 220px; overflow-y: auto; z-index: 100; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
@@ -82,7 +81,6 @@ main{max-width:600px;margin:auto;padding:16px}
 <h3 style="margin-top:0">طلب جديد</h3>
 <label>المنطقة</label>
 
-<!-- 🟢 حقل البحث الجديد عن المناطق -->
 <div class="search-dropdown">
   <input type="text" id="areaSearch" placeholder="ابحث عن المنطقة..." autocomplete="off">
   <input type="hidden" id="area" value="">
@@ -144,7 +142,6 @@ const ST={pending:"بانتظار سائق",waiting_store:"سائق ينتظر �
 let uid=null,store=null,areas={},orders={},priv={},settings={},driversOnline=0;
 let alarmTimer = null;
 
-// 🟢 دالة تشغيل صوت التنبيه المتكرر
 function playBeep() {
     try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -167,9 +164,8 @@ function checkWaitingAlarm(activeOrders) {
     if (hasWaiting) {
         if (!alarmTimer) {
             playBeep();
-            // 🔔 إشعار عند وجود سائق ينتظر الموافقة
             if (window.notifyApp) window.notifyApp('سائق ينتظر موافقتك','افتح التطبيق واضغط قبول السائق');
-            alarmTimer = setInterval(playBeep, 4000); // يتكرر كل 4 ثوانٍ
+            alarmTimer = setInterval(playBeep, 4000);
         }
     } else {
         if (alarmTimer) {
@@ -216,11 +212,23 @@ function start(){
   $("pulse").className="dot "+(driversOnline>0?"":"off");
  }));
  stops.push(onValue(ref(db,"areas"),s=>{ areas=s.val()||{}; drawAreas(); }));
- stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{ orders=s.val()||{}; drawOrders(); }));
+ stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{ orders=s.val()||{}; checkTimeoutOrders(); drawOrders(); }));
  stops.push(onValue(query(ref(db,"orderPrivate"),orderByChild("storeId"),equalTo(uid)),s=>{ priv=s.val()||{}; drawOrders(); }));
 }
 
-// 🟢 دالة رسم المناطق والبحث فيها
+async function checkTimeoutOrders() {
+  const now = Date.now();
+  const fifteenMinutes = 15 * 60 * 1000;
+  for (const [id, o] of Object.entries(orders)) {
+    if (o.status === "pending" && (now - (o.createdAt || 0)) > fifteenMinutes) {
+      try {
+        await update(ref(db, "orders/" + id), { status: "cancelled", cancelReason: "نفاذ وقت قبول الطلب" });
+        say("نفاذ وقت قبول الطلب (15 دقيقة)، حاول مرة أخرى", 1);
+      } catch(e){}
+    }
+  }
+}
+
 function drawAreas(){
   const currentId = $("area").value;
   if (currentId && !areas[currentId]) {
@@ -232,7 +240,6 @@ function drawAreas(){
   calcTotal();
 }
 
-// 🟢 إضافة مستمعي الأحداث للبحث
 const areaSearchInput = $("areaSearch");
 const areaListDiv = $("areaList");
 
@@ -316,7 +323,6 @@ function drawOrders(){
  const os=Object.entries(orders).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
  const active=os.filter(([,o])=>!["delivered","cancelled"].includes(o.status));
  
- // فحص حالة الطلبات النشطة لتشغيل أو إيقاف صوت التنبيه
  checkWaitingAlarm(active);
 
  const history=os.filter(([,o])=>["delivered","cancelled"].includes(o.status));
@@ -351,14 +357,14 @@ function card(id,o,isHistory){
  </div>` : "";
 
  let actionHtml = "";
+ // يظهر زر القبول أو الرفض للمتجر حصراً عندما يكون السائق في حالة waiting_store
  if(o.status === "waiting_store"){
    actionHtml = `<div style="display:flex; gap:8px; margin-top:10px">
     <button style="flex:2; background:var(--ok)" onclick="acceptDriver('${id}')">قبول السائق</button>
     <button style="flex:1; background:var(--bad)" onclick="cancelOrder('${id}')">رفض</button>
    </div>`;
- } else if(o.status==="pending" || o.status==="accepted") {
-   actionHtml = `<button type="button" style="width:100%;margin-top:8px; background:var(--bad)" onclick="cancelOrder('${id}')">إلغاء الطلب</button>`;
  }
+ // تم إزالة أي أزرار إلغاء أخرى للمتجر، تصبح الإدارة هي المخولة بالإلغاء بعد موافقة المتجر
 
  const storeCom = Number(o.storeCommission !== undefined ? o.storeCommission : (settings.storeCommission || 500));
  const receiveAmt = Math.max(0, (Number(o.itemPrice)||0) - storeCom);
@@ -387,8 +393,8 @@ window.acceptDriver = async(id) => {
 };
 
 window.cancelOrder = async(id) => {
- if(!confirm("هل أنت متأكد من إلغاء الطلب؟"))return;
- try{ await update(ref(db,"orders/"+id),{status:"cancelled"}); say("تم إلغاء الطلب."); }
+ if(!confirm("هل أنت متأكد من رفض السائق وإلغاء الطلب؟"))return;
+ try{ await update(ref(db,"orders/"+id),{status:"cancelled", cancelReason:"تم الرفض من قبل المتجر"}); say("تم إلغاء الطلب."); }
  catch(e){ say("فشل الإلغاء: "+e.message,1); }
 };
 
