@@ -154,12 +154,20 @@ function start(){
   $("off").hidden=s.val()===true;
   if(s.val()===true)onDisconnect(pr).set({online:false,lastSeen:serverTimestamp()}).then(()=>set(pr,{online:true,lastSeen:serverTimestamp()}));
  }));
- const merge=()=>{orders={...pend,...mine};draw();fetchPrivateData()};
+ 
+ // تحميل الطلبات المتاحة (pending) والطلبات التي تخص السائق بغض النظر عن حالتها (لضمان ظهور waiting_store وغيرها)
  stops.push(onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{pend=s.val()||{};merge()},e=>say("خطأ تحميل الطلبات: "+e.message)));
  stops.push(onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{mine=s.val()||{};merge()},e=>say("خطأ تحميل طلباتك: "+e.message)));
+ 
  stops.push(onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{cash=s.val()||{};draw()},()=>{}));
  stops.push(onValue(ref(db,"settings"),s=>{settings=s.val()||{};lim=Number(settings.debtLimit)||15000;maxA=Number(settings.maxActive)||3;$("bn").textContent=settings.announcement||"";$("bn").hidden=!settings.announcement;draw()},()=>{}));
  stops.push(onValue(ref(db,"users/"+uid),s=>{const u=s.val();if(!u||u.isActive===false)logout()}));
+}
+
+function merge(){
+ orders={...pend,...mine};
+ draw();
+ fetchPrivateData();
 }
 
 function fetchPrivateData(){
@@ -175,7 +183,6 @@ function fetchPrivateData(){
 
 function buildFinBox(o) {
     const storeCom = Number(settings.storeCommission || 500);
-    const platformCom = Math.round(o.deliveryFee * 0.1);
     const payStore = Math.round(o.itemPrice - storeCom);
     const collectCustomer = Math.round(o.customerTotal);
     const profit = Math.round(o.deliveryFee * 0.9);
@@ -190,7 +197,10 @@ function buildFinBox(o) {
 function draw(){
  const all=Object.entries(orders).filter(([,o])=>o);
  const av=all.filter(([,o])=>o.status==="pending"&&!o.driverId&&!(o.rejectedBy&&o.rejectedBy[uid]));
+ 
+ // ضبط فلترة الطلبات الحالية لتشمل كل الحالات غير Delivered و Cancelled والتي يملكها السائق
  const my=all.filter(([,o])=>o.driverId===uid&&!["delivered","cancelled"].includes(o.status));
+ 
  const dn=all.filter(([,o])=>o.driverId===uid&&o.status==="delivered");
  
  const debt=dn.reduce((s,[,o])=>{
