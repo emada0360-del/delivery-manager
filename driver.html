@@ -65,7 +65,7 @@ main{max-width:600px;margin:auto;padding:16px}
 <body>
 
 <section id="login" class="box">
-<h2 style="text-align:center;margin-top:0">دخول السائق <small style="font-size:11px;color:#94a3b8">v12</small></h2>
+<h2 style="text-align:center;margin-top:0">دخول السائق <small style="font-size:11px;color:#94a3b8">v13</small></h2>
 <form id="lf" onsubmit="return false;">
 <label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
 <label>كلمة المرور</label><input id="pw" type="password" required>
@@ -125,7 +125,7 @@ const ref=(d,p)=>p?d.ref(p):d.ref();
 const query=(r,...c)=>c.reduce((q,f)=>f(q),r);
 const orderByChild=k=>q=>q.orderByChild(k);
 const equalTo=v=>q=>q.equalTo(v);
-const onValue=(q,cb)=>{const h=q.on("value",snap(cb));return ()=>q.off("value",h);};
+const onValue=(q,cb)=>{const h=q.on("value",snap(cb),function(e){try{say("خطأ قراءة البيانات: "+(e&&(e.code||e.message)||e),1);}catch(_){}});return ()=>q.off("value",h);};
 const get=q=>q.once("value");
 const set=(r,v)=>r.set(v);
 const update=(r,v)=>r.update(v);
@@ -175,15 +175,21 @@ $("btnOut").onclick=()=>{
 
 onAuthStateChanged(auth, async u=>{
  if(!u){$("login").hidden=false;$("app").hidden=true;return;}
- const snap=await get(ref(db,"users/"+u.uid));
- const user = snap.val();
- if(!user || user.role!=="driver" || user.isActive===false){
-  await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
+ try{
+  $("err").textContent="جاري فحص الحساب...";
+  const snap=await get(ref(db,"users/"+u.uid));
+  const user = snap.val();
+  if(!user){ await signOut(auth);$("err").textContent="الحساب غير موجود بقاعدة البيانات (users/"+u.uid+")";return; }
+  if(user.role!=="driver"){ await signOut(auth);$("err").textContent="هذا الحساب ليس حساب سائق (الدور: "+(user.role||"غير محدد")+")";return; }
+  if(user.isActive===false){ await signOut(auth);$("err").textContent="هذا الحساب معطل.";return; }
+  uid=u.uid;driver=user;
+  $("err").textContent="";
+  $("drvName").textContent=user.name||"السائق";
+  $("login").hidden=true;$("app").hidden=false;
+  start();
+ }catch(e){
+  $("err").textContent="خطأ بعد الدخول: "+(e&&(e.code||e.message)||e);
  }
- uid=u.uid;driver=user;
- $("drvName").textContent=user.name;
- $("login").hidden=true;$("app").hidden=false;
- start();
 });
 
 function startGPS(){
@@ -374,9 +380,4 @@ function drawOrders(){
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" ${canDel?'':'disabled'} onclick="updateStep('${id}','delivered')">${canDel?'تم التوصيل للزبون':'انتظر 5 دقائق...'}</button>`;
   }
 
-  let storeBox = `<div class="customer-box" style="background:#f0fdf4; border-color:#bbf7d0; padding:10px;"><b style="color:#166534">هاتف المتجر: <span dir="ltr">${esc(o.storePhone || "غير متوفر")}</span></b>${o.storePhone ? `<div class="btn-group" style="margin-top:4px"><a href="tel:${esc(o.storePhone)}" class="btn-call" style="background:#dcfce7; color:#166534">📞 اتصال بالمتجر</a></div>` : ""}</div>`;
-
-  let customerBox = "";
-  if(q.customerPhone && o.status !== "waiting_store") {
-     const waLink = `https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`;
-     customerBox = `<div class="customer-b
+  let storeBox = `<div class="customer-box" style="background:#f0fdf4; border-color:#bbf7d0; padding:10px;"><b style="color:#166534">هاتف المتجر: <span dir="ltr">${esc(o.storePhone || "غير
