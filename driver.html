@@ -65,11 +65,11 @@ main{max-width:600px;margin:auto;padding:16px}
 <body>
 
 <section id="login" class="box">
-<h2 style="text-align:center;margin-top:0">دخول السائق</h2>
+<h2 style="text-align:center;margin-top:0">دخول السائق <small style="font-size:11px;color:#94a3b8">v10</small></h2>
 <form id="lf" onsubmit="return false;">
 <label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
 <label>كلمة المرور</label><input id="pw" type="password" required>
-<button type="button" id="btnLogin" style="width:100%;margin-top:10px">دخول</button>
+<button type="button" id="btnLogin" style="width:100%;margin-top:10px" onclick="document.getElementById('err').textContent='جاري تحميل الصفحة... انتظر ثواني ثم اضغط مرة ثانية'">دخول</button>
 </form>
 <p id="err"></p>
 </section>
@@ -113,9 +113,18 @@ main{max-width:600px;margin:auto;padding:16px}
 </div>
 
 <script type="module">
-import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+let initializeApp,getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged;
+let getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp;
+try{
+  const B="https://www.gstatic.com/firebasejs/11.6.0/";
+  const [m1,m2,m3]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-auth.js"),import(B+"firebase-database.js")]);
+  ({initializeApp}=m1);
+  ({getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}=m2);
+  ({getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp}=m3);
+}catch(e){
+  document.getElementById("err").textContent="تعذر تحميل المكتبات: "+(e.message||e)+" — تأكد من الإنترنت وحدّث الصفحة";
+  throw e;
+}
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -140,7 +149,8 @@ const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fee2e2":"#dcfce7";m.style.color=bad?"#b91c1c":"#15803d";setTimeout(()=>m.style.display="none",4000)}
 
 $("btnLogin").onclick=async()=>{
- $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
+ $("err").textContent="";
+ if(!$("un").value.trim()||!$("pw").value){ $("err").textContent="أدخل رقم الهاتف وكلمة المرور"; return; }$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
  try{ await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value); }
  catch(e){ $("err").textContent="خطأ: "+(e.code||e.message); }
  finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
@@ -371,16 +381,4 @@ function drawOrders(){
  }).join("");
 }
 
-function getDist(lat1, lon1, lat2, lon2){
- if(!lat1||!lat2)return 0;
- const R=6371e3, p1=lat1*Math.PI/180, p2=lat2*Math.PI/180;
- const dp=(lat2-lat1)*Math.PI/180, dl=(lon2-lon1)*Math.PI/180;
- const a=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)*Math.sin(dl/2);
- return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-window.acceptOrder=async(id)=>{
- if(currentDebt >= debtLimit) return say("لا يمكنك قبول الطلبات، لقد تجاوزت سقف الدين", 1);
- if(!isOnline) return say("يجب أن تكون متصلاً لتقبل الطلب", 1);
- try{
-  await update(ref(db,"orders/"+id),{ driverId:uid, driverName:driver.name
+function getDist(lat1
