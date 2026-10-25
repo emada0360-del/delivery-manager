@@ -53,11 +53,11 @@ main{max-width:600px;margin:auto;padding:16px}
 <body>
 <section id="login" class="box">
 <h2 style="text-align:center;margin-top:0">دخول السائق</h2>
-<!-- 🟢 العودة للطريقة الأصلية للـ form التي كانت تعمل معك بسلاسة -->
-<form id="lf" onsubmit="return false;">
+<!-- 🟢 الـ Form الأصلي البسيط المعتمد في الكود القديم -->
+<form id="lf">
 <label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
 <label>كلمة المرور</label><input id="pw" type="password" required>
-<button id="lb" style="width:100%;margin-top:8px">دخول</button>
+<button id="lb" type="submit" style="width:100%;margin-top:8px">دخول</button>
 </form>
 <p id="err"></p>
 </section>
@@ -112,11 +112,10 @@ const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-let uid=null,driverData=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},pend={},mine={},cash={},privData={},settings={},stops=[];
+let uid=null,driverData=null,lim=15000,maxA=3,blocked=false,orders={},pend={},mine={},cash={},privData={},settings={},stops=[];
 let pos={lat:null,lng:null},gpsId=null;
 let alarmTimer = null;
 
-// 🔔 نظام التنبيهات الصوتية والإشعارات
 function playBeep() {
     try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -169,12 +168,13 @@ function getDist(la1,lo1,la2,lo2){
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
-/* 🟢 طريقة الدخول الأصلية البسيطة جداً التي كانت تعمل معك تماماً */
-$("lb").onclick=async()=>{
+/* 🟢 طريقة الدخول الأصلية عبر الـ onsubmit للـ form تماماً مثل الكود القديم */
+$("lf").onsubmit = async (e) => {
+ e.preventDefault();
  $("err").textContent="";$("lb").disabled=true;$("lb").textContent="جاري...";
  try{
-  await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value);
- }catch(e){
+  await signInWithEmailAndPassword(auth, $("un").value.trim()+"@baqubah.app", $("pw").value);
+ }catch(er){
   $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة.";
   $("lb").disabled=false;$("lb").textContent="دخول";
  }
@@ -343,4 +343,4 @@ async function act(e){
    const elapsedSec = Math.floor((Date.now() - (o.stepAt || 0)) / 1000);
    if(elapsedSec < 300) return say(`انتظر ${Math.ceil((300 - elapsedSec)/60)} دقيقة إضافية.`);
    const fee=Math.max(0,Math.round(Number(o.deliveryFee)||0)),p=Math.round(fee*0.9);
-   await update(r,{status:"delivered",stepAt:Date.now(),deliveredAt:Date.now(),driverProfit:p,platformDeliveryCommission:fee-p,st
+   await update(r,{status:"delivered",stepAt:Date.now(),deliveredAt:Date.now(),driverProfit:p,platformDeliveryCommission:fee-p,storeCommission:Number(o.storeCo
