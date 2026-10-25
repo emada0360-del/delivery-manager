@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Baqubah Delivery | السائق</title>
 <script>
-// تفعيل قناة إشعارات النظام المباشرة لضمان عمل الصوت والهزاز في تطبيق السائق
+// تفعيل قناة إشعارات النظام المباشرة لضمان عمل الصوت والهزاز في الخلفية
 window.notifyApp = async (title, body) => {
   try {
     const P = window.Capacitor && window.Capacitor.Plugins;
@@ -22,6 +22,9 @@ window.notifyApp = async (title, body) => {
     const P = window.Capacitor && window.Capacitor.Plugins;
     if (P && P.LocalNotifications) {
       await P.LocalNotifications.requestPermissions();
+    }
+    if (P && P.BackgroundMode) {
+      await P.BackgroundMode.enable();
     }
   } catch(e) {}
 })();
@@ -132,9 +135,9 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const ST={accepted:"تم قبول الطلب",arrived_store:"وصلت للمتجر",picked_up:"استلمت الطلب",delivering:"بالطريق للزبون"};
 const STEP={arrive:["accepted","arrived_store"],pick:["arrived_store","picked_up"],go:["picked_up","delivering"],done:["delivering","delivered"]};
 const BTN={accepted:["arrive","وصلت للمتجر"],arrived_store:["pick","استلمت الطلب"],picked_up:["go","انطلقت للتوصيل"],delivering:["done","تأكيد التسليم"]};
-let uid=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},pend={},mine={},cash={},privData={},stops=[],busy=false;
+let uid=null,lim=15000,maxA=3,blocked=false,orders={},pend={},mine={},cash={},privData={},stops=[],busy=false;
 
-let AC=null;
+let AC=null, loopAlarmTimer=null;
 const wake=()=>{
   try{
     AC = AC || new (window.AudioContext || window.webkitAudioContext)();
@@ -144,7 +147,7 @@ const wake=()=>{
 document.addEventListener("click",wake);
 document.addEventListener("touchstart",wake,{passive:true});
 
-const beep=()=>{
+const playSingleBeep=()=>{
   try{
     wake();
     const o=AC.createOscillator(),g=AC.createGain();
@@ -154,6 +157,21 @@ const beep=()=>{
     if(navigator.vibrate) navigator.vibrate([300, 150, 300]);
   }catch(e){}
 };
+
+// تشغيل الصوت بشكل مستمر لا يتوقف إلا عندما يوافق السائق أو يرفض الطلب
+function manageLoopAlarm(hasAvailableOrders) {
+  if (hasAvailableOrders && !blocked) {
+    if (!loopAlarmTimer) {
+      playSingleBeep();
+      loopAlarmTimer = setInterval(playSingleBeep, 4000);
+    }
+  } else {
+    if (loopAlarmTimer) {
+      clearInterval(loopAlarmTimer);
+      loopAlarmTimer = null;
+    }
+  }
+}
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
@@ -173,7 +191,10 @@ onAuthStateChanged(auth,async u=>{
  bg("start",{uid:u.uid,apiKey:cfg.apiKey,refreshToken:u.refreshToken,dbUrl:cfg.databaseURL});
 });
 function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on){clear();bg("stop")}}
-function clear(){stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};seen=null}
+function clear(){
+  stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};
+  manageLoopAlarm(false);
+}
 
 function start(){
  clear();
@@ -186,7 +207,7 @@ function start(){
  stops.push(onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{pend=s.val()||{};merge()},e=>say("خطأ تحميل الطلبات: "+e.message)));
  stops.push(onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{mine=s.val()||{};merge()},e=>say("خطأ تحميل طلباتك: "+e.message)));
  stops.push(onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{cash=s.val()||{};draw()},()=>{}));
- stops.push(onValue(ref(db,"settings"),s=>{const v=s.val()||{};lim=Number(v.debtLimit)||15000;maxA=Number(v.maxActive)||3;$("bn").textContent=v.announcement||"";$("bn").hidden=!v.announcement;draw()},()=>{}));
+ stops.push(onValue(query(ref(db,"settings"),s=>{const v=s.val()||{};lim=Number(v.debtLimit)||15000;maxA=Number(v.maxActive)||3;$("bn").textContent=v.announcement||"";$("bn").hidden=!v.announcement;draw()},()=>{}));
  stops.push(onValue(ref(db,"users/"+uid),s=>{const u=s.val();if(!u||u.isActive===false)logout()}));
 }
 
@@ -230,13 +251,8 @@ function draw(){
  const t0=new Date().setHours(0,0,0,0),full=my.length>=maxA;
  $("td").textContent=fmt(dn.filter(([,o])=>o.deliveredAt>=t0).reduce((s,[,o])=>s+(o.driverProfit||0),0));
  
- // تفعيل الصوت والإشعار الفوري عند ورود طلب جديد
- if(seen && !blocked && !full && av.some(([id])=>!seen.has(id))){
-   const newOrder = av.find(([id])=>!seen.has(id))[1];
-   beep();
-   if(window.notifyApp) window.notifyApp("🚨 طلب توصيل جديد!", `من متجر: ${newOrder.storeName || 'جديد'} - منطقة: ${newOrder.area || ''}`);
- }
- seen=new Set(av.map(([id])=>id));
+ // تشغيل الصوت المتقطع المستمر وإنذار النظام عند وجود طلبات متاحة
+ manageLoopAlarm(av.length > 0 && !full);
 
  $("av").innerHTML=blocked?"الاستلام متوقف لحد تسديد المستحق.":(full?'<p class="warn">وصلت للحد الأقصى ('+maxA+') من الطلبات النشطة. سلّم طلب حتى تكدر تقبل غيره.</p>':"")+(av.length?av.map(([id,o])=>`<div class="box ord"><b>طلب ${esc(id.slice(-6))}</b>
   <p><b>المتجر:</b> ${esc(o.storeName)} | <b>المنطقة:</b> ${esc(o.area)}${o.fragile?" - قابل للكسر":""}</p>
@@ -296,20 +312,22 @@ function draw(){
 }
 
 async function act(e){
- const b=e.target.closest("button[data-a]);if(!b||busy)return;
+ const b=e.target.closest("button[data-a]");if(!b||busy)return;
  const a=b.dataset.a,r=ref(db,"orders/"+b.dataset.id);busy=true;
+ 
+ // إيقاف صوت الإنذار فوراً بمجرد أن يضغط السائق على قبول أو رفض الطلب
+ manageLoopAlarm(false);
+
  try{
   let x,ok;
   if(a==="accept"){
    if(blocked){say("الاستلام متوقف لحد تسديد المستحق.");return}
-   if(Object.values(orders).filter(o=>o&&o.driverId===uid&&!["delivered","cancelled"].includes(o.status)).length>=maxA){say("وصلت للحد الأقصى من الطلبات النشطة.");return}
-   x=update(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.driverId=uid;o.status="accepted";o.acceptedAt=Date.now();return o}});
-   // استخدام runTransaction بشكل آمن
+   if(Object.values(orders).filter(o=>o&&o.driverId===uid&&!["delivered","cancelled"].includes(o.status)).length>=maxA){say("وصلت للحد الأقصى للطلبات النشطة.");return}
    const tx = await runTransaction(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.driverId=uid;o.status="accepted";o.acceptedAt=Date.now();return o}});
    ok=tx.committed&&tx.snapshot.val()?.driverId===uid;
    say(ok?"تم قبول الطلب.":"سبقك سائق آخر أو الطلب لم يعد متاحاً.");
   }else if(a==="reject"){
-   const tx = await runTransaction(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.rejectedBy=o.rejectedBy||{};o.rejectedBy[uid]=true;return o}});
+   const tx = await runTransaction(r,o=>{if(o===null)return o;if(o.status===pending&&!o.driverId){o.rejectedBy=o.rejectedBy||{};o.rejectedBy[uid]=true;return o}});
    say(tx.committed&&tx.snapshot.val()?.rejectedBy?.[uid]?"تم رفض الطلب.":"تعذّر رفض الطلب.");
   }else if(STEP[a]){
    if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟")))return;
@@ -319,7 +337,7 @@ async function act(e){
     if(o.driverId!==uid||o.status!==from)return;
     o.status=to;o.updatedAt=Date.now();
     if(to==="delivered"){
-     const fee=Math.max(0,Math.round(Number(o.deliveryFee)||0)),p=Math.round(fee*0.9);
+     const fee=Math.max(0,Math.round(Number(o.deliveryFee||0))),p=Math.round(fee*0.9);
      o.deliveredAt=Date.now();o.driverProfit=p;o.platformDeliveryCommission=fee-p;o.storeCommission=500;
     }
     return o;
