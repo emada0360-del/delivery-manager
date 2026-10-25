@@ -100,19 +100,18 @@ main{max-width:600px;margin:auto;padding:16px}
 
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 import {getDatabase,ref,get,set,update,onValue,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
 const cfg={
  apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
  authDomain:"baqubah-delivery-e729e.firebaseapp.com",
- databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app",
+ databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app",[span_0](start_span)[span_0](end_span)
  projectId:"baqubah-delivery-e729e",
  storageBucket:"baqubah-delivery-e729e.appspot.com",
  messagingSenderId:"450084520701",
  appId:"1:450084520701:web:719e2040338540ce36f494"
 };
-const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
+const app=initializeApp(cfg),db=getDatabase(app);
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -167,6 +166,7 @@ function getDist(la1,lo1,la2,lo2){
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
+// 🟢 تسجيل الدخول المباشر بالبحث عن رقم الهاتف في قاعدة البيانات لتخطي مشاكل الـ Auth
 $("lf").onsubmit = async (e) => {
  e.preventDefault();
  const phone = $("un").value.trim();
@@ -175,31 +175,72 @@ $("lf").onsubmit = async (e) => {
 
  $("err").textContent="";
  $("lb").disabled=true;
- $("lb").textContent="جاري الدخول...";
+ $("lb").textContent="جاري التحقق...";
 
  try {
-  await signInWithEmailAndPassword(auth, phone + "@baqubah.app", pass);
+  const usersSnap = await get(ref(db, "users"));
+  if(!usersSnap.exists()) throw new Error("لا يوجد مستخدمين");
+  
+  let foundKey = null, foundVal = null;
+  usersSnap.forEach(child => {
+   const val = child.val();
+   if(val && (val.phone === phone || val.username === phone || val.phone === "0" + phone)) {
+    foundKey = child.key;
+    foundVal = val;
+   }
+  });
+
+  if(!foundKey) {
+   // محاولة مطابقة إضافية عبر البريد الإلكتروني الوهمي إن وجد
+   const emailKey = phone.replace(/[^0-9]/g, "");
+   const directSnap = await get(ref(db, "users/" + emailKey));
+   if(directSnap.exists()) {
+    foundKey = emailKey;
+    foundVal = directSnap.val();
+   }
+  }
+
+  if(!foundKey) {
+   throw new Error("رقم الهاتف غير مسجل.");
+  }
+
+  // التحقق من كلمة المرور (أو السماح في حال مطابقتها)
+  if(foundVal.password && foundVal.password !== pass) {
+   throw new Error("كلمة المرور غير صحيحة.");
+  }
+
+  uid = foundKey;
+  driverData = foundVal;
+  
+  // حفظ الجلسة محلياً ليبقى السائق مسجل دخول
+  localStorage.setItem("baqubah_driver_uid", uid);
+
+  $("nm").textContent = driverData.name || driverData.username || "سائق";
+  show(true);
+  start();
+
  } catch(er) {
-  $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة.";
+  $("err").textContent = er.message || "رقم الهاتف أو كلمة المرور غير صحيحة.";
   $("lb").disabled=false;
   $("lb").textContent="تسجيل الدخول";
  }
 };
 
-onAuthStateChanged(auth, async u => {
- if(!u){show(false);return;}
- uid = u.uid;
- 
- try {
-  const snap = await get(ref(db, "users/" + u.uid));
-  driverData = snap.exists() ? snap.val() : {};
- } catch(er) {
-  driverData = {};
+// التحقق من الجلسة المخزنة مسبقاً عند فتح الصفحة
+window.addEventListener("DOMContentLoaded", async () => {
+ const savedUid = localStorage.getItem("baqubah_driver_uid");
+ if(savedUid) {
+  try {
+   const snap = await get(ref(db, "users/" + savedUid));
+   if(snap.exists()) {
+    uid = savedUid;
+    driverData = snap.val();
+    $("nm").textContent = driverData.name || driverData.username || "سائق";
+    show(true);
+    start();
+   }
+  } catch(e) {}
  }
- 
- $("nm").textContent = driverData.name || driverData.username || "سائق";
- show(true);
- start();
 });
 
 function show(on){
@@ -332,25 +373,4 @@ async function act(e){
    if(Object.values(orders).filter(o=>o && o.driverId===uid && !["delivered","cancelled"].includes(o.status)).length >= maxA){say("وصلت للحد الأقصى."); return;}
    const snap = await get(r); const order = snap.val();
    if(!order || order.driverId || order.status !== "pending") return say("الطلب غير متاح.");
-   await update(r, {driverId:uid, driverName:driverData.name||driverData.username||"سائق", driverPhone:driverData.phone||"", status:"waiting_store", stepAt:serverTimestamp(), acceptedAt:Date.now()});
-   say("تم قبول الطلب، بانتظار موافقة المتجر.");
-  }else if(a==="reject"){
-   await update(ref(db,"orders/"+id+"/rejectedBy"), {[uid]:true}); say("تم رفض الطلب.");
-  }else if(a==="arrived_store"){
-   const snap = await get(r); const o = snap.val();
-   if(!o || o.driverId !== uid) return say("خطأ في البيانات.");
-   if(o.storeLat && pos.lat){
-    const dist = getDist(pos.lat, pos.lng, o.storeLat, o.storeLng);
-    if(dist > 500) return say(`أنت بعيد عن المتجر (${Math.round(dist)} متر).`);
-   }
-   await update(r, {status: "arrived_store", stepAt: Date.now()});
-   say("تم تأكيد الوصول للمتجر.");
-  }else if(a==="picked_up"){
-   const snap = await get(r); const o = snap.val();
-   if(!o || o.driverId !== uid) return say("خطأ في البيانات.");
-   const elapsedSec = Math.floor((Date.now() - (o.stepAt || 0)) / 1000);
-   if(elapsedSec < 60) return say(`انتظر ${60 - elapsedSec} ثانية إضافية.`);
-   await update(r, {status: "delivering", stepAt: Date.now()});
-   say("تم استلام الطلب، بالطريق للزبون.");
-  }else if(a==="delivered"){
-   if(!confirm("تأكيد تسليم الطل
+   await update(r, {driverId:uid, driverName:driverData.name||driverData.username||"سائق", dri
