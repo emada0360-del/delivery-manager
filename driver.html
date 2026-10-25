@@ -32,12 +32,17 @@ header{padding-top:calc(14px + env(safe-area-inset-top,0px))}
 #mdl .mr{display:flex;gap:8px}#mdl .mr button{flex:1}
 #mdl .mn{background:#64748b}
 
-.fin-box { background:#f8fafc; border-radius:8px; padding:10px; margin:8px 0; font-size:13px; border:1px solid #e2e8f0; }
-.fin-row { display:flex; justify-content:space-between; margin-bottom:4px; }
-.fin-row:last-child { margin-bottom:0; border-top:1px dashed #cbd5e1; padding-top:4px; font-weight:bold; }
-.map-link { display:inline-block; background:#e0f2fe; color:#0369a1; padding:6px 10px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:bold; margin:6px 0; }
-.btn-group { display:flex; gap:6px; margin-top:8px; }
-.btn-group a { flex:1; padding:9px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; display:flex; justify-content:center; align-items:center; gap:4px; text-align:center; }
+/* تنسيق القوائم المنسدلة الثلاث (Details Dropdowns) */
+details { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin: 6px 0; padding: 8px 12px; font-size: 13px; }
+details summary { font-weight: bold; cursor: pointer; color: #1e293b; outline: none; }
+details[open] summary { margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px; }
+
+.fin-box { background:#fff; border-radius:6px; padding:8px; margin-top:4px; font-size:12px; border:1px solid #e2e8f0; }
+.fin-row { display:flex; justify-content:space-between; margin-bottom:3px; }
+.fin-row:last-child { margin-bottom:0; border-top:1px dashed #cbd5e1; padding-top:3px; font-weight:bold; }
+.map-link { display:inline-block; background:#e0f2fe; color:#0369a1; padding:6px 10px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold; margin:4px 0; }
+.btn-group { display:flex; gap:6px; margin-top:6px; }
+.btn-group a { flex:1; padding:7px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; display:flex; justify-content:center; align-items:center; gap:4px; text-align:center; }
 .btn-call { background:#e0e7ff; color:#3730a3; }
 .btn-wa { background:#dcfce7; color:#166534; }
 
@@ -104,9 +109,7 @@ let uid=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},pend={},mine={},
 let AC=null;const wake=()=>{try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch{}};
 document.addEventListener("click",wake);document.addEventListener("touchstart",wake,{passive:true});
 
-// 🔔 دالة إرسال إشعارات نظام الهاتف عند وصول طلب جديد
 async function sendNotification(title, body) {
-  // 1. صوت واهتزاز المتصفح
   try {
     wake();
     const o=AC.createOscillator(),g=AC.createGain();
@@ -115,26 +118,16 @@ async function sendNotification(title, body) {
     o.start();o.stop(AC.currentTime+.35);
     if(navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
   } catch(e){}
-
-  // 2. إشعار النظام المباشر عبر Capacitor (لأجهزة الأندرويد والتطبيق)
   try {
     const P = window.Capacitor && window.Capacitor.Plugins;
     if (P && P.LocalNotifications) {
-      await P.LocalNotifications.schedule({
-        notifications: [{
-          id: Math.floor(Math.random() * 100000),
-          title: title,
-          body: body,
-          sound: 'default'
-        }]
-      });
+      await P.LocalNotifications.schedule({ notifications: [{ id: Math.floor(Math.random() * 100000), title: title, body: body, sound: 'default' }] });
     } else if ("Notification" in window && Notification.permission === "granted") {
       new Notification(title, { body: body });
     }
   } catch(e){}
 }
 
-// طلب إذن الإشعارات عند فتح الصفحة
 if ("Notification" in window && Notification.permission === "default") {
   Notification.requestPermission();
 }
@@ -200,32 +193,55 @@ function draw(){
  const t0=new Date().setHours(0,0,0,0),full=my.length>=maxA;
  $("td").textContent=fmt(dn.filter(([,o])=>o.deliveredAt>=t0).reduce((s,[,o])=>s+(o.driverProfit||0),0));
  
- // 🚀 تفعيل إشعارات الهاتف مع الصوت فور دخول أي طلب جديد
  if(seen && !blocked && !full && av.some(([id])=>!seen.has(id))){
    const newOrder = av.find(([id])=>!seen.has(id))[1];
    sendNotification("🚨 طلب توصيل جديد!", `من متجر: ${newOrder.storeName || 'جديد'} - منطقة: ${newOrder.area || ''}`);
  }
  seen=new Set(av.map(([id])=>id));
 
+ // الطلبات المتاحة مع الخطوط المنسدلة الثلاثة
  $("av").innerHTML=blocked?"الاستلام متوقف لحد تسديد المستحق.":(full?'<p class="warn">وصلت للحد الأقصى ('+maxA+') من الطلبات النشطة. سلّم طلب حتى تكدر تقبل غيره.</p>':"")+(av.length?av.map(([id,o])=>`<div class="box ord"><b>طلب ${esc(id.slice(-6))}</b>
-  <p>المتجر: ${esc(o.storeName)}${o.fragile?" - قابل للكسر":""}</p><p>المنطقة: ${esc(o.area)}</p>
-  ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
-  ${buildFinBox(o)}
+  <p><b>المتجر:</b> ${esc(o.storeName)} | <b>المنطقة:</b> ${esc(o.area)}${o.fragile?" - قابل للكسر":""}</p>
+  
+  <details><summary>📍 تفاصيل موقع المتجر وخريطة الطريق</summary>
+   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:"<p>لا يوجد رابط خريطة للمتجر.</p>"}
+  </details>
+
+  <details><summary>💰 التفاصيل المالية للطلب</summary>
+   ${buildFinBox(o)}
+  </details>
+
+  <details><summary>📋 معلومات أضافية وملاحظات</summary>
+   <p>سعر الطلب: ${fmt(o.itemPrice)} د.ع | التوصيل: ${fmt(o.deliveryFee)} د.ع</p>
+   ${o.note?`<p style="color:#b45309">ملاحظة: ${esc(o.note)}</p>`:""}
+  </details>
+
   <div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول</button><button class="gry" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):"لا توجد طلبات متاحة.");
 
+ // طلباتي الحالية مع الخطوط المنسدلة الثلاثة
  $("my").innerHTML=my.length?my.map(([id,o])=>{
   const b=BTN[o.status];
   const waLink=o.customerPhone?`https://wa.me/964${o.customerPhone.substring(o.customerPhone.startsWith('0')?1:0)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`:"";
   return `<div class="box ord"><b>طلب ${esc(id.slice(-6))}</b>
-  <p>المتجر: ${esc(o.storeName)} | المنطقة: ${esc(o.area)}</p>
-  ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
-  <p>الزبون: <a href="tel:${esc(o.customerPhone)}">${esc(o.customerPhone)}</a>${o.note?" | ملاحظة: "+esc(o.note):""}${o.fragile?" | قابل للكسر":""}</p>
-  <div class="btn-group">
-   <a href="tel:${esc(o.customerPhone)}" class="btn-group a btn-call" style="background:#e0e7ff;color:#3730a3;padding:8px;border-radius:6px;text-align:center;text-decoration:none;font-weight:bold;font-size:12px;flex:1;">📞 اتصال بالزبون</a>
-   ${waLink?`<a href="${waLink}" target="_blank" style="background:#dcfce7;color:#166534;padding:8px;border-radius:6px;text-align:center;text-decoration:none;font-weight:bold;font-size:12px;flex:1;">🟢 واتساب (الموقع)</a>`:""}
-  </div>
-  <p>الحالة: <b>${ST[o.status]||esc(o.status)}</b></p>
-  ${buildFinBox(o)}
+  <p><b>المتجر:</b> ${esc(o.storeName)} | <b>المنطقة:</b> ${esc(o.area)}</p>
+  <p><b>الحالة:</b> ${ST[o.status]||esc(o.status)}</p>
+
+  <details><summary>📍 خريطة المتجر والموقع</summary>
+   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:"<p>لا يوجد رابط خريطة.</p>"}
+  </details>
+
+  <details><summary>📞 التواصل مع الزبون (${esc(o.customerPhone||"غير متوفر")})</summary>
+   <div class="btn-group">
+    <a href="tel:${esc(o.customerPhone)}" class="btn-group a btn-call">📞 اتصال بالزبون</a>
+    ${waLink?`<a href="${waLink}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a>`:""}
+   </div>
+   ${o.note?`<p style="color:#b45309;margin-top:6px">ملاحظة الزبون: ${esc(o.note)}</p>`:""}
+  </details>
+
+  <details><summary>💰 الحسابات المالية للطلب</summary>
+   ${buildFinBox(o)}
+  </details>
+
   ${b?`<button class="${b[0]==="done"?"grn":""}" style="width:100%;margin-top:8px" data-a="${b[0]}" data-id="${esc(id)}">${b[1]}</button>`:""}</div>`
  }).join(""):"ما عندك طلبات قيد التنفيذ.";
 }
