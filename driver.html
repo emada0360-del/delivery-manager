@@ -28,7 +28,7 @@ main{max-width:600px;margin:auto;padding:16px}
 .ord p{margin:6px 0;font-size:14px}
 .warn{background:#fff3cd;color:#7a5200;padding:12px;border-radius:12px;margin-bottom:16px;font-weight:600;font-size:14px;border:1px solid #ffeeba}
 #login{max-width:380px;margin:60px auto}
-#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600}
+#err{color:var(--bad);font-size:13px;text-align:center;font-weight:600;margin-top:8px}
 #msg{padding:12px;border-radius:10px;margin-bottom:16px;display:none;font-weight:600;text-align:center;background:#dcfce7;color:#15803d;box-shadow:0 4px 12px rgba(0,0,0,.05)}
 [hidden]{display:none!important}
 .badge{padding:5px 10px;border-radius:6px;font-size:12px;font-weight:bold;display:inline-block}
@@ -50,7 +50,7 @@ main{max-width:600px;margin:auto;padding:16px}
 <body>
 <section id="login" class="box">
 <h2 style="text-align:center;margin-top:0">دخول السائق</h2>
-<form id="lf" onsubmit="return false;">
+<form id="lf">
 <label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required autocomplete="username">
 <label>كلمة المرور</label><input id="pw" type="password" required autocomplete="current-password">
 <button id="lb" style="width:100%;margin-top:8px">دخول</button>
@@ -137,12 +137,13 @@ const beep=()=>{try{wake();const o=AC.createOscillator(),g=AC.createGain();o.con
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
-/* 🟢 كود تسجيل الدخول الأصلي البسيط المضمون */
-$("lb").onclick=async()=>{
+/* 🟢 طريقة الدخول الأصلية السريعة */
+$("lf").onsubmit=async e=>{
+ e.preventDefault();
  $("err").textContent="";$("lb").disabled=true;$("lb").textContent="جاري...";
  try{
   await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value);
- }catch(e){
+ }catch(er){
   $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة.";
   $("lb").disabled=false;$("lb").textContent="دخول";
  }
@@ -152,13 +153,11 @@ onAuthStateChanged(auth,async u=>{
  if(!u){show(false);return}
  uid=u.uid;
  try{
-  const snap = await get(ref(db,"users/"+u.uid));
-  driverData = snap.val() || {};
- }catch(e){ driverData = {}; }
- 
+  const snap=await get(ref(db,"users/"+u.uid));
+  driverData=snap.val()||{};
+ }catch{driverData={};}
  $("nm").textContent=driverData.name||driverData.username||"سائق";
- show(true);
- start();
+ show(true);start();
 });
 
 function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on)clear()}
@@ -374,4 +373,4 @@ async function act(e){
    const patch={
     status: "delivered",
     stepAt: Date.now(),
-    delivered
+    deliveredAt: Date.now()
