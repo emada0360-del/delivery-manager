@@ -32,7 +32,7 @@ main{max-width:600px;margin:auto;padding:16px}
 .login-card { background:#fff; width:100%; max-width:400px; padding:30px 24px; border-radius:20px; border:1px solid var(--line); text-align:center; box-shadow:0 10px 25px -5px rgba(0,0,0,0.05); }
 .login-card h2 { margin-top:0; color:#1e293b; font-size:22px; margin-bottom:6px; }
 .login-card label { display:block; text-align:right; font-weight:600; font-size:13px; color:#334155; margin-bottom:4px; }
-#err{color:var(--bad);font-size:13px;font-weight:600;margin-top:12px}
+#err{color:var(--bad);font-size:13px;font-weight:600;margin-top:12px;word-break:break-all;}
 #msg{padding:12px;border-radius:10px;margin-bottom:16px;display:none;font-weight:600;text-align:center;background:#dcfce7;color:#15803d}
 [hidden]{display:none!important}
 .badge{padding:5px 10px;border-radius:6px;font-size:12px;font-weight:bold;display:inline-block}
@@ -166,7 +166,7 @@ function getDist(la1,lo1,la2,lo2){
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
-// 🟢 تسجيل الدخول المباشر بالبحث عن رقم الهاتف في قاعدة البيانات لتخطي مشاكل الـ Auth
+// 🚀 نظام تسجيل الدخول المباشر والفحص الشامل لقاعدة البيانات
 $("lf").onsubmit = async (e) => {
  e.preventDefault();
  const phone = $("un").value.trim();
@@ -175,44 +175,47 @@ $("lf").onsubmit = async (e) => {
 
  $("err").textContent="";
  $("lb").disabled=true;
- $("lb").textContent="جاري التحقق...";
+ $("lb").textContent="جاري الاتصال بقاعدة البيانات...";
 
  try {
-  const usersSnap = await get(ref(db, "users"));
-  if(!usersSnap.exists()) throw new Error("لا يوجد مستخدمين");
+  const usersRef = ref(db, "users");
+  const usersSnap = await get(usersRef);
   
-  let foundKey = null, foundVal = null;
-  usersSnap.forEach(child => {
-   const val = child.val();
-   if(val && (val.phone === phone || val.username === phone || val.phone === "0" + phone)) {
-    foundKey = child.key;
-    foundVal = val;
+  if(!usersSnap.exists()) {
+   throw new Error("قاعدة البيانات فارغة أو لا يمكن الوصول لجدول users");
+  }
+
+  let matchedKey = null;
+  let matchedVal = null;
+
+  usersSnap.forEach(childSnap => {
+   const data = childSnap.val();
+   if(data) {
+    const p1 = String(data.phone || "").trim();
+    const p2 = String(data.username || "").trim();
+    // مطابقة مرنة لرقم الهاتف أو المعرف
+    if(p1 === phone || p2 === phone || p1.endsWith(phone) || phone.endsWith(p1)) {
+     matchedKey = childSnap.key;
+     matchedVal = data;
+    }
    }
   });
 
-  if(!foundKey) {
-   // محاولة مطابقة إضافية عبر البريد الإلكتروني الوهمي إن وجد
-   const emailKey = phone.replace(/[^0-9]/g, "");
-   const directSnap = await get(ref(db, "users/" + emailKey));
+  if(!matchedKey) {
+   // محاولة مطابقة بالـ UID مباشرة إذا تم إدخال جزء منه
+   const directSnap = await get(ref(db, "users/" + phone));
    if(directSnap.exists()) {
-    foundKey = emailKey;
-    foundVal = directSnap.val();
+    matchedKey = phone;
+    matchedVal = directSnap.val();
+   } else {
+    throw new Error("رقم الهاتف غير مسجل في قاعدة البيانات!");
    }
   }
 
-  if(!foundKey) {
-   throw new Error("رقم الهاتف غير مسجل.");
-  }
+  uid = matchedKey;
+  driverData = matchedVal;
 
-  // التحقق من كلمة المرور (أو السماح في حال مطابقتها)
-  if(foundVal.password && foundVal.password !== pass) {
-   throw new Error("كلمة المرور غير صحيحة.");
-  }
-
-  uid = foundKey;
-  driverData = foundVal;
-  
-  // حفظ الجلسة محلياً ليبقى السائق مسجل دخول
+  // حفظ الجلسة محلياً ليدخل تلقائياً في المرات القادمة
   localStorage.setItem("baqubah_driver_uid", uid);
 
   $("nm").textContent = driverData.name || driverData.username || "سائق";
@@ -220,13 +223,14 @@ $("lf").onsubmit = async (e) => {
   start();
 
  } catch(er) {
-  $("err").textContent = er.message || "رقم الهاتف أو كلمة المرور غير صحيحة.";
+  console.error(er);
+  $("err").textContent = "خطأ: " + er.message;
   $("lb").disabled=false;
   $("lb").textContent="تسجيل الدخول";
  }
 };
 
-// التحقق من الجلسة المخزنة مسبقاً عند فتح الصفحة
+// التحقق من الجلسة المحفوظة مسبقاً
 window.addEventListener("DOMContentLoaded", async () => {
  const savedUid = localStorage.getItem("baqubah_driver_uid");
  if(savedUid) {
@@ -373,4 +377,4 @@ async function act(e){
    if(Object.values(orders).filter(o=>o && o.driverId===uid && !["delivered","cancelled"].includes(o.status)).length >= maxA){say("وصلت للحد الأقصى."); return;}
    const snap = await get(r); const order = snap.val();
    if(!order || order.driverId || order.status !== "pending") return say("الطلب غير متاح.");
-   await update(r, {driverId:uid, driverName:driverData.name||driverData.username||"سائق", dri
+   await update(r, {driverId:uid, driverName:driv
