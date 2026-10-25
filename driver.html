@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Baqubah Delivery | السائق</title>
 <script>
-// تفعيل وضع الخلفية وإشعارات النظام لضمان عدم فصل الإنترنت أو الصوت عند الخروج من التطبيق
 window.notifyApp = async (title, body) => {
   try {
     const P = window.Capacitor && window.Capacitor.Plugins;
@@ -48,7 +47,7 @@ main{max-width:800px;margin:auto;padding:12px}
 .ord p{margin:5px 0}
 .warn{background:#fff3cd;color:#7a5200;padding:10px;border-radius:8px;margin-bottom:12px}
 #login{max-width:380px;margin:50px auto}
-#err{color:#b42318}
+#err{color:#b42318;margin-top:10px;font-weight:bold}
 #msg{padding:10px;border-radius:8px;margin-bottom:12px;display:none;background:#e8f5e9;color:#176337}
 [hidden]{display:none!important}
 header{padding-top:calc(14px + env(safe-area-inset-top,0px))}
@@ -177,19 +176,32 @@ const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeou
 
 $("lf").onsubmit=async e=>{
  e.preventDefault();$("err").textContent="";$("lb").disabled=true;
- try{await signInWithEmailAndPassword(auth,$("un").value.trim().toLowerCase()+"@baqubah.app",$("pw").value)}
- catch(e){$("err").textContent=lerr(e)}
- finally{$("lb").disabled=false}
+ try{
+   await signInWithEmailAndPassword(auth,$("un").value.trim().toLowerCase()+"@baqubah.app",$("pw").value);
+ }
+ catch(e){
+   $("err").textContent=lerr(e);
+   $("lb").disabled=false;
+ }
 };
 
 onAuthStateChanged(auth,async u=>{
  if(!u){show(false);return}
- let me;try{me=(await get(ref(db,"users/"+u.uid))).val()}catch{await signOut(auth);$("err").textContent="تعذّر تحميل الحساب. تأكد من الإنترنت.";return}
- if(!me||me.role!=="driver"){await signOut(auth);$("err").textContent="هذا الحساب مو حساب سائق.";return}
- if(me.isActive===false){await signOut(auth);$("err").textContent="حسابك معطّل. راجع المدير.";return}
+ let me;
+ try {
+   me=(await get(ref(db,"users/"+u.uid))).val();
+ } catch(err) {
+   await signOut(auth);
+   $("err").textContent="تعذّر تحميل الحساب. تأكد من الإنترنت.";
+   $("lb").disabled=false;
+   return;
+ }
+ if(!me||me.role!=="driver"){await signOut(auth);$("err").textContent="هذا الحساب مو حساب سائق.";$("lb").disabled=false;return}
+ if(me.isActive===false){await signOut(auth);$("err").textContent="حسابك معطّل. راجع المدير.";$("lb").disabled=false;return}
  uid=u.uid;$("nm").textContent=me.name||me.username;show(true);start();
  bg("start",{uid:u.uid,apiKey:cfg.apiKey,refreshToken:u.refreshToken,dbUrl:cfg.databaseURL});
 });
+
 function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on){clear();bg("stop")}}
 function clear(){
   stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};
@@ -335,7 +347,8 @@ async function act(e){
     if(o.driverId!==uid||o.status!==from)return;
     o.status=to;o.updatedAt=Date.now();
     if(to==="delivered"){
-     const fee=Math.max(0,Math.round(Number(o.deliveryFee||0)),0),p=Math.round(fee*0.9);
+     const fee=Math.max(0,Math.round(Number(o.deliveryFee||0)));
+     const p=Math.round(fee*0.9);
      o.deliveredAt=Date.now();o.driverProfit=p;o.platformDeliveryCommission=fee-p;o.storeCommission=500;
     }
     return o;
