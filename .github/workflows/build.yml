@@ -30,7 +30,6 @@ jobs:
           mkdir www && echo '<html></html>' > www/index.html
           npm init -y
           npm i --legacy-peer-deps @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/local-notifications@6
-          npm i --legacy-peer-deps @anuradev/capacitor-background-mode || echo "background plugin skipped"
           cat > capacitor.config.json <<CFG
           {
             "appId": "${{ matrix.id }}",
