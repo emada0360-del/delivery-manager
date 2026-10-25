@@ -15,8 +15,8 @@ header{background:#14263d;color:#fff;padding:14px 16px;display:flex;justify-cont
 header h2{margin:0;font-size:17px}
 main{max-width:800px;margin:auto;padding:12px}
 .box{background:#fff;border:1px solid #e0e6ef;border-radius:12px;padding:14px;margin-bottom:12px}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
-.grid .box{margin:0}.grid strong{display:block;font-size:21px;margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
+.grid .box{margin:0}.grid strong{display:block;font-size:19px;margin-top:4px}
 .row{display:flex;gap:8px;margin-top:8px}.row button{flex:1}
 .grn{background:#218838}.gry{background:#64748b}.red{background:#c93030}
 .ord p{margin:5px 0}
@@ -32,9 +32,9 @@ header{padding-top:calc(14px + env(safe-area-inset-top,0px))}
 #mdl .mr{display:flex;gap:8px}#mdl .mr button{flex:1}
 #mdl .mn{background:#64748b}
 
-details { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin: 6px 0; padding: 8px 12px; font-size: 13px; }
-details summary { font-weight: bold; cursor: pointer; color: #1e293b; outline: none; }
-details[open] summary { margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px; }
+details { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin: 6px 0; padding: 10px 14px; font-size: 13px; }
+details summary { font-weight: bold; cursor: pointer; color: #1e293b; outline: none; font-size: 15px; }
+details[open] summary { margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px; }
 
 .fin-box { background:#fff; border-radius:6px; padding:8px; margin-top:4px; font-size:12px; border:1px solid #e2e8f0; }
 .fin-row { display:flex; justify-content:space-between; margin-bottom:3px; }
@@ -46,7 +46,7 @@ details[open] summary { margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; p
 .btn-wa { background:#dcfce7; color:#166534; }
 .empty-msg { text-align:center; color:#64748b; padding:25px; font-size:15px; font-weight:600; background:#f8fafc; border-radius:10px; border:1px dashed #cbd5e1; }
 
-@media(min-width:600px){.grid{grid-template-columns:repeat(5,1fr)}}
+@media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
@@ -67,13 +67,19 @@ details[open] summary { margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; p
 <div id="bn" class="warn" hidden></div>
 <div id="off" class="warn" style="background:#fdecea;color:#a61b1b" hidden>لا يوجد اتصال بالإنترنت. ما راح توصلك طلبات جديدة.</div>
 <div id="dw" class="warn" style="background:#fdecea;color:#a61b1b" hidden>المستحق عليك للمنصة وصل <b id="lm">15,000</b> د.ع أو أكثر. ما تكدر تستلم طلبات جديدة لحد ما تسدد للمدير.</div>
+
+<!-- قائمة منسدلة تجمع مربعات الإحصائيات والسجل -->
+<details class="box" style="padding:10px 14px;">
+<summary>📊 تفاصيل وسجل السائق (المستحق والأرباح)</summary>
 <div class="grid">
-<div class="box">المستحق عليّ (د.ع)<strong id="debt">0</strong></div>
-<div class="box">طلبات مكتملة<strong id="done">0</strong></div>
-<div class="box">طلبات مرفوضة<strong id="rej">0</strong></div>
-<div class="box">طلبات متاحة<strong id="avc">0</strong></div>
-<div class="box">أرباحي اليوم (د.ع)<strong id="td">0</strong></div>
+<div class="box" style="background:#f8fafc">المستحق عليّ (د.ع)<strong id="debt" style="color:#dc2626">0</strong></div>
+<div class="box" style="background:#f8fafc">طلبات مكتملة<strong id="done" style="color:#16a34a">0</strong></div>
+<div class="box" style="background:#f8fafc">طلبات مرفوضة<strong id="rej" style="color:#64748b">0</strong></div>
+<div class="box" style="background:#f8fafc">طلبات متاحة<strong id="avc" style="color:#2563eb">0</strong></div>
+<div class="box" style="background:#f8fafc; grid-column: span 2;">أرباحي اليوم (د.ع)<strong id="td" style="color:#16a34a">0</strong></div>
 </div>
+</details>
+
 <div class="box"><h3>طلبات متاحة</h3><div id="av"></div></div>
 <div class="box"><h3>طلباتي الحالية</h3><div id="my"></div></div>
 <div class="box"><small>ربحك 90% من أجرة التوصيل. المنصة 10% وعمولة المتجر 500 د.ع لكل طلب، تُحسب في المستحق عليك. المدير يسجل الكاش اللي تسدده.</small></div>
@@ -167,7 +173,6 @@ function start(){
  stops.push(onValue(ref(db,"users/"+uid),s=>{const u=s.val();if(!u||u.isActive===false)logout()}));
 }
 
-// دالة لجلب معلومات الزبون الخاصة (رقم الهاتف والملاحظة) من جدول orderPrivate
 function fetchPrivateData(){
  const ids = Object.keys(mine);
  if(!ids.length) return;
