@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
@@ -54,6 +53,7 @@ main{max-width:600px;margin:auto;padding:16px}
 <body>
 <section id="login" class="box">
 <h2 style="text-align:center;margin-top:0">دخول السائق</h2>
+<!-- 🟢 العودة للطريقة الأصلية للـ form التي كانت تعمل معك بسلاسة -->
 <form id="lf" onsubmit="return false;">
 <label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
 <label>كلمة المرور</label><input id="pw" type="password" required>
@@ -116,7 +116,7 @@ let uid=null,driverData=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},
 let pos={lat:null,lng:null},gpsId=null;
 let alarmTimer = null;
 
-// 🔔 نظام التنبيهات الصوتية المتكررة والإشعارات
+// 🔔 نظام التنبيهات الصوتية والإشعارات
 function playBeep() {
     try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -169,6 +169,7 @@ function getDist(la1,lo1,la2,lo2){
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
+/* 🟢 طريقة الدخول الأصلية البسيطة جداً التي كانت تعمل معك تماماً */
 $("lb").onclick=async()=>{
  $("err").textContent="";$("lb").disabled=true;$("lb").textContent="جاري...";
  try{
@@ -273,7 +274,7 @@ function draw(){
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="arrived_store" data-id="${esc(id)}">وصلت للمتجر</button>`;
   } else if(o.status==="arrived_store"){
    statusBadge=`<span class="badge acc">وصل للمتجر</span>`;
-   const waitSec = 60; // دقيقة واحدة
+   const waitSec = 60;
    const remaining = waitSec - elapsedSec;
    if(remaining > 0){
     actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" disabled>انتظر استلام الطلب (${remaining} ثانية)</button>`;
@@ -282,7 +283,7 @@ function draw(){
    }
   } else if(["picked_up","delivering"].includes(o.status)){
    statusBadge=`<span class="badge acc">بالطريق للزبون</span>`;
-   const waitSec = 300; // 5 دقائق
+   const waitSec = 300;
    const remaining = waitSec - elapsedSec;
    if(remaining > 0){
     const remMin = Math.floor(remaining / 60);
@@ -342,6 +343,4 @@ async function act(e){
    const elapsedSec = Math.floor((Date.now() - (o.stepAt || 0)) / 1000);
    if(elapsedSec < 300) return say(`انتظر ${Math.ceil((300 - elapsedSec)/60)} دقيقة إضافية.`);
    const fee=Math.max(0,Math.round(Number(o.deliveryFee)||0)),p=Math.round(fee*0.9);
-   await update(r,{status:"delivered",stepAt:Date.now(),deliveredAt:Date.now(),driverProfit:p,platformDeliveryCommission:fee-p,storeCommission:Number(o.storeCommission||settings.storeCommission||500)});
-   say("تم التوصيل بنجاح!");
- 
+   await update(r,{status:"delivered",stepAt:Date.now(),deliveredAt:Date.now(),driverProfit:p,platformDeliveryCommission:fee-p,st
