@@ -61,13 +61,14 @@ main{max-width:600px;margin:auto;padding:12px}
 </head>
 <body>
 <section id="login" class="box">
-<h2 style="text-align:center;margin-top:0">دخول السائق <small style="font-size:11px;color:#94a3b8">v15</small></h2>
-<form id="lf" onsubmit="document.getElementById('err').textContent='جاري تحميل الصفحة... انتظر ثواني ثم اضغط دخول';return false">
+<h2 style="text-align:center;margin-top:0">دخول السائق <small style="font-size:11px;color:#94a3b8">v16</small></h2>
+<form id="lf" onsubmit="document.getElementById('err').textContent='جاري تحميل المكتبات... انتظر لين يطلع تحت الزر جاهز';return false">
 <label>رقم الهاتف</label><input id="un" type="tel" required autocomplete="username" autocapitalize="none" placeholder="07XXXXXXXXX">
 <label>كلمة المرور</label><input id="pw" type="password" required autocomplete="current-password">
 <button id="lb" style="width:100%">دخول</button>
 </form>
 <div id="err"></div>
+<div id="diag" style="text-align:center;font-size:12px;color:#64748b;margin-top:6px;direction:ltr"></div>
 </section>
 
 <div id="app" hidden>
@@ -90,10 +91,34 @@ main{max-width:600px;margin:auto;padding:12px}
 
 <div id="mdl" hidden><div><p id="mdt"></p><div class="mr"><button id="mdy">تأكيد</button><button id="mdn" class="gry">إلغاء</button></div></div></div>
 
-<script type="module">
-import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,get,set,update,onValue,query,orderByChild,equalTo,onDisconnect,serverTimestamp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+<script>
+var __d=function(t){var e=document.getElementById('diag');if(e)e.textContent=t;};
+function __set(base){return new Promise(function(res,rej){var names=['app','auth','database'],loaded=0,failed=false,t;
+names.forEach(function(n){var s=document.createElement('script');s.async=false;s.src=base(n);
+s.onload=function(){loaded++;__d('تم تحميل '+loaded+' من 3 ...');if(loaded===3){clearTimeout(t);res();}};
+s.onerror=function(){if(!failed){failed=true;clearTimeout(t);rej(new Error('فشل تحميل '+base(n)));}};
+document.head.appendChild(s);});
+t=setTimeout(function(){if(!failed&&loaded<3){failed=true;rej(new Error('انتهت المهلة'));}},90000);});}
+function __load(){var bases=[function(n){return 'https://www.gstatic.com/firebasejs/10.14.1/firebase-'+n+'-compat.js';},function(n){return 'https://cdn.jsdelivr.net/npm/firebase@10.14.1/firebase-'+n+'-compat.js';},function(n){return 'https://cdnjs.cloudflare.com/ajax/libs/firebase/10.14.1/firebase-'+n+'-compat.min.js';}],i=0;
+function next(){if(i>=bases.length)return Promise.reject(new Error('تعذر تحميل مكتبات Firebase من كل المصادر'));__d('جاري التحميل (مصدر '+(i+1)+' من 3) ... قد ياخذ وقت مع النت البطيء');var b=bases[i++];return __set(b).catch(function(){return next();});}
+return next();}
+</script>
+<script>
+function __main(){
+const ref=(d,p)=>p?d.ref(p):d.ref();
+const query=(r,...c)=>c.reduce((q,f)=>f(q),r);
+const orderByChild=k=>q=>q.orderByChild(k);
+const equalTo=v=>q=>q.equalTo(v);
+const onValue=(q,cb,eb)=>{const h=q.on("value",cb,function(e){try{eb&&eb(e)}catch(_){}});return ()=>q.off("value",h)};
+const get=q=>q.once("value");
+const set=(r,v)=>r.set(v);
+const update=(r,v)=>r.update(v);
+const onDisconnect=r=>r.onDisconnect();
+const serverTimestamp=()=>firebase.database.ServerValue.TIMESTAMP;
+const signInWithEmailAndPassword=(a,e,p)=>a.signInWithEmailAndPassword(e,p);
+const signOut=a=>a.signOut();
+const onAuthStateChanged=(a,cb)=>a.onAuthStateChanged(cb);
+
 
 const cfg={
  apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -104,7 +129,8 @@ const cfg={
  messagingSenderId:"450084520701",
  appId:"1:450084520701:web:719e2040338540ce36f494"
 };
-const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
+firebase.initializeApp(cfg);
+const auth=firebase.auth(),db=firebase.database();
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -272,19 +298,4 @@ function draw(){
   else if(o.status==="arrived_store"){badge='<span class="badge">وصل للمتجر</span>';const ok=(now-st)>60000;
    btn='<button class="grn" style="width:100%;margin-top:10px" '+(ok?"":"disabled")+' data-a="pick" data-id="'+esc(id)+'">'+(ok?"تم استلام الطلب":"انتظر دقيقة...")+'</button>'}
   else if(["picked_up","delivering"].includes(o.status)){badge='<span class="badge">بالطريق للزبون</span>';const ok=(now-st)>300000;
-   btn='<button class="grn" style="width:100%;margin-top:10px" '+(ok?"":"disabled")+' data-a="done" data-id="'+esc(id)+'">'+(ok?"تم التوصيل للزبون":"انتظر 5 دقائق...")+'</button>'}
-  const storeBox=`<div class="customer-box" style="background:#f0fdf4;border-color:#bbf7d0;padding:10px"><b style="color:#166534">هاتف المتجر: <span dir="ltr">${esc(o.storePhone||"غير متوفر")}</span></b>${o.storePhone?`<div class="btn-group" style="margin-top:4px"><a href="tel:${esc(o.storePhone)}" class="btn-call" style="background:#dcfce7;color:#166534">📞 اتصال بالمتجر</a></div>`:""}</div>`;
-  let cust="";
-  if(q.customerPhone&&o.status!=="waiting_store"){
-   const wa="https://wa.me/964"+String(q.customerPhone).substring(1)+"?text="+encodeURIComponent("مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.");
-   cust=`<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>${q.customerName?`<div style="margin-bottom:8px;font-size:13px;color:#475569">الاسم: ${esc(q.customerName)}</div>`:""}${q.note?`<div style="margin-bottom:8px;font-size:13px;color:#b45309">ملاحظة: ${esc(q.note)}</div>`:""}<div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-call">📞 اتصال</a><a href="${esc(wa)}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a></div></div>`;
-  }
-  return `<div class="card ${o.status==="waiting_store"?"waiting":""}"><div class="row"><b>#${esc(id.slice(-6))}</b> ${badge}</div>
-   <p><b>المتجر:</b> ${esc(o.storeName)}</p><p><b>المنطقة:</b> ${esc(o.area)}</p>
-   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
-   ${storeBox}${finBox(o)}${cust}${warn}${btn}</div>`;
- }).join(""));
-}
-
-async function act(e){
- const b=e.target.closest("button[data-a]");if(!b||b
+   btn='<button class="grn" style="width:100%;margin-top:10px" '+(ok?"":"disabled")+' data-a="done" data-id="'+esc(id)+'">'+(ok?"تم التوصيل للزبون":"انتظر 5 دقائق...")+'<
