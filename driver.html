@@ -44,6 +44,7 @@ details[open] summary { margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; p
 .btn-group a { flex:1; padding:7px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; display:flex; justify-content:center; align-items:center; gap:4px; text-align:center; }
 .btn-call { background:#e0e7ff; color:#3730a3; }
 .btn-wa { background:#dcfce7; color:#166534; }
+.empty-msg { text-align:center; color:#64748b; padding:25px; font-size:15px; font-weight:600; background:#f8fafc; border-radius:10px; border:1px dashed #cbd5e1; }
 
 @media(min-width:600px){.grid{grid-template-columns:repeat(5,1fr)}}
 </style>
@@ -198,7 +199,7 @@ function draw(){
  }
  seen=new Set(av.map(([id])=>id));
 
- // الطلبات المتاحة (مرتبة ونظيفة)
+ // الطلبات المتاحة مع رسالة المنتصف التلقائية
  $("av").innerHTML=blocked?"الاستلام متوقف لحد تسديد المستحق.":(full?'<p class="warn">وصلت للحد الأقصى ('+maxA+') من الطلبات النشطة. سلّم طلب حتى تكدر تقبل غيره.</p>':"")+(av.length?av.map(([id,o])=>`<div class="box ord"><b>طلب ${esc(id.slice(-6))}</b>
   <p><b>المتجر:</b> ${esc(o.storeName)} | <b>المنطقة:</b> ${esc(o.area)}${o.fragile?" - قابل للكسر":""}</p>
   
@@ -215,9 +216,9 @@ function draw(){
    ${o.note?`<p style="color:#b45309">ملاحظة: ${esc(o.note)}</p>`:""}
   </details>
 
-  <div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول</button><button class="gry" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):"لا توجد طلبات متاحة.");
+  <div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول</button><button class="gry" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):`<div class="empty-msg">انتظر، سوف يصلك طلب قريباً</div>`);
 
- // طلباتي الحالية (مع ظهور رقم المتجر وزر الاتصال به فور قبول الطلب ضمن الخطوط المنسدلة)
+ // طلباتي الحالية (جعل الحسابات المالية الخيار الأول المنسدل، مع ظهور رقم المتجر)
  $("my").innerHTML=my.length?my.map(([id,o])=>{
   const b=BTN[o.status];
   const waLink=o.customerPhone?`https://wa.me/964${o.customerPhone.substring(o.customerPhone.startsWith('0')?1:0)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`:"";
@@ -225,7 +226,11 @@ function draw(){
   <p><b>المتجر:</b> ${esc(o.storeName)} | <b>المنطقة:</b> ${esc(o.area)}</p>
   <p><b>الحالة:</b> ${ST[o.status]||esc(o.status)}</p>
 
-  <details><summary>🏪 المتجر وخريطة الطريق (${esc(o.storePhone||"بدون هاتف")})</summary>
+  <details open><summary>💰 الحسابات المالية للطلب</summary>
+   ${buildFinBox(o)}
+  </details>
+
+  <details><summary>🏪 المتجر ورقم الهاتف والخريطة (${esc(o.storePhone||"بدون هاتف")})</summary>
    <div style="margin-top:6px">
     ${o.storePhone?`<a href="tel:${esc(o.storePhone)}" class="map-link" style="background:#e0e7ff;color:#3730a3;display:block;text-align:center;margin-bottom:6px">📞 اتصال برقم المتجر (${esc(o.storePhone)})</a>`:""}
     ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link" style="display:block;text-align:center">📍 فتح موقع المتجر على الخريطة</a>`:"<p>لا يوجد رابط خريطة للمتجر.</p>"}
@@ -235,17 +240,13 @@ function draw(){
   <details><summary>📞 الزبون والملاحظات (${esc(o.customerPhone||"غير متوفر")})</summary>
    <div class="btn-group">
     <a href="tel:${esc(o.customerPhone)}" class="btn-group a btn-call">📞 اتصال بالزبون</a>
-    ${waLink?`<a href="${waLink}" target="_blank" class="btn-wa">🟢 واتساب (الموقع)</a>`:""}
+    ${waLink?`<a href="${waLink}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a>`:""}
    </div>
    ${o.note?`<p style="color:#b45309;margin-top:6px">ملاحظة الزبون: ${esc(o.note)}</p>`:""}
   </details>
 
-  <details><summary>💰 الحسابات المالية للطلب</summary>
-   ${buildFinBox(o)}
-  </details>
-
   ${b?`<button class="${b[0]==="done"?"grn":""}" style="width:100%;margin-top:8px" data-a="${b[0]}" data-id="${esc(id)}">${b[1]}</button>`:""}</div>`
- }).join(""):"ما عندك طلبات قيد التنفيذ.";
+ }).join(""):`<div class="empty-msg">ما عندك طلبات قيد التنفيذ حالياً.</div>`;
 }
 
 async function act(e){
