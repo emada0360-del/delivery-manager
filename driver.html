@@ -32,7 +32,6 @@ header{padding-top:calc(14px + env(safe-area-inset-top,0px))}
 #mdl .mr{display:flex;gap:8px}#mdl .mr button{flex:1}
 #mdl .mn{background:#64748b}
 
-/* تنسيق القوائم المنسدلة الثلاث (Details Dropdowns) */
 details { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin: 6px 0; padding: 8px 12px; font-size: 13px; }
 details summary { font-weight: bold; cursor: pointer; color: #1e293b; outline: none; }
 details[open] summary { margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px; }
@@ -199,26 +198,26 @@ function draw(){
  }
  seen=new Set(av.map(([id])=>id));
 
- // الطلبات المتاحة مع الخطوط المنسدلة الثلاثة
+ // الطلبات المتاحة (مرتبة ونظيفة)
  $("av").innerHTML=blocked?"الاستلام متوقف لحد تسديد المستحق.":(full?'<p class="warn">وصلت للحد الأقصى ('+maxA+') من الطلبات النشطة. سلّم طلب حتى تكدر تقبل غيره.</p>':"")+(av.length?av.map(([id,o])=>`<div class="box ord"><b>طلب ${esc(id.slice(-6))}</b>
   <p><b>المتجر:</b> ${esc(o.storeName)} | <b>المنطقة:</b> ${esc(o.area)}${o.fragile?" - قابل للكسر":""}</p>
   
-  <details><summary>📍 تفاصيل موقع المتجر وخريطة الطريق</summary>
+  <details><summary>📍 خريطة موقع المتجر</summary>
    ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:"<p>لا يوجد رابط خريطة للمتجر.</p>"}
   </details>
 
-  <details><summary>💰 التفاصيل المالية للطلب</summary>
+  <details><summary>💰 التفاصيل المالية</summary>
    ${buildFinBox(o)}
   </details>
 
-  <details><summary>📋 معلومات أضافية وملاحظات</summary>
+  <details><summary>📋 ملاحظات الطلب</summary>
    <p>سعر الطلب: ${fmt(o.itemPrice)} د.ع | التوصيل: ${fmt(o.deliveryFee)} د.ع</p>
    ${o.note?`<p style="color:#b45309">ملاحظة: ${esc(o.note)}</p>`:""}
   </details>
 
   <div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول</button><button class="gry" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):"لا توجد طلبات متاحة.");
 
- // طلباتي الحالية مع الخطوط المنسدلة الثلاثة
+ // طلباتي الحالية (مع ظهور رقم المتجر وزر الاتصال به فور قبول الطلب ضمن الخطوط المنسدلة)
  $("my").innerHTML=my.length?my.map(([id,o])=>{
   const b=BTN[o.status];
   const waLink=o.customerPhone?`https://wa.me/964${o.customerPhone.substring(o.customerPhone.startsWith('0')?1:0)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`:"";
@@ -226,14 +225,17 @@ function draw(){
   <p><b>المتجر:</b> ${esc(o.storeName)} | <b>المنطقة:</b> ${esc(o.area)}</p>
   <p><b>الحالة:</b> ${ST[o.status]||esc(o.status)}</p>
 
-  <details><summary>📍 خريطة المتجر والموقع</summary>
-   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:"<p>لا يوجد رابط خريطة.</p>"}
+  <details><summary>🏪 المتجر وخريطة الطريق (${esc(o.storePhone||"بدون هاتف")})</summary>
+   <div style="margin-top:6px">
+    ${o.storePhone?`<a href="tel:${esc(o.storePhone)}" class="map-link" style="background:#e0e7ff;color:#3730a3;display:block;text-align:center;margin-bottom:6px">📞 اتصال برقم المتجر (${esc(o.storePhone)})</a>`:""}
+    ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link" style="display:block;text-align:center">📍 فتح موقع المتجر على الخريطة</a>`:"<p>لا يوجد رابط خريطة للمتجر.</p>"}
+   </div>
   </details>
 
-  <details><summary>📞 التواصل مع الزبون (${esc(o.customerPhone||"غير متوفر")})</summary>
+  <details><summary>📞 الزبون والملاحظات (${esc(o.customerPhone||"غير متوفر")})</summary>
    <div class="btn-group">
     <a href="tel:${esc(o.customerPhone)}" class="btn-group a btn-call">📞 اتصال بالزبون</a>
-    ${waLink?`<a href="${waLink}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a>`:""}
+    ${waLink?`<a href="${waLink}" target="_blank" class="btn-wa">🟢 واتساب (الموقع)</a>`:""}
    </div>
    ${o.note?`<p style="color:#b45309;margin-top:6px">ملاحظة الزبون: ${esc(o.note)}</p>`:""}
   </details>
