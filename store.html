@@ -70,8 +70,14 @@ main{max-width:600px;margin:auto;padding:16px}
 
 <div id="app" hidden>
 <header>
-<h2 id="sname">المتجر</h2>
-<div class="pill"><i class="dot" id="pulse"></i><span id="onCount">0</span> متصل</div>
+<div>
+  <h2 id="sname" style="display:inline-block">المتجر</h2>
+  <span style="font-size:12px;opacity:0.8;margin-right:8px" id="sphone"></span>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+  <div class="pill"><i class="dot" id="pulse"></i><span id="onCount">0</span> متصل</div>
+  <button id="out" style="background:#dc3545;padding:6px 12px;font-size:13px">خروج</button>
+</div>
 </header>
 <main>
 <div id="msg"></div>
@@ -420,6 +426,5 @@ window.cancelOrder = async(id) => {
 };
 
 $("btnHistory").onclick = () => { $("historyOrders").hidden = !$("historyOrders").hidden; };
-</script>
-</body>
-</html>
+
+// 🚪 زر 
