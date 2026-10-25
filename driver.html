@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Baqubah Delivery | السائق</title>
 <script>
-// تفعيل قناة إشعارات النظام المباشرة لضمان عمل الصوت والهزاز في الخلفية
+// تفعيل وضع الخلفية وإشعارات النظام لضمان عدم فصل الإنترنت أو الصوت عند الخروج من التطبيق
 window.notifyApp = async (title, body) => {
   try {
     const P = window.Capacitor && window.Capacitor.Plugins;
@@ -25,6 +25,7 @@ window.notifyApp = async (title, body) => {
     }
     if (P && P.BackgroundMode) {
       await P.BackgroundMode.enable();
+      await P.BackgroundMode.overrideBackButton();
     }
   } catch(e) {}
 })();
@@ -158,7 +159,6 @@ const playSingleBeep=()=>{
   }catch(e){}
 };
 
-// تشغيل الصوت بشكل مستمر لا يتوقف إلا عندما يوافق السائق أو يرفض الطلب
 function manageLoopAlarm(hasAvailableOrders) {
   if (hasAvailableOrders && !blocked) {
     if (!loopAlarmTimer) {
@@ -251,7 +251,6 @@ function draw(){
  const t0=new Date().setHours(0,0,0,0),full=my.length>=maxA;
  $("td").textContent=fmt(dn.filter(([,o])=>o.deliveredAt>=t0).reduce((s,[,o])=>s+(o.driverProfit||0),0));
  
- // تشغيل الصوت المتقطع المستمر وإنذار النظام عند وجود طلبات متاحة
  manageLoopAlarm(av.length > 0 && !full);
 
  $("av").innerHTML=blocked?"الاستلام متوقف لحد تسديد المستحق.":(full?'<p class="warn">وصلت للحد الأقصى ('+maxA+') من الطلبات النشطة. سلّم طلب حتى تكدر تقبل غيره.</p>':"")+(av.length?av.map(([id,o])=>`<div class="box ord"><b>طلب ${esc(id.slice(-6))}</b>
@@ -315,7 +314,6 @@ async function act(e){
  const b=e.target.closest("button[data-a]");if(!b||busy)return;
  const a=b.dataset.a,r=ref(db,"orders/"+b.dataset.id);busy=true;
  
- // إيقاف صوت الإنذار فوراً بمجرد أن يضغط السائق على قبول أو رفض الطلب
  manageLoopAlarm(false);
 
  try{
@@ -327,7 +325,7 @@ async function act(e){
    ok=tx.committed&&tx.snapshot.val()?.driverId===uid;
    say(ok?"تم قبول الطلب.":"سبقك سائق آخر أو الطلب لم يعد متاحاً.");
   }else if(a==="reject"){
-   const tx = await runTransaction(r,o=>{if(o===null)return o;if(o.status===pending&&!o.driverId){o.rejectedBy=o.rejectedBy||{};o.rejectedBy[uid]=true;return o}});
+   const tx = await runTransaction(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.rejectedBy=o.rejectedBy||{};o.rejectedBy[uid]=true;return o}});
    say(tx.committed&&tx.snapshot.val()?.rejectedBy?.[uid]?"تم رفض الطلب.":"تعذّر رفض الطلب.");
   }else if(STEP[a]){
    if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟")))return;
@@ -337,7 +335,7 @@ async function act(e){
     if(o.driverId!==uid||o.status!==from)return;
     o.status=to;o.updatedAt=Date.now();
     if(to==="delivered"){
-     const fee=Math.max(0,Math.round(Number(o.deliveryFee||0))),p=Math.round(fee*0.9);
+     const fee=Math.max(0,Math.round(Number(o.deliveryFee||0)),0),p=Math.round(fee*0.9);
      o.deliveredAt=Date.now();o.driverProfit=p;o.platformDeliveryCommission=fee-p;o.storeCommission=500;
     }
     return o;
