@@ -65,7 +65,7 @@ main{max-width:600px;margin:auto;padding:16px}
 <body>
 
 <section id="login" class="box">
-<h2 style="text-align:center;margin-top:0">دخول السائق <small style="font-size:11px;color:#94a3b8">v10</small></h2>
+<h2 style="text-align:center;margin-top:0">دخول السائق <small style="font-size:11px;color:#94a3b8">v11</small></h2>
 <form id="lf" onsubmit="return false;">
 <label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
 <label>كلمة المرور</label><input id="pw" type="password" required>
@@ -112,19 +112,26 @@ main{max-width:600px;margin:auto;padding:16px}
 </main>
 </div>
 
-<script type="module">
-let initializeApp,getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged;
-let getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp;
-try{
-  const B="https://www.gstatic.com/firebasejs/11.6.0/";
-  const [m1,m2,m3]=await Promise.all([import(B+"firebase-app.js"),import(B+"firebase-auth.js"),import(B+"firebase-database.js")]);
-  ({initializeApp}=m1);
-  ({getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}=m2);
-  ({getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,onDisconnect,serverTimestamp}=m3);
-}catch(e){
-  document.getElementById("err").textContent="تعذر تحميل المكتبات: "+(e.message||e)+" — تأكد من الإنترنت وحدّث الصفحة";
-  throw e;
-}
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" onerror="document.getElementById('err').textContent='تعذر تحميل مكتبة Firebase (app)'"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js" onerror="document.getElementById('err').textContent='تعذر تحميل مكتبة Firebase (auth)'"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js" onerror="document.getElementById('err').textContent='تعذر تحميل مكتبة Firebase (database)'"></script>
+<script>
+(function(){
+const snap=s=>s;
+const ref=(d,p)=>p?d.ref(p):d.ref();
+const query=(r,...c)=>c.reduce((q,f)=>f(q),r);
+const orderByChild=k=>q=>q.orderByChild(k);
+const equalTo=v=>q=>q.equalTo(v);
+const onValue=(q,cb)=>{const h=q.on("value",snap(cb));return ()=>q.off("value",h);};
+const get=q=>q.once("value");
+const set=(r,v)=>r.set(v);
+const update=(r,v)=>r.update(v);
+const push=r=>r.push();
+const onDisconnect=r=>r.onDisconnect();
+const serverTimestamp=()=>firebase.database.ServerValue.TIMESTAMP;
+const signInWithEmailAndPassword=(a,e,p)=>a.signInWithEmailAndPassword(e,p);
+const signOut=a=>a.signOut();
+const onAuthStateChanged=(a,cb)=>a.onAuthStateChanged(cb);
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -135,7 +142,8 @@ const cfg = {
   messagingSenderId: "450084520701",
   appId: "1:450084520701:web:719e2040338540ce36f494"
 };
-const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
+firebase.initializeApp(cfg);
+const auth=firebase.auth(),db=firebase.database();
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -371,14 +379,4 @@ function drawOrders(){
      customerBox = `<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>${q.customerName?`<div style="margin-bottom:8px;font-size:13px;color:#475569">الاسم: ${esc(q.customerName)}</div>`:""}${q.note?`<div style="margin-bottom:8px;font-size:13px;color:#b45309">ملاحظة: ${esc(q.note)}</div>`:""}<div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a></div></div>`;
   }
 
-  return `<div class="card ${o.status==='waiting_store'?'waiting':''}">
-   <div class="row"><b>#${esc(id.slice(-6))}</b> ${statusBadge}</div>
-   <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
-   <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
-   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
-   ${storeBox}${buildFinBox(o)}${customerBox}${warn}${actionBtn}
-  </div>`;
- }).join("");
-}
-
-function getDist(lat1
+  return `<div class="card ${o.status==='waiting_store'?'waiti
