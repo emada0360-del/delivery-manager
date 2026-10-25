@@ -4,31 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Baqubah Delivery | السائق</title>
-<script>
-window.notifyApp = async (title, body) => {
-  try {
-    const P = window.Capacitor && window.Capacitor.Plugins;
-    if (P && P.LocalNotifications) {
-      await P.LocalNotifications.createChannel({ id: 'driver_orders', name: 'Order Notifications', importance: 5, sound: 'default', vibration: true });
-      await P.LocalNotifications.schedule({
-        notifications: [{ id: Math.floor(Math.random() * 2000000), title: title, body: body, channelId: 'driver_orders', sound: 'default' }]
-      });
-    }
-  } catch(e) {}
-};
-(async () => {
-  try {
-    const P = window.Capacitor && window.Capacitor.Plugins;
-    if (P && P.LocalNotifications) {
-      await P.LocalNotifications.requestPermissions();
-    }
-    if (P && P.BackgroundMode) {
-      await P.BackgroundMode.enable();
-      await P.BackgroundMode.overrideBackButton();
-    }
-  } catch(e) {}
-})();
-</script>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,Tahoma,Arial;background:#f2f5f9;color:#172235}
@@ -40,14 +15,14 @@ header{background:#14263d;color:#fff;padding:14px 16px;display:flex;justify-cont
 header h2{margin:0;font-size:17px}
 main{max-width:800px;margin:auto;padding:12px}
 .box{background:#fff;border:1px solid #e0e6ef;border-radius:12px;padding:14px;margin-bottom:12px}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
-.grid .box{margin:0}.grid strong{display:block;font-size:19px;margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+.grid .box{margin:0}.grid strong{display:block;font-size:21px;margin-top:4px}
 .row{display:flex;gap:8px;margin-top:8px}.row button{flex:1}
 .grn{background:#218838}.gry{background:#64748b}.red{background:#c93030}
 .ord p{margin:5px 0}
 .warn{background:#fff3cd;color:#7a5200;padding:10px;border-radius:8px;margin-bottom:12px}
 #login{max-width:380px;margin:50px auto}
-#err{color:#b42318;margin-top:10px;font-weight:bold}
+#err{color:#b42318}
 #msg{padding:10px;border-radius:8px;margin-bottom:12px;display:none;background:#e8f5e9;color:#176337}
 [hidden]{display:none!important}
 header{padding-top:calc(14px + env(safe-area-inset-top,0px))}
@@ -57,21 +32,16 @@ header{padding-top:calc(14px + env(safe-area-inset-top,0px))}
 #mdl .mr{display:flex;gap:8px}#mdl .mr button{flex:1}
 #mdl .mn{background:#64748b}
 
-details { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin: 6px 0; padding: 10px 14px; font-size: 13px; }
-details summary { font-weight: bold; cursor: pointer; color: #1e293b; outline: none; font-size: 15px; }
-details[open] summary { margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 6px; }
-
-.fin-box { background:#fff; border-radius:6px; padding:8px; margin-top:4px; font-size:12px; border:1px solid #e2e8f0; }
-.fin-row { display:flex; justify-content:space-between; margin-bottom:3px; }
-.fin-row:last-child { margin-bottom:0; border-top:1px dashed #cbd5e1; padding-top:3px; font-weight:bold; }
-.map-link { display:inline-block; background:#e0f2fe; color:#0369a1; padding:6px 10px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold; margin:4px 0; }
-.btn-group { display:flex; gap:6px; margin-top:6px; }
-.btn-group a { flex:1; padding:7px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; display:flex; justify-content:center; align-items:center; gap:4px; text-align:center; }
+.fin-box { background:#f8fafc; border-radius:8px; padding:10px; margin:8px 0; font-size:13px; border:1px solid #e2e8f0; }
+.fin-row { display:flex; justify-content:space-between; margin-bottom:4px; }
+.fin-row:last-child { margin-bottom:0; border-top:1px dashed #cbd5e1; padding-top:4px; font-weight:bold; }
+.map-link { display:inline-block; background:#e0f2fe; color:#0369a1; padding:6px 10px; border-radius:6px; text-decoration:none; font-size:13px; font-weight:bold; margin:6px 0; }
+.btn-group { display:flex; gap:6px; margin-top:8px; }
+.btn-group a { flex:1; padding:9px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px; display:flex; justify-content:center; align-items:center; gap:4px; text-align:center; }
 .btn-call { background:#e0e7ff; color:#3730a3; }
 .btn-wa { background:#dcfce7; color:#166534; }
-.empty-msg { text-align:center; color:#64748b; padding:25px; font-size:15px; font-weight:600; background:#f8fafc; border-radius:10px; border:1px dashed #cbd5e1; }
 
-@media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:600px){.grid{grid-template-columns:repeat(5,1fr)}}
 </style>
 </head>
 <body>
@@ -92,18 +62,13 @@ details[open] summary { margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; 
 <div id="bn" class="warn" hidden></div>
 <div id="off" class="warn" style="background:#fdecea;color:#a61b1b" hidden>لا يوجد اتصال بالإنترنت. ما راح توصلك طلبات جديدة.</div>
 <div id="dw" class="warn" style="background:#fdecea;color:#a61b1b" hidden>المستحق عليك للمنصة وصل <b id="lm">15,000</b> د.ع أو أكثر. ما تكدر تستلم طلبات جديدة لحد ما تسدد للمدير.</div>
-
-<details class="box" style="padding:10px 14px;">
-<summary>📊 تفاصيل وسجل السائق (المستحق والأرباح)</summary>
 <div class="grid">
-<div class="box" style="background:#f8fafc">المستحق عليّ (د.ع)<strong id="debt" style="color:#dc2626">0</strong></div>
-<div class="box" style="background:#f8fafc">طلبات مكتملة<strong id="done" style="color:#16a34a">0</strong></div>
-<div class="box" style="background:#f8fafc">طلبات مرفوضة<strong id="rej" style="color:#64748b">0</strong></div>
-<div class="box" style="background:#f8fafc">طلبات متاحة<strong id="avc" style="color:#2563eb">0</strong></div>
-<div class="box" style="background:#f8fafc; grid-column: span 2;">أرباحي اليوم (د.ع)<strong id="td" style="color:#16a34a">0</strong></div>
+<div class="box">المستحق عليّ (د.ع)<strong id="debt">0</strong></div>
+<div class="box">طلبات مكتملة<strong id="done">0</strong></div>
+<div class="box">طلبات مرفوضة<strong id="rej">0</strong></div>
+<div class="box">طلبات متاحة<strong id="avc">0</strong></div>
+<div class="box">أرباحي اليوم (د.ع)<strong id="td">0</strong></div>
 </div>
-</details>
-
 <div class="box"><h3>طلبات متاحة</h3><div id="av"></div></div>
 <div class="box"><h3>طلباتي الحالية</h3><div id="my"></div></div>
 <div class="box"><small>ربحك 90% من أجرة التوصيل. المنصة 10% وعمولة المتجر 500 د.ع لكل طلب، تُحسب في المستحق عليك. المدير يسجل الكاش اللي تسدده.</small></div>
@@ -135,78 +100,52 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const ST={accepted:"تم قبول الطلب",arrived_store:"وصلت للمتجر",picked_up:"استلمت الطلب",delivering:"بالطريق للزبون"};
 const STEP={arrive:["accepted","arrived_store"],pick:["arrived_store","picked_up"],go:["picked_up","delivering"],done:["delivering","delivered"]};
 const BTN={accepted:["arrive","وصلت للمتجر"],arrived_store:["pick","استلمت الطلب"],picked_up:["go","انطلقت للتوصيل"],delivering:["done","تأكيد التسليم"]};
-let uid=null,lim=15000,maxA=3,blocked=false,orders={},pend={},mine={},cash={},privData={},stops=[],busy=false;
+let uid=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},pend={},mine={},cash={},stops=[],busy=false;
+let AC=null;const wake=()=>{try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch{}};
+document.addEventListener("click",wake);document.addEventListener("touchstart",wake,{passive:true});
 
-let AC=null, loopAlarmTimer=null;
-const wake=()=>{
-  try{
-    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
-    if(AC.state === 'suspended') AC.resume();
-  }catch(e){}
-};
-document.addEventListener("click",wake);
-document.addEventListener("touchstart",wake,{passive:true});
-
-const playSingleBeep=()=>{
-  try{
+async function sendNotification(title, body) {
+  try {
     wake();
     const o=AC.createOscillator(),g=AC.createGain();
     o.connect(g);g.connect(AC.destination);
-    o.frequency.value=880;g.gain.value=.5;
-    o.start();o.stop(AC.currentTime+.4);
-    if(navigator.vibrate) navigator.vibrate([300, 150, 300]);
-  }catch(e){}
-};
+    o.frequency.value=880;g.gain.value=.4;
+    o.start();o.stop(AC.currentTime+.35);
+    if(navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+  } catch(e){}
+  try {
+    const P = window.Capacitor && window.Capacitor.Plugins;
+    if (P && P.LocalNotifications) {
+      await P.LocalNotifications.schedule({ notifications: [{ id: Math.floor(Math.random() * 100000), title: title, body: body, sound: 'default' }] });
+    } else if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, { body: body });
+    }
+  } catch(e){}
+}
 
-function manageLoopAlarm(hasAvailableOrders) {
-  if (hasAvailableOrders && !blocked) {
-    if (!loopAlarmTimer) {
-      playSingleBeep();
-      loopAlarmTimer = setInterval(playSingleBeep, 4000);
-    }
-  } else {
-    if (loopAlarmTimer) {
-      clearInterval(loopAlarmTimer);
-      loopAlarmTimer = null;
-    }
-  }
+if ("Notification" in window && Notification.permission === "default") {
+  Notification.requestPermission();
 }
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
 $("lf").onsubmit=async e=>{
  e.preventDefault();$("err").textContent="";$("lb").disabled=true;
- try{
-   await signInWithEmailAndPassword(auth,$("un").value.trim().toLowerCase()+"@baqubah.app",$("pw").value);
- }
- catch(e){
-   $("err").textContent=lerr(e);
-   $("lb").disabled=false;
- }
+ try{await signInWithEmailAndPassword(auth,$("un").value.trim().toLowerCase()+"@baqubah.app",$("pw").value)}
+ catch(e){$("err").textContent=lerr(e)}
+ finally{$("lb").disabled=false}
 };
 
 onAuthStateChanged(auth,async u=>{
  if(!u){show(false);return}
- let me;
- try {
-   me=(await get(ref(db,"users/"+u.uid))).val();
- } catch(err) {
-   await signOut(auth);
-   $("err").textContent="تعذّر تحميل الحساب. تأكد من الإنترنت.";
-   $("lb").disabled=false;
-   return;
- }
- if(!me||me.role!=="driver"){await signOut(auth);$("err").textContent="هذا الحساب مو حساب سائق.";$("lb").disabled=false;return}
- if(me.isActive===false){await signOut(auth);$("err").textContent="حسابك معطّل. راجع المدير.";$("lb").disabled=false;return}
+ let me;try{me=(await get(ref(db,"users/"+u.uid))).val()}catch{await signOut(auth);$("err").textContent="تعذّر تحميل الحساب. تأكد من الإنترنت.";return}
+ if(!me||me.role!=="driver"){await signOut(auth);$("err").textContent="هذا الحساب مو حساب سائق.";return}
+ if(me.isActive===false){await signOut(auth);$("err").textContent="حسابك معطّل. راجع المدير.";return}
  uid=u.uid;$("nm").textContent=me.name||me.username;show(true);start();
  bg("start",{uid:u.uid,apiKey:cfg.apiKey,refreshToken:u.refreshToken,dbUrl:cfg.databaseURL});
 });
-
 function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on){clear();bg("stop")}}
-function clear(){
-  stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};
-  manageLoopAlarm(false);
-}
+function clear(){stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};seen=null}
 
 function start(){
  clear();
@@ -215,26 +154,12 @@ function start(){
   $("off").hidden=s.val()===true;
   if(s.val()===true)onDisconnect(pr).set({online:false,lastSeen:serverTimestamp()}).then(()=>set(pr,{online:true,lastSeen:serverTimestamp()}));
  }));
- const merge=()=>{orders={...pend,...mine};draw();fetchPrivateData();};
+ const merge=()=>{orders={...pend,...mine};draw()};
  stops.push(onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{pend=s.val()||{};merge()},e=>say("خطأ تحميل الطلبات: "+e.message)));
  stops.push(onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{mine=s.val()||{};merge()},e=>say("خطأ تحميل طلباتك: "+e.message)));
  stops.push(onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{cash=s.val()||{};draw()},()=>{}));
- stops.push(onValue(query(ref(db,"settings"),s=>{const v=s.val()||{};lim=Number(v.debtLimit)||15000;maxA=Number(v.maxActive)||3;$("bn").textContent=v.announcement||"";$("bn").hidden=!v.announcement;draw()},()=>{}));
+ stops.push(onValue(ref(db,"settings"),s=>{const v=s.val()||{};lim=Number(v.debtLimit)||15000;maxA=Number(v.maxActive)||3;$("bn").textContent=v.announcement||"";$("bn").hidden=!v.announcement;draw()},()=>{}));
  stops.push(onValue(ref(db,"users/"+uid),s=>{const u=s.val();if(!u||u.isActive===false)logout()}));
-}
-
-function fetchPrivateData(){
- const ids = Object.keys(mine);
- if(!ids.length) return;
- ids.forEach(id=>{
-  if(privData[id]) return;
-  get(ref(db, "orderPrivate/" + id)).then(snap=>{
-   if(snap.exists()){
-    privData[id] = snap.val();
-    draw();
-   }
-  });
- });
 }
 
 function buildFinBox(o) {
@@ -263,98 +188,69 @@ function draw(){
  const t0=new Date().setHours(0,0,0,0),full=my.length>=maxA;
  $("td").textContent=fmt(dn.filter(([,o])=>o.deliveredAt>=t0).reduce((s,[,o])=>s+(o.driverProfit||0),0));
  
- manageLoopAlarm(av.length > 0 && !full);
+ if(seen && !blocked && !full && av.some(([id])=>!seen.has(id))){
+   const newOrder = av.find(([id])=>!seen.has(id))[1];
+   sendNotification("🚨 طلب توصيل جديد!", `من متجر: ${newOrder.storeName || 'جديد'} - منطقة: ${newOrder.area || ''}`);
+ }
+ seen=new Set(av.map(([id])=>id));
 
  $("av").innerHTML=blocked?"الاستلام متوقف لحد تسديد المستحق.":(full?'<p class="warn">وصلت للحد الأقصى ('+maxA+') من الطلبات النشطة. سلّم طلب حتى تكدر تقبل غيره.</p>':"")+(av.length?av.map(([id,o])=>`<div class="box ord"><b>طلب ${esc(id.slice(-6))}</b>
-  <p><b>المتجر:</b> ${esc(o.storeName)} | <b>المنطقة:</b> ${esc(o.area)}${o.fragile?" - قابل للكسر":""}</p>
-  
-  <details><summary>📍 خريطة موقع المتجر</summary>
-   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:"<p>لا يوجد رابط خريطة للمتجر.</p>"}
-  </details>
-
-  <details><summary>💰 التفاصيل المالية</summary>
-   ${buildFinBox(o)}
-  </details>
-
-  <details><summary>📋 ملاحظات الطلب</summary>
-   <p>سعر الطلب: ${fmt(o.itemPrice)} د.ع | التوصيل: ${fmt(o.deliveryFee)} د.ع</p>
-   ${o.note?`<p style="color:#b45309">ملاحظة: ${esc(o.note)}</p>`:""}
-  </details>
-
-  <div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول</button><button class="gry" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):`<div class="empty-msg">انتظر، سوف يصلك طلب قريباً</div>`);
+  <p>المتجر: ${esc(o.storeName)}${o.fragile?" - قابل للكسر":""}</p><p>المنطقة: ${esc(o.area)}</p>
+  ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
+  ${buildFinBox(o)}
+  <div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول</button><button class="gry" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):"لا توجد طلبات متاحة.");
 
  $("my").innerHTML=my.length?my.map(([id,o])=>{
   const b=BTN[o.status];
-  const q = privData[id] || {};
-  const customerPhone = q.customerPhone || o.customerPhone || "";
-  const customerNote = q.note || o.note || "";
-  const waLink = customerPhone ? `https://wa.me/964${customerPhone.substring(customerPhone.startsWith('0')?1:0)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.` : "";
-  
+  const waLink=o.customerPhone?`https://wa.me/964${o.customerPhone.substring(o.customerPhone.startsWith('0')?1:0)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`:"";
   return `<div class="box ord"><b>طلب ${esc(id.slice(-6))}</b>
-  <p><b>المتجر:</b> ${esc(o.storeName)} | <b>المنطقة:</b> ${esc(o.area)}</p>
-  <p><b>الحالة:</b> ${ST[o.status]||esc(o.status)}</p>
-
-  <details open><summary>💰 الحسابات المالية للطلب</summary>
-   ${buildFinBox(o)}
-  </details>
-
-  <details><summary>🏪 المتجر ورقم الهاتف والخريطة (${esc(o.storePhone||"بدون هاتف")})</summary>
-   <div style="margin-top:6px">
-    ${o.storePhone?`<a href="tel:${esc(o.storePhone)}" class="map-link" style="background:#e0e7ff;color:#3730a3;display:block;text-align:center;margin-bottom:6px">📞 اتصال برقم المتجر (${esc(o.storePhone)})</a>`:""}
-    ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link" style="display:block;text-align:center">📍 فتح موقع المتجر على الخريطة</a>`:"<p>لا يوجد رابط خريطة للمتجر.</p>"}
-   </div>
-  </details>
-
-  <details><summary>📞 الزبون والملاحظات (${esc(customerPhone||"غير متوفر")})</summary>
-   <div style="margin-top:6px">
-    ${customerPhone ? `
-     <p><b>رقم الزبون:</b> <a href="tel:${esc(customerPhone)}" style="color:#2563eb;font-weight:bold">${esc(customerPhone)}</a></p>
-     <div class="btn-group">
-      <a href="tel:${esc(customerPhone)}" class="btn-group a btn-call">📞 اتصال بالزبون</a>
-      ${waLink?`<a href="${waLink}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a>`:""}
-     </div>
-    ` : `<p style="color:#64748b">جاري تحميل رقم الزبون...</p>`}
-    ${customerNote?`<p style="color:#b45309;margin-top:6px"><b>ملاحظة الزبون:</b> ${esc(customerNote)}</p>`:""}
-   </div>
-  </details>
-
+  <p>المتجر: ${esc(o.storeName)} | المنطقة: ${esc(o.area)}</p>
+  ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
+  <p>الزبون: <a href="tel:${esc(o.customerPhone)}">${esc(o.customerPhone)}</a>${o.note?" | ملاحظة: "+esc(o.note):""}${o.fragile?" | قابل للكسر":""}</p>
+  <div class="btn-group">
+   <a href="tel:${esc(o.customerPhone)}" class="btn-group a btn-call" style="background:#e0e7ff;color:#3730a3;padding:8px;border-radius:6px;text-align:center;text-decoration:none;font-weight:bold;font-size:12px;flex:1;">📞 اتصال بالزبون</a>
+   ${waLink?`<a href="${waLink}" target="_blank" style="background:#dcfce7;color:#166534;padding:8px;border-radius:6px;text-align:center;text-decoration:none;font-weight:bold;font-size:12px;flex:1;">🟢 واتساب (الموقع)</a>`:""}
+  </div>
+  <p>الحالة: <b>${ST[o.status]||esc(o.status)}</b></p>
+  ${buildFinBox(o)}
   ${b?`<button class="${b[0]==="done"?"grn":""}" style="width:100%;margin-top:8px" data-a="${b[0]}" data-id="${esc(id)}">${b[1]}</button>`:""}</div>`
- }).join(""):`<div class="empty-msg">ما عندك طلبات قيد التنفيذ حالياً.</div>`;
+ }).join(""):narrateDefault("ما عندك طلبات قيد التنفيذ.");
+}
+
+// دالة مساعدة لتجنب أخطاء العرض البسيطة
+function narrateDefault(txt) {
+  return txt;
 }
 
 async function act(e){
  const b=e.target.closest("button[data-a]");if(!b||busy)return;
  const a=b.dataset.a,r=ref(db,"orders/"+b.dataset.id);busy=true;
- 
- manageLoopAlarm(false);
-
  try{
   let x,ok;
   if(a==="accept"){
    if(blocked){say("الاستلام متوقف لحد تسديد المستحق.");return}
-   if(Object.values(orders).filter(o=>o&&o.driverId===uid&&!["delivered","cancelled"].includes(o.status)).length>=maxA){say("وصلت للحد الأقصى للطلبات النشطة.");return}
-   const tx = await runTransaction(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.driverId=uid;o.status="accepted";o.acceptedAt=Date.now();return o}});
-   ok=tx.committed&&tx.snapshot.val()?.driverId===uid;
+   if(Object.values(orders).filter(o=>o&&o.driverId===uid&&!["delivered","cancelled"].includes(o.status)).length>=maxA){say("وصلت للحد الأقصى من الطلبات النشطة.");return}
+   x=await runTransaction(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.driverId=uid;o.status="accepted";o.acceptedAt=Date.now();return o}});
+   ok=x.committed&&x.snapshot.val()?.driverId===uid;
    say(ok?"تم قبول الطلب.":"سبقك سائق آخر أو الطلب لم يعد متاحاً.");
   }else if(a==="reject"){
-   const tx = await runTransaction(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.rejectedBy=o.rejectedBy||{};o.rejectedBy[uid]=true;return o}});
-   say(tx.committed&&tx.snapshot.val()?.rejectedBy?.[uid]?"تم رفض الطلب.":"تعذّر رفض الطلب.");
+   x=await runTransaction(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.rejectedBy=o.rejectedBy||{};o.rejectedBy[uid]=true;return o}});
+   say(x.committed&&x.snapshot.val()?.rejectedBy?.[uid]?"تم رفض الطلب.":"تعذّر رفض الطلب.");
   }else if(STEP[a]){
    if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟")))return;
    const [from,to]=STEP[a];
-   const tx = await runTransaction(r,o=>{
+   x=await runTransaction(r,o=>{
     if(o===null)return o;
     if(o.driverId!==uid||o.status!==from)return;
     o.status=to;o.updatedAt=Date.now();
     if(to==="delivered"){
-     const fee=Math.max(0,Math.round(Number(o.deliveryFee||0)));
-     const p=Math.round(fee*0.9);
+     const fee=Math.max(0,Math.round(Number(o.deliveryFee)||0)),p=Math.round(fee*0.9);
      o.deliveredAt=Date.now();o.driverProfit=p;o.platformDeliveryCommission=fee-p;o.storeCommission=500;
     }
     return o;
    });
-   ok=tx.committed&&tx.snapshot.val()?.status===to;
-   say(ok?(to==="delivered"?"تم التسليم. ربحك "+fmt(tx.snapshot.val().driverProfit)+" د.ع.":"تم تحديث الحالة."):"تغيّرت حالة الطلب. حدّث الصفحة.");
+   ok=x.committed&&x.snapshot.val()?.status===to;
+   say(ok?(to==="delivered"?"تم التسليم. ربحك "+fmt(x.snapshot.val().driverProfit)+" د.ع.":"تم تحديث الحالة."):"تغيّرت حالة الطلب. حدّث الصفحة.");
   }
  }catch(err){say("خطأ: "+err.message)}
  finally{busy=false}
