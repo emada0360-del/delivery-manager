@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Baqubah Delivery | المتجر</title>
-<!-- 🔔 كود إشعارات التطبيق -->
 <script>
 window.notifyApp=async(t,b)=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P||!P.LocalNotifications)return;await P.LocalNotifications.createChannel({id:'orders',name:'Orders',importance:5,sound:'default',vibration:true});await P.LocalNotifications.schedule({notifications:[{id:Math.floor(Math.random()*2e9),title:t,body:b,channelId:'orders'}]});}catch(e){}};
 (async()=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P)return;await P.LocalNotifications.requestPermissions();if(P.BackgroundMode){await P.BackgroundMode.enable();}}catch(e){}})();
@@ -72,11 +71,10 @@ main{max-width:600px;margin:auto;padding:16px}
 <header>
 <div>
   <h2 id="sname" style="display:inline-block">المتجر</h2>
-  <span style="font-size:12px;opacity:0.8;margin-right:8px" id="sphone"></span>
 </div>
 <div style="display:flex;align-items:center;gap:10px">
   <div class="pill"><i class="dot" id="pulse"></i><span id="onCount">0</span> متصل</div>
-  <button id="out" style="background:#dc3545;padding:6px 12px;font-size:13px">خروج</button>
+  <button id="out" style="background:#dc3545;padding:6px 12px;font-size:13px;border-radius:6px">خروج</button>
 </div>
 </header>
 <main>
@@ -427,4 +425,8 @@ window.cancelOrder = async(id) => {
 
 $("btnHistory").onclick = () => { $("historyOrders").hidden = !$("historyOrders").hidden; };
 
-// 🚪 زر 
+$("out").onclick = async () => {
+  try {
+    await signOut(auth);
+    $("app").hidden = true;
+    $("lo
