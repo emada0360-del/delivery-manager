@@ -9,13 +9,13 @@
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,Tahoma,Arial;background:var(--bg);color:var(--ink);padding-bottom:50px}
 button,input{font:inherit}
-button{border:0;border-radius:10px;padding:12px 16px;background:var(--pri);color:#fff;cursor:pointer;font-weight:700}
+button{border:0;border-radius:8px;padding:12px 16px;background:var(--pri);color:#fff;cursor:pointer;font-weight:700}
 button:disabled{opacity:.5;cursor:not-allowed}
-input{width:100%;padding:12px;border:1px solid #ccd5e2;border-radius:10px;margin:8px 0 16px;background:#fff}
+input{width:100%;padding:12px;border:1px solid #ccd5e2;border-radius:8px;margin:6px 0 14px}
 header{background:#14263d;color:#fff;padding:14px 20px;padding-top:calc(14px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
 header h2{margin:0;font-size:18px}
 main{max-width:600px;margin:auto;padding:16px}
-.box{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
+.box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 15px rgba(0,0,0,.03)}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .stat{background:#fff;border-radius:12px;padding:12px 8px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.03)}
 .stat span{font-size:11px;color:#64748b;display:block;margin-bottom:4px;line-height:1.3}
@@ -143,28 +143,87 @@ const hasActive=()=>Object.values(mine).some(o=>o&&!FIN.includes(o.status));
 const activeEntries=()=>Object.entries(mine).filter(([,o])=>o&&!FIN.includes(o.status));
 const storeComOf=o=>Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommission||500));
 
+// 🟢 تعديل زر تسجيل الدخول ليتطابق مع هيكل النظام الأصلي
 $("lf").onsubmit=async e=>{
- e.preventDefault();$("err").textContent="";$("lb").disabled=true;
- try{await signInWithEmailAndPassword(auth,$("un").value.trim().toLowerCase()+"@baqubah.app",$("pw").value)}
- catch(er){$("err").textContent=lerr(er)}
- finally{$("lb").disabled=false}
+ e.preventDefault();
+ $("err").textContent="";
+ $("lb").disabled=true;
+ $("lb").textContent="جاري...";
+ 
+ const phoneInput = $("un").value.trim();
+ const passInput = $("pw").value;
+ const email = phoneInput.includes("@") ? phoneInput : phoneInput + "@baqubah.app";
+
+ try{
+  await signInWithEmailAndPassword(auth, email, passInput);
+ }catch(er){
+  $("err").textContent=lerr(er);
+  $("lb").disabled=false;
+  $("lb").textContent="دخول";
+ }
 };
 
 onAuthStateChanged(auth,async u=>{
  if(!u){show(false);return}
  let me;
- try{me=(await get(ref(db,"users/"+u.uid))).val()}
- catch(er){await signOut(auth);$("err").textContent="تعذّر تحميل الحساب: تأكد من الإنترنت";return}
- if(!me||me.role!=="driver"||me.isActive===false){await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return}
- uid=u.uid;driver=me;$("drvName").textContent=me.name||"السائق";
- show(true);start();
+ try{
+  const snap = await get(ref(db,"users/"+u.uid));
+  me = snap.val();
+ }catch(er){
+  await signOut(auth);
+  $("err").textContent="تعذّر تحميل الحساب: تأكد من الإنترنت";
+  return;
+ }
+ 
+ if(!me){
+  await signOut(auth);
+  $("err").textContent="هذا الحساب غير مسجل في قاعدة البيانات.";
+  return;
+ }
+ if(me.role!=="driver"){
+  await signOut(auth);
+  $("err").textContent="هذا الحساب ليس حساب سائق.";
+  return;
+ }
+ if(me.isActive===false){
+  await signOut(auth);
+  $("err").textContent="حسابك معطّل. راجع الإدارة.";
+  return;
+ }
+ 
+ uid=u.uid;
+ driver=me;
+ $("drvName").textContent=me.name||"السائق";
+ show(true);
+ start();
 });
 
 function show(on){
- $("login").hidden=on;$("app").hidden=!on;
- if(!on){clear();if(gpsId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(gpsId);gpsId=null}}
+ $("login").hidden=on;
+ $("app").hidden=!on;
+ if(!on){
+  clear();
+  if(gpsId!==null&&navigator.geolocation){
+   navigator.geolocation.clearWatch(gpsId);
+   gpsId=null;
+  }
+ }
 }
-function clear(){stops.forEach(f=>{try{f()}catch{}});stops=[];avail={};mine={};finance={};priv={};prev=null;seen=null;isOnline=false;currentDebt=0}
+
+function clear(){
+ stops.forEach(f=>{try{f()}catch{}});
+ stops=[];
+ avail={};
+ mine={};
+ finance={};
+ priv={};
+ prev=null;
+ seen=null;
+ isOnline=false;
+ currentDebt=0;
+ $("lb").disabled=false;
+ $("lb").textContent="دخول";
+}
 
 function startGPS(){
  if(!navigator.geolocation||gpsId!==null)return;
@@ -318,20 +377,4 @@ function drawOrders(){
    <div class="row"><b>#${esc(id.slice(-6))}</b> ${badge}</div>
    <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
    <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
-   ${mapLink(o)}${storeBox}${buildFinBox(o)}${cust}${warn}${btn}</div>`;
- }).join("");
-}
-setInterval(()=>{if(uid&&hasActive())drawOrders()},5000);
-
-function getDist(la1,lo1,la2,lo2){
- if(!la1||!la2)return 0;
- const R=6371e3,p1=la1*Math.PI/180,p2=la2*Math.PI/180,dp=(la2-la1)*Math.PI/180,dl=(lo2-lo1)*Math.PI/180;
- const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
- return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-async function act(e){
- const b=e.target.closest("button[data-a]");if(!b||busy||b.disabled)return;
- const a=b.dataset.a,id=b.dataset.id;busy=true;
- try{
-  
+   ${mapLink(o)}${storeBox}${buildFinBox(o)}${c
