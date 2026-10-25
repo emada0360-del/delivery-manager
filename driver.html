@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Baqubah Delivery | السائق</title>
+<script>
+function showErr(m){var d=document.createElement('div');d.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#b91c1c;color:#fff;padding:10px;font-size:12px;direction:ltr;word-break:break-all';d.textContent='ERR: '+m;(document.body||document.documentElement).appendChild(d);}
+window.addEventListener('error',function(e){showErr(e.message||(e.target&&(e.target.src||e.target.tagName))||'unknown');},true);
+window.addEventListener('unhandledrejection',function(e){showErr((e.reason&&(e.reason.code||e.reason.message))||String(e.reason));});
+</script>
 <!-- 🔔 كود إشعارات التطبيق -->
 <script>
 window.notifyApp=async(t,b)=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P||!P.LocalNotifications)return;await P.LocalNotifications.createChannel({id:'orders',name:'Orders',importance:5,sound:'default',vibration:true});await P.LocalNotifications.schedule({notifications:[{id:Math.floor(Math.random()*2e9),title:t,body:b,channelId:'orders'}]});}catch(e){}};
@@ -137,7 +142,7 @@ function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.s
 $("btnLogin").onclick=async()=>{
  $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
  try{ await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value); }
- catch(e){ $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة."; }
+ catch(e){ $("err").textContent="خطأ: "+(e.code||e.message); }
  finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
 };
 
@@ -378,18 +383,4 @@ window.acceptOrder=async(id)=>{
  if(currentDebt >= debtLimit) return say("لا يمكنك قبول الطلبات، لقد تجاوزت سقف الدين", 1);
  if(!isOnline) return say("يجب أن تكون متصلاً لتقبل الطلب", 1);
  try{
-  await update(ref(db,"orders/"+id),{ driverId:uid, driverName:driver.name, driverPhone:driver.phone||"", status:"waiting_store", stepAt:serverTimestamp(), acceptedAt:Date.now() });
-  say("تم قبول الطلب، بانتظار موافقة المتجر"); speak("تم قبول الطلب، بانتظار موافقة المتجر");
- }catch(e){say("تم أخذه من سائق آخر", 1);}
-};
-
-window.rejectOrder=async(id)=>{
- try{ await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]: true}); say("تم رفض الطلب."); }
- catch(e){say("فشل الرفض",1);}
-};
-
-window.updateStep=async(id,newStatus)=>{
- const o=activeOrders[id]; if(!o)return;
- if(newStatus==="arrived_store"){
-   if(o.storeLat && pos.lat){
-    const d=getDi
+  await update(ref(db,"orders/"+id),{ driverId:uid, driverName:driver.name
