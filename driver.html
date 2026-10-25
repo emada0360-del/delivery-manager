@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Baqubah Delivery | السائق</title>
-<!-- 🔔 كود إشعارات التطبيق (متوافق مع APK و Capacitor) -->
 <script>
 window.notifyApp=async(t,b)=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P||!P.LocalNotifications)return;await P.LocalNotifications.createChannel({id:'orders',name:'Orders',importance:5,sound:'default',vibration:true});await P.LocalNotifications.schedule({notifications:[{id:Math.floor(Math.random()*2e9),title:t,body:b,channelId:'orders'}]});}catch(e){}};
 (async()=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P)return;await P.LocalNotifications.requestPermissions();if(P.BackgroundMode){await P.BackgroundMode.enable();}}catch(e){}})();
@@ -167,61 +166,80 @@ function getDist(la1,lo1,la2,lo2){
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
-$("lf").onsubmit=async(e)=>{
+$("lf").onsubmit = async (e) => {
  e.preventDefault();
- $("err").textContent="";$("lb").disabled=true;$("lb").textContent="جاري...";
- try{
-  await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value);
- }catch(er){
-  console.error("Login Error:", er);
-  $("err").textContent="خطأ: " + er.message;
-  $("lb").disabled=false;$("lb").textContent="دخول";
+ const phone = $("un").value.trim();
+ const pass = $("pw").value;
+ if(!phone || !pass) {
+  $("err").textContent = "يرجى أدخال رقم الهاتف وكلمة المرور";
+  return;
+ }
+ 
+ $("err").textContent = "";
+ $("lb").disabled = true;
+ $("lb").textContent = "جاري الدخول...";
+
+ try {
+  // محاولة تسجيل الدخول عبر الـ Firebase Auth مباشرة
+  await signInWithEmailAndPassword(auth, phone + "@baqubah.app", pass);
+ } catch(err) {
+  $("err").textContent = "فشل الدخول: تحقق من الرقم أو كلمة المرور";
+  $("lb").disabled = false;
+  $("lb").textContent = "دخول";
  }
 };
 
-onAuthStateChanged(auth,async u=>{
- if(!u){show(false);return}
- uid=u.uid;
- try{
-  const snap=await get(ref(db,"users/"+u.uid));
-  driverData=snap.val()||{};
- }catch(er){
-  console.error("Fetch user data error:", er);
-  driverData={};
+onAuthStateChanged(auth, async (user) => {
+ if(!user) {
+  show(false);
+  return;
  }
- $("nm").textContent=driverData.name||driverData.username||"سائق";
- show(true);start();
+ uid = user.uid;
+ try {
+  const snap = await get(ref(db, "users/" + uid));
+  driverData = snap.val() || {};
+ } catch(e) {
+  driverData = {};
+ }
+ $("nm").textContent = driverData.name || driverData.username || "سائق";
+ show(true);
+ start();
 });
 
-function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on)clear()}
+function show(on){
+ $("login").hidden = on;
+ $("app").hidden = !on;
+ if(!on) clear();
+}
+
 function clear(){
- stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};
- if(alarmTimer){clearInterval(alarmTimer);alarmTimer=null;}
- if(gpsId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(gpsId);gpsId=null;}
+ stops.forEach(f=>f()); stops=[]; orders={}; pend={}; mine={}; cash={}; privData={};
+ if(alarmTimer){clearInterval(alarmTimer); alarmTimer=null;}
+ if(gpsId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(gpsId); gpsId=null;}
 }
 
 function start(){
- clear();startGPS();
- const pr=ref(db,"presence/"+uid);
- stops.push(onValue(ref(db,".info/connected"),s=>{
-  $("off").hidden=s.val()===true;
-  if(s.val()===true)onDisconnect(pr).set({online:false,lastSeen:serverTimestamp()}).then(()=>set(pr,{online:true,lastSeen:serverTimestamp()}));
+ clear(); startGPS();
+ const pr = ref(db, "presence/" + uid);
+ stops.push(onValue(ref(db,".info/connected"), s=>{
+  $("off").hidden = s.val() === true;
+  if(s.val() === true) onDisconnect(pr).set({online:false, lastSeen:serverTimestamp()}).then(()=>set(pr,{online:true, lastSeen:serverTimestamp()}));
  }));
  
- stops.push(onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{pend=s.val()||{};merge()},e=>say("خطأ: "+e.message)));
- stops.push(onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{mine=s.val()||{};merge()},e=>say("خطأ: "+e.message)));
- stops.push(onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{cash=s.val()||{};draw()},()=>{}));
- stops.push(onValue(query(ref(db,"settings"),s=>{settings=s.val()||{};lim=Number(settings.debtLimit)||15000;maxA=Number(settings.maxActive)||3;$("bn").textContent=settings.announcement||"";$("bn").hidden=!settings.announcement;draw()},()=>{}));
+ stops.push(onValue(query(ref(db,"orders"), orderByChild("status"), equalTo("pending")), s=>{pend = s.val()||{}; merge()}, e=>say("خطأ: "+e.message)));
+ stops.push(onValue(query(ref(db,"orders"), orderByChild("driverId"), equalTo(uid)), s=>{mine = s.val()||{}; merge()}, e=>say("خطأ: "+e.message)));
+ stops.push(onValue(query(ref(db,"finance"), orderByChild("userId"), equalTo(uid)), s=>{cash = s.val()||{}; draw()}, ()=>{}));
+ stops.push(onValue(query(ref(db,"settings"), s=>{settings = s.val()||{}; lim = Number(settings.debtLimit)||15000; maxA = Number(settings.maxActive)||3; $("bn").textContent = settings.announcement||""; $("bn").hidden = !settings.announcement; draw()}, ()=>{}));
 }
 
-function merge(){orders={...pend,...mine};draw();fetchPrivateData();}
+function merge(){ orders = {...pend, ...mine}; draw(); fetchPrivateData(); }
 
 function fetchPrivateData(){
- const ids=Object.keys(mine);
- if(!ids.length)return;
+ const ids = Object.keys(mine);
+ if(!ids.length) return;
  ids.forEach(id=>{
-  if(privData[id])return;
-  get(ref(db,"orderPrivate/"+id)).then(snap=>{if(snap.exists()){privData[id]=snap.val();draw()}});
+  if(privData[id]) return;
+  get(ref(db, "orderPrivate/" + id)).then(snap=>{if(snap.exists()){privData[id]=snap.val(); draw()}});
  });
 }
 
@@ -234,34 +252,33 @@ function buildFinBox(o) {
 }
 
 function draw(){
- const all=Object.entries(orders).filter(([,o])=>o);
- const av=all.filter(([,o])=>o.status==="pending"&&!o.driverId&&!(o.rejectedBy&&o.rejectedBy[uid]));
- const my=all.filter(([,o])=>o.driverId===uid&&!["delivered","cancelled"].includes(o.status));
- const dn=all.filter(([,o])=>o.driverId===uid&&o.status==="delivered");
+ const all = Object.entries(orders).filter(([,o])=>o);
+ const av = all.filter(([,o])=>o.status==="pending" && !o.driverId && !(o.rejectedBy && o.rejectedBy[uid]));
+ const my = all.filter(([,o])=>o.driverId===uid && !["delivered","cancelled"].includes(o.status));
+ const dn = all.filter(([,o])=>o.driverId===uid && o.status==="delivered");
  
  checkDriverAlarm(av);
 
- const debt=dn.reduce((s,[,o])=>{
+ const debt = dn.reduce((s,[,o])=>{
   const storeCom = Number(o.storeCommission !== undefined ? o.storeCommission : (settings.storeCommission || 500));
   return s + (o.platformDeliveryCommission||0) + storeCom;
  },0) + Object.values(cash).filter(f=>f&&f.type==="archive").reduce((s,f)=>s+f.amount,0)
   - Object.values(cash).filter(f=>f&&f.type==="cash_received").reduce((s,f)=>s+f.amount,0);
 
- $("debt").textContent=fmt(debt)+" د.ع";
- $("done").textContent=fmt(dn.length+Object.values(cash).filter(f=>f&&f.type==="archive").reduce((s,f)=>s+(f.count||0),0));
- $("rej").textContent=fmt(all.filter(([,o])=>o.rejectedBy&&o.rejectedBy[uid]).length);
- $("avc").textContent=fmt(av.length);
- blocked=debt>=lim;$("dw").hidden=!blocked;$("lm").textContent=fmt(lim);
+ $("debt").textContent = fmt(debt)+" د.ع";
+ $("done").textContent = fmt(dn.length + Object.values(cash).filter(f=>f&&f.type==="archive").reduce((s,f)=>s+(f.count||0),0));
+ $("rej").textContent = fmt(all.filter(([,o])=>o.rejectedBy && o.rejectedBy[uid]).length);
+ $("avc").textContent = fmt(av.length);
+ blocked = debt >= lim; $("dw").hidden = !blocked; $("lm").textContent = fmt(lim);
  
- const t0=new Date().setHours(0,0,0,0),full=my.length>=maxA;
- $("td").textContent=fmt(dn.filter(([,o])=>o.deliveredAt>=t0).reduce((s,[,o])=>s+(o.driverProfit||0),0))+" د.ع";
+ const t0 = new Date().setHours(0,0,0,0), full = my.length >= maxA;
+ $("td").textContent = fmt(dn.filter(([,o])=>o.deliveredAt >= t0).reduce((s,[,o])=>s+(o.driverProfit||0),0))+" د.ع";
 
- $("av").innerHTML=blocked?"<p style='color:var(--bad);text-align:center;font-weight:bold'>الاستلام متوقف لحد تسديد المستحق.</p>":(full?'<p class="warn">وصلت للحد الأقصى.</p>':"")+(av.length?av.map(([id,o])=>`<div class="box ord" style="margin-bottom:12px;box-shadow:none;border:1px solid #e2e8f0"><b>طلب #${esc(id.slice(-6))}</b><p><b>المتجر:</b> ${esc(o.storeName)}</p><p><b>المنطقة:</b> ${esc(o.area)}</p>${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}${buildFinBox(o)}<div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول الطلب</button><button class="red" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):"<p style='color:#94a3b8;text-align:center;margin:10px 0'>لا توجد طلبات متاحة.</p>");
+ $("av").innerHTML = blocked ? "<p style='color:var(--bad);text-align:center;font-weight:bold'>الاستلام متوقف لحد تسديد المستحق.</p>" : (full ? '<p class="warn">وصلت للحد الأقصى.</p>' : "") + (av.length ? av.map(([id,o])=>`<div class="box ord" style="margin-bottom:12px;box-shadow:none;border:1px solid #e2e8f0"><b>طلب #${esc(id.slice(-6))}</b><p><b>المتجر:</b> ${esc(o.storeName)}</p><p><b>المنطقة:</b> ${esc(o.area)}</p>${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}${buildFinBox(o)}<div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول الطلب</button><button class="red" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join("") : "<p style='color:#94a3b8;text-align:center;margin:10px 0'>لا توجد طلبات متاحة.</p>");
 
  const now = Date.now();
-
- $("my").innerHTML=my.length?my.map(([id,o])=>{
-  const q=privData[id]||{};
+ $("my").innerHTML = my.length ? my.map(([id,o])=>{
+  const q = privData[id]||{};
   let actionBtn="", statusBadge="", distWarn="";
   const stepTime = o.stepAt || o.acceptedAt || 0;
   const elapsedSec = Math.floor((now - stepTime) / 1000);
@@ -280,8 +297,7 @@ function draw(){
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="arrived_store" data-id="${esc(id)}">وصلت للمتجر</button>`;
   } else if(o.status==="arrived_store"){
    statusBadge=`<span class="badge acc">وصل للمتجر</span>`;
-   const waitSec = 60;
-   const remaining = waitSec - elapsedSec;
+   const waitSec = 60, remaining = waitSec - elapsedSec;
    if(remaining > 0){
     actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" disabled>انتظر استلام الطلب (${remaining} ثانية)</button>`;
    } else {
@@ -289,11 +305,9 @@ function draw(){
    }
   } else if(["picked_up","delivering"].includes(o.status)){
    statusBadge=`<span class="badge acc">بالطريق للزبون</span>`;
-   const waitSec = 300;
-   const remaining = waitSec - elapsedSec;
+   const waitSec = 300, remaining = waitSec - elapsedSec;
    if(remaining > 0){
-    const remMin = Math.floor(remaining / 60);
-    const remSec = remaining % 60;
+    const remMin = Math.floor(remaining / 60), remSec = remaining % 60;
     actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" disabled>انتظر للتوصيل (${remMin}:${remSec<10?'0':''}${remSec} دقيقة)</button>`;
    } else {
     actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="delivered" data-id="${esc(id)}">تأكيد التوصيل للزبون</button>`;
@@ -304,28 +318,28 @@ function draw(){
   let customerBox = "";
   if(q.customerPhone && o.status !== "waiting_store"){
    const waLink=`https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`;
-   customerBox=`<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>${q.customerName?`<div style="margin-bottom:4px;font-size:12px">الاسم: ${esc(q.customerName)}</div>`:""}${q.note?`<div style="margin-bottom:6px;font-size:12px;color:#b45309">ملاحظة: ${esc(q.note)}</div>`:""}${window.B?``:`<div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a></div>`}</div>`;
+   customerBox=`<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>${q.customerName?`<div style="margin-bottom:4px;font-size:12px">الاسم: ${esc(q.customerName)}</div>`:""}${q.note?`<div style="margin-bottom:6px;font-size:12px;color:#b45309">ملاحظة: ${esc(q.note)}</div>`:""}<div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a></div></div>`;
   }
 
   return `<div class="box ord" style="margin-bottom:12px;box-shadow:none;border:1px solid #e2e8f0"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>طلب #${esc(id.slice(-6))}</b> ${statusBadge}</div><p><b>المتجر:</b> ${esc(o.storeName)}</p><p><b>المنطقة:</b> ${esc(o.area)}</p>${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}${storeBox}${buildFinBox(o)}${customerBox}${distWarn}${actionBtn}</div>`;
- }).join(""):"<p style='color:#94a3b8;text-align:center;margin:10px 0'>ما عندك طلبات حالياً.</p>";
+ }).join("") : "<p style='color:#94a3b8;text-align:center;margin:10px 0'>ما عندك طلبات حالياً.</p>";
 }
 
-setInterval(()=>{if(uid)draw();},1000);
+setInterval(()=>{if(uid) draw();}, 1000);
 
 async function act(e){
- const b=e.target.closest("button[data-a]");if(!b)return;
- const a=b.dataset.a, id=b.dataset.id, r=ref(db,"orders/"+id);
+ const b = e.target.closest("button[data-a]"); if(!b) return;
+ const a = b.dataset.a, id = b.dataset.id, r = ref(db, "orders/" + id);
  try{
   if(a==="accept"){
-   if(blocked){say("الاستلام متوقف لحد تسديد المستحق.");return}
-   if(Object.values(orders).filter(o=>o&&o.driverId===uid&&!["delivered","cancelled"].includes(o.status)).length>=maxA){say("وصلت للحد الأقصى.");return}
-   const snap=await get(r);const order=snap.val();
-   if(!order||order.driverId||order.status!=="pending")return say("الطلب غير متاح.");
-   await update(r,{driverId:uid,driverName:driverData.name||driverData.username||"سائق",driverPhone:driverData.phone||"",status:"waiting_store",stepAt:serverTimestamp(),acceptedAt:Date.now()});
+   if(blocked){say("الاستلام متوقف لحد تسديد المستحق."); return;}
+   if(Object.values(orders).filter(o=>o && o.driverId===uid && !["delivered","cancelled"].includes(o.status)).length >= maxA){say("وصلت للحد الأقصى."); return;}
+   const snap = await get(r); const order = snap.val();
+   if(!order || order.driverId || order.status !== "pending") return say("الطلب غير متاح.");
+   await update(r, {driverId:uid, driverName:driverData.name||driverData.username||"سائق", driverPhone:driverData.phone||"", status:"waiting_store", stepAt:serverTimestamp(), acceptedAt:Date.now()});
    say("تم قبول الطلب، بانتظار موافقة المتجر.");
   }else if(a==="reject"){
-   await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]:true});say("تم رفض الطلب.");
+   await update(ref(db,"orders/"+id+"/rejectedBy"), {[uid]:true}); say("تم رفض الطلب.");
   }else if(a==="arrived_store"){
    const snap = await get(r); const o = snap.val();
    if(!o || o.driverId !== uid) return say("خطأ في البيانات.");
@@ -343,11 +357,8 @@ async function act(e){
    await update(r, {status: "delivering", stepAt: Date.now()});
    say("تم استلام الطلب، بالطريق للزبون.");
   }else if(a==="delivered"){
-   if(!confirm("تأكيد تسليم الطلب للزبون؟"))return;
-   const snap=await get(r);const o=snap.val();
-   if(!o||o.driverId!==uid)return say("خطأ في البيانات.");
+   if(!confirm("تأكيد تسليم الطلب للزبون؟")) return;
+   const snap = await get(r); const o = snap.val();
+   if(!o || o.driverId !== uid) return say("خطأ في البيانات.");
    const elapsedSec = Math.floor((Date.now() - (o.stepAt || 0)) / 1000);
-   if(elapsedSec < 300) return say(`انتظر ${Math.ceil((300 - elapsedSec)/60)} دقيقة إضافية.`);
-   const fee=Math.max(0,Math.round(Number(o.deliveryFee)||0)),p=Math.round(fee*0.9);
-   await update(r,{status:"delivered",stepAt:Date.now(),deliveredAt:Date.now(),driverProfit:p,platformDeliveryCommission:fee-p,storeCommission:Number(o.storeCommission||settings.storeCommission||500)});
-   
+   if(elapsedSec < 300) return say(`انتظر ${Math
