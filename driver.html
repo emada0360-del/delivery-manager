@@ -32,7 +32,6 @@ header{padding-top:calc(14px + env(safe-area-inset-top,0px))}
 #mdl .mr{display:flex;gap:8px}#mdl .mr button{flex:1}
 #mdl .mn{background:#64748b}
 
-/* تحسينات الواجهة الميدانية والبطاقات المالية */
 .fin-box { background:#f8fafc; border-radius:8px; padding:10px; margin:8px 0; font-size:13px; border:1px solid #e2e8f0; }
 .fin-row { display:flex; justify-content:space-between; margin-bottom:4px; }
 .fin-row:last-child { margin-bottom:0; border-top:1px dashed #cbd5e1; padding-top:4px; font-weight:bold; }
@@ -62,7 +61,7 @@ header{padding-top:calc(14px + env(safe-area-inset-top,0px))}
 <div id="msg"></div>
 <div id="bn" class="warn" hidden></div>
 <div id="off" class="warn" style="background:#fdecea;color:#a61b1b" hidden>لا يوجد اتصال بالإنترنت. ما راح توصلك طلبات جديدة.</div>
-<div id="dw" class="warn" hidden>المستحق عليك للمنصة وصل <b id="lm">15,000</b> د.ع أو أكثر. ما تكدر تستلم طلبات جديدة لحد ما تسدد للمدير.</div>
+<div id="dw" class="warn" style="background:#fdecea;color:#a61b1b" hidden>المستحق عليك للمنصة وصل <b id="lm">15,000</b> د.ع أو أكثر. ما تكدر تستلم طلبات جديدة لحد ما تسدد للمدير.</div>
 <div class="grid">
 <div class="box">المستحق عليّ (د.ع)<strong id="debt">0</strong></div>
 <div class="box">طلبات مكتملة<strong id="done">0</strong></div>
@@ -104,7 +103,41 @@ const BTN={accepted:["arrive","وصلت للمتجر"],arrived_store:["pick","ا
 let uid=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},pend={},mine={},cash={},stops=[],busy=false;
 let AC=null;const wake=()=>{try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch{}};
 document.addEventListener("click",wake);document.addEventListener("touchstart",wake,{passive:true});
-const beep=()=>{try{wake();const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);o.frequency.value=880;g.gain.value=.4;o.start();o.stop(AC.currentTime+.35);navigator.vibrate&&navigator.vibrate([200,100,200])}catch{}};
+
+// 🔔 دالة إرسال إشعارات نظام الهاتف عند وصول طلب جديد
+async function sendNotification(title, body) {
+  // 1. صوت واهتزاز المتصفح
+  try {
+    wake();
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.connect(g);g.connect(AC.destination);
+    o.frequency.value=880;g.gain.value=.4;
+    o.start();o.stop(AC.currentTime+.35);
+    if(navigator.vibrate) navigator.vibrate([300, 100, 300, 100, 300]);
+  } catch(e){}
+
+  // 2. إشعار النظام المباشر عبر Capacitor (لأجهزة الأندرويد والتطبيق)
+  try {
+    const P = window.Capacitor && window.Capacitor.Plugins;
+    if (P && P.LocalNotifications) {
+      await P.LocalNotifications.schedule({
+        notifications: [{
+          id: Math.floor(Math.random() * 100000),
+          title: title,
+          body: body,
+          sound: 'default'
+        }]
+      });
+    } else if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, { body: body });
+    }
+  } catch(e){}
+}
+
+// طلب إذن الإشعارات عند فتح الصفحة
+if ("Notification" in window && Notification.permission === "default") {
+  Notification.requestPermission();
+}
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
@@ -141,7 +174,6 @@ function start(){
  stops.push(onValue(ref(db,"users/"+uid),s=>{const u=s.val();if(!u||u.isActive===false)logout()}));
 }
 
-// دالة لتنظيم التفاصيل المالية للطلب بشكل احترافي
 function buildFinBox(o) {
     const storeCom = 500;
     const payStore = Math.round(Number(o.itemPrice||0) - storeCom);
@@ -167,7 +199,12 @@ function draw(){
  $("avc").textContent=fmt(av.length);blocked=debt>=lim;$("dw").hidden=!blocked;$("lm").textContent=fmt(lim);
  const t0=new Date().setHours(0,0,0,0),full=my.length>=maxA;
  $("td").textContent=fmt(dn.filter(([,o])=>o.deliveredAt>=t0).reduce((s,[,o])=>s+(o.driverProfit||0),0));
- if(seen&&!blocked&&!full&&av.some(([id])=>!seen.has(id)))beep();
+ 
+ // 🚀 تفعيل إشعارات الهاتف مع الصوت فور دخول أي طلب جديد
+ if(seen && !blocked && !full && av.some(([id])=>!seen.has(id))){
+   const newOrder = av.find(([id])=>!seen.has(id))[1];
+   sendNotification("🚨 طلب توصيل جديد!", `من متجر: ${newOrder.storeName || 'جديد'} - منطقة: ${newOrder.area || ''}`);
+ }
  seen=new Set(av.map(([id])=>id));
 
  $("av").innerHTML=blocked?"الاستلام متوقف لحد تسديد المستحق.":(full?'<p class="warn">وصلت للحد الأقصى ('+maxA+') من الطلبات النشطة. سلّم طلب حتى تكدر تقبل غيره.</p>':"")+(av.length?av.map(([id,o])=>`<div class="box ord"><b>طلب ${esc(id.slice(-6))}</b>
