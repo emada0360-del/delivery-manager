@@ -55,10 +55,10 @@ main{max-width:600px;margin:auto;padding:16px}
 <body>
 <section id="login" class="box">
 <h2 style="text-align:center;margin-top:0">دخول السائق</h2>
-<form id="lf">
+<form id="lf" onsubmit="return false;">
 <label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required autocomplete="username">
 <label>كلمة المرور</label><input id="pw" type="password" required autocomplete="current-password">
-<button id="lb" style="width:100%;margin-top:8px">دخول</button>
+<button type="button" id="lb" style="width:100%;margin-top:8px">دخول</button>
 </form>
 <p id="err"></p>
 </section>
@@ -106,7 +106,7 @@ import {getDatabase,ref,get,set,update,onValue,query,orderByChild,equalTo,onDisc
 const cfg={
  apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
  authDomain:"baqubah-delivery-e729e.firebaseapp.com",
- databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",
+ databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app",
  projectId:"baqubah-delivery-e729e",
  storageBucket:"baqubah-delivery-e729e.firebasestorage.app",
  messagingSenderId:"450084520701",
@@ -121,7 +121,6 @@ let uid=null,driverData=null,lim=15000,maxA=3,blocked=false,orders={},pend={},mi
 let pos={lat:null,lng:null},gpsId=null;
 let alarmTimer = null;
 
-// 🔔 نظام التنبيهات الصوتية المتكررة والإشعارات تماماً مثل المتجر
 function playBeep() {
     try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -146,7 +145,7 @@ function checkDriverAlarm(avOrders) {
         if (!alarmTimer) {
             playBeep();
             if (window.notifyApp) window.notifyApp('طلب توصيل جديد متاح!', 'افتح التطبيق لقبول الطلب');
-            alarmTimer = setInterval(playBeep, 5000); // يتكرر كل 5 ثوانٍ
+            alarmTimer = setInterval(playBeep, 5000);
         }
     } else {
         if (alarmTimer) {
@@ -174,12 +173,17 @@ function getDist(la1,lo1,la2,lo2){
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
-/* 🟢 تسجيل الدخول السريع والمضمون */
-$("lf").onsubmit=async e=>{
- e.preventDefault();
+/* 🟢 زر الدخول المشرك كـ type=button لعدم عمل Submit تقليدي يتسبب في التجمد */
+$("lb").onclick=async()=>{
+ const uVal = $("un").value.trim();
+ const pVal = $("pw").value;
+ if(!uVal || !pVal){
+  $("err").textContent="أدخل رقم الهاتف وكلمة المرور.";
+  return;
+ }
  $("err").textContent="";$("lb").disabled=true;$("lb").textContent="جاري...";
  try{
-  await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value);
+  await signInWithEmailAndPassword(auth, uVal+"@baqubah.app", pVal);
  }catch(er){
   $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة.";
   $("lb").disabled=false;$("lb").textContent="دخول";
@@ -197,7 +201,12 @@ onAuthStateChanged(auth,async u=>{
  show(true);start();
 });
 
-function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on)clear()}
+function show(on){
+ $("login").hidden=on;
+ $("app").hidden=!on;
+ if(!on)clear();
+}
+
 function clear(){
  stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};
  if(alarmTimer){clearInterval(alarmTimer);alarmTimer=null;}
@@ -255,7 +264,6 @@ function draw(){
  const my=all.filter(([,o])=>o.driverId===uid&&!["delivered","cancelled"].includes(o.status));
  const dn=all.filter(([,o])=>o.driverId===uid&&o.status==="delivered");
  
- // 🔔 فحص التنبيهات والأصوات عند وجود طلبات متاحة
  checkDriverAlarm(av);
 
  const debt=dn.reduce((s,[,o])=>{
@@ -304,7 +312,7 @@ function draw(){
   } else if(o.status==="arrived_store"){
    statusBadge=`<span class="badge acc">وصل للمتجر</span>`;
    
-   const waitSec = 60; // دقيقة واحدة
+   const waitSec = 60;
    const remaining = waitSec - elapsedSec;
    if(remaining > 0){
     actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" disabled>انتظر استلام الطلب (${remaining} ثانية)</button>`;
@@ -314,7 +322,7 @@ function draw(){
   } else if(["picked_up","delivering"].includes(o.status)){
    statusBadge=`<span class="badge acc">بالطريق للزبون</span>`;
    
-   const waitSec = 300; // 5 دقائق
+   const waitSec = 300;
    const remaining = waitSec - elapsedSec;
    if(remaining > 0){
     const remMin = Math.floor(remaining / 60);
@@ -342,7 +350,6 @@ function draw(){
  }).join(""):"<p style='color:#94a3b8;text-align:center;margin:10px 0'>ما عندك طلبات قيد التنفيذ حالياً.</p>";
 }
 
-// تحديث العدادات التنازلية كل ثانية
 setInterval(()=>{if(uid)draw();},1000);
 
 async function act(e){
@@ -375,4 +382,4 @@ async function act(e){
    const snap = await get(r);
    const o = snap.val();
    if(!o || o.driverId !== uid) return say("خطأ في بيانات الطلب.");
- 
+   
