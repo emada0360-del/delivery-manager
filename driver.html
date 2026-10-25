@@ -65,13 +65,14 @@ main{max-width:600px;margin:auto;padding:16px}
 <body>
 
 <section id="login" class="box">
-<h2 style="text-align:center;margin-top:0">دخول السائق <small style="font-size:11px;color:#94a3b8">v11</small></h2>
+<h2 style="text-align:center;margin-top:0">دخول السائق <small style="font-size:11px;color:#94a3b8">v12</small></h2>
 <form id="lf" onsubmit="return false;">
 <label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
 <label>كلمة المرور</label><input id="pw" type="password" required>
 <button type="button" id="btnLogin" style="width:100%;margin-top:10px" onclick="document.getElementById('err').textContent='جاري تحميل الصفحة... انتظر ثواني ثم اضغط مرة ثانية'">دخول</button>
 </form>
 <p id="err"></p>
+<p id="diag" style="text-align:center;font-size:12px;color:#64748b;direction:ltr"></p>
 </section>
 
 <div id="app" hidden>
@@ -112,11 +113,13 @@ main{max-width:600px;margin:auto;padding:16px}
 </main>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" onerror="document.getElementById('err').textContent='تعذر تحميل مكتبة Firebase (app)'"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js" onerror="document.getElementById('err').textContent='تعذر تحميل مكتبة Firebase (auth)'"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js" onerror="document.getElementById('err').textContent='تعذر تحميل مكتبة Firebase (database)'"></script>
 <script>
-(function(){
+var __d=function(t){var e=document.getElementById('diag');if(e)e.textContent=t;};
+function __lib(n){return new Promise(function(res,rej){var u=['https://www.gstatic.com/firebasejs/10.14.1/firebase-'+n+'-compat.js','https://cdn.jsdelivr.net/npm/firebase@10.14.1/firebase-'+n+'-compat.js','https://cdnjs.cloudflare.com/ajax/libs/firebase/10.14.1/firebase-'+n+'-compat.min.js'],i=0;(function next(){if(i>=u.length)return rej(new Error('تعذر تحميل مكتبة '+n));var s=document.createElement('script'),done=false;var src=u[i++];s.src=src;var t=setTimeout(function(){if(done)return;done=true;next();},8000);s.onload=function(){if(done)return;done=true;clearTimeout(t);__d('تم تحميل '+n+' من '+src.split('/')[2]);res();};s.onerror=function(){if(done)return;done=true;clearTimeout(t);next();};document.head.appendChild(s);})();});}
+function __load(){__d('جاري تحميل المكتبات...');return __lib('app').then(function(){return __lib('auth');}).then(function(){return __lib('database');});}
+</script>
+<script>
+function __main(){
 const snap=s=>s;
 const ref=(d,p)=>p?d.ref(p):d.ref();
 const query=(r,...c)=>c.reduce((q,f)=>f(q),r);
@@ -376,7 +379,4 @@ function drawOrders(){
   let customerBox = "";
   if(q.customerPhone && o.status !== "waiting_store") {
      const waLink = `https://wa.me/964${q.customerPhone.substring(1)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`;
-     customerBox = `<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(q.customerPhone)}</span></b>${q.customerName?`<div style="margin-bottom:8px;font-size:13px;color:#475569">الاسم: ${esc(q.customerName)}</div>`:""}${q.note?`<div style="margin-bottom:8px;font-size:13px;color:#b45309">ملاحظة: ${esc(q.note)}</div>`:""}<div class="btn-group"><a href="tel:${esc(q.customerPhone)}" class="btn-call">📞 اتصال</a><a href="${esc(waLink)}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a></div></div>`;
-  }
-
-  return `<div class="card ${o.status==='waiting_store'?'waiti
+     customerBox = `<div class="customer-b
