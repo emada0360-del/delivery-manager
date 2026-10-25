@@ -11,7 +11,7 @@ body{margin:0;font-family:system-ui,Tahoma,Arial;background:var(--bg);color:var(
 button,input{font:inherit}
 button{border:0;border-radius:10px;padding:12px 16px;background:var(--pri);color:#fff;cursor:pointer;font-weight:700;transition:.15s}
 button:hover{filter:brightness(1.1)}
-button:disabled{opacity:.5;cursor:not-allowed}
+button:disabled{opacity:.5;cursor:not-allowed;background:#94a3b8!important}
 input{width:100%;padding:12px;border:1px solid #ccd5e2;border-radius:10px;margin:8px 0 16px;outline:none;background:#fff}
 input:focus{border-color:var(--pri);box-shadow:0 0 0 3px #1769aa22}
 header{background:#14263d;color:#fff;padding:14px 20px;padding-top:calc(14px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50;box-shadow:0 2px 10px rgba(0,0,0,.1)}
@@ -113,6 +113,25 @@ const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 let uid=null,driverData=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},pend={},mine={},cash={},privData={},settings={},stops=[];
+let pos={lat:null,lng:null},gpsId=null;
+
+/* ---------- تتبع الموقع (GPS) ---------- */
+function startGPS(){
+ if(!navigator.geolocation||gpsId!==null)return;
+ gpsId=navigator.geolocation.watchPosition(
+  p=>{pos.lat=p.coords.latitude;pos.lng=p.coords.longitude;draw();},
+  e=>console.log("GPS Error",e),
+  {enableHighAccuracy:true}
+ );
+}
+
+function getDist(la1,lo1,la2,lo2){
+ if(!la1||!la2)return 999999;
+ const R=6371e3,p1=la1*Math.PI/180,p2=la2*Math.PI/180,dp=(la2-la1)*Math.PI/180,dl=(lo2-lo1)*Math.PI/180;
+ const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+ return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
 let AC=null;const wake=()=>{try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch{}};
 document.addEventListener("click",wake);document.addEventListener("touchstart",wake,{passive:true});
 const beep=()=>{try{wake();const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);o.frequency.value=880;g.gain.value=.4;o.start();o.stop(AC.currentTime+.35);navigator.vibrate&&navigator.vibrate([200,100,200])}catch{}};
@@ -135,10 +154,13 @@ onAuthStateChanged(auth,async u=>{
 });
 
 function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on)clear()}
-function clear(){stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};seen=null}
+function clear(){
+ stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};seen=null;
+ if(gpsId!==null&&navigator.geolocation){navigator.geolocation.clearWatch(gpsId);gpsId=null;}
+}
 
 function start(){
- clear();
+ clear();startGPS();
  const pr=ref(db,"presence/"+uid);
  stops.push(onValue(ref(db,".info/connected"),s=>{
   $("off").hidden=s.val()===true;
@@ -212,22 +234,54 @@ function draw(){
   ${buildFinBox(o)}
   <div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول الطلب</button><button class="red" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):"<p style='color:#94a3b8;text-align:center;margin:10px 0'>لا توجد طلبات متاحة حالياً.</p>");
 
+ const now = Date.now();
+
  $("my").innerHTML=my.length?my.map(([id,o])=>{
   const q=privData[id]||{};
-  let actionBtn="", statusBadge="";
+  let actionBtn="", statusBadge="", distWarn="";
+  const stepTime = o.stepAt || o.acceptedAt || 0;
+  const elapsedSec = Math.floor((now - stepTime) / 1000);
   
   if(o.status==="waiting_store"){
    statusBadge=`<span class="badge wait">بانتظار موافقة المتجر</span>`;
    actionBtn=`<div style="text-align:center; padding:12px; background:#fef3c7; color:#b45309; border-radius:10px; font-weight:bold; margin-top:10px">يرجى الانتظار حتى يوافق المتجر على طلبك...</div>`;
   } else if(o.status==="accepted"){
    statusBadge=`<span class="badge acc">بالطريق للمتجر</span>`;
+   
+   // 🟢 فحص المسافة للمتجر (500 متر)
+   let dist = 0;
+   if(o.storeLat && pos.lat){
+    dist = Math.round(getDist(pos.lat, pos.lng, o.storeLat, o.storeLng));
+    if(dist > 500){
+     distWarn = `<div style="color:var(--bad);font-size:12px;margin:6px 0;font-weight:bold">📍 أنت بعيد عن المتجر (${dist} متر). يجب أن تكون ضمن 500 متر لتضغط وصول.</div>`;
+    }
+   }
+   
    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="arrived_store" data-id="${esc(id)}">وصلت للمتجر</button>`;
   } else if(o.status==="arrived_store"){
    statusBadge=`<span class="badge acc">وصل للمتجر</span>`;
-   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="picked_up" data-id="${esc(id)}">تم استلام الطلب</button>`;
+   
+   // 🟢 قيد دقيقة واحدة (60 ثانية) عند المتجر
+   const waitSec = 60;
+   const remaining = waitSec - elapsedSec;
+   if(remaining > 0){
+    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" disabled>انتظر استلام الطلب (${remaining} ثانية)</button>`;
+   } else {
+    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="picked_up" data-id="${esc(id)}">تم استلام الطلب</button>`;
+   }
   } else if(["picked_up","delivering"].includes(o.status)){
    statusBadge=`<span class="badge acc">بالطريق للزبون</span>`;
-   actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="delivered" data-id="${esc(id)}">تأكيد التوصيل للزبون</button>`;
+   
+   // 🟢 قيد 5 دقائق (300 ثانية) للوصول للزبون
+   const waitSec = 300;
+   const remaining = waitSec - elapsedSec;
+   if(remaining > 0){
+    const remMin = Math.floor(remaining / 60);
+    const remSec = remaining % 60;
+    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" disabled>انتظر للتوصيل (${remMin}:${remSec<10?'0':''}${remSec} دقيقة)</button>`;
+   } else {
+    actionBtn=`<button style="width:100%;margin-top:10px;background:var(--ok)" data-a="delivered" data-id="${esc(id)}">تأكيد التوصيل للزبون</button>`;
+   }
   }
 
   let storeBox = `<div style="background:#f1f5ff;padding:10px;border-radius:8px;margin:10px 0;font-size:13px"><b>هاتف المتجر:</b> <span dir="ltr">${esc(o.storePhone||"غير متوفر")}</span>${o.storePhone?` | <a href="tel:${esc(o.storePhone)}" style="color:var(--pri);font-weight:bold">📞 اتصال</a>`:""}</div>`;
@@ -242,13 +296,16 @@ function draw(){
    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>طلب #${esc(id.slice(-6))}</b> ${statusBadge}</div>
    <p><b>المتجر:</b> ${esc(o.storeName)}</p><p><b>المنطقة:</b> ${esc(o.area)}</p>
    ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
-   ${storeBox}${buildFinBox(o)}${customerBox}${actionBtn}
+   ${storeBox}${buildFinBox(o)}${customerBox}${distWarn}${actionBtn}
   </div>`;
  }).join(""):"<p style='color:#94a3b8;text-align:center;margin:10px 0'>ما عندك طلبات قيد التنفيذ حالياً.</p>";
 }
 
+// 🟢 تحديث العداد التنازلي كل ثانية
+setInterval(()=>{ if(uid) draw(); }, 1000);
+
 async function act(e){
- const b=e.target.closest("button[data-a]");if(!b)return;
+ const b=e.target.closest("button[data-a]");if(!b||b.disabled)return;
  const a=b.dataset.a, id=b.dataset.id, r=ref(db,"orders/"+id);
  try{
   if(a==="accept"){
@@ -273,30 +330,32 @@ async function act(e){
   }else if(a==="reject"){
    await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]: true});
    say("تم رفض الطلب.");
-  }else if(["arrived_store","picked_up","delivered"].includes(a)){
-   if(a==="delivered"&&!confirm("تأكيد تسليم الطلب للزبون؟"))return;
+  }else if(a==="arrived_store"){
    const snap = await get(r);
    const o = snap.val();
    if(!o || o.driverId !== uid) return say("خطأ في بيانات الطلب.");
    
-   const patch={status:a, stepAt:serverTimestamp()};
-   if(a==="delivered"){
-    const fee=Math.max(0,Math.round(Number(o.deliveryFee)||0)),p=Math.round(fee*0.9);
-    patch.deliveredAt=Date.now(); patch.driverProfit=p; patch.platformDeliveryCommission=fee-p; patch.storeCommission=Number(o.storeCommission||settings.storeCommission||500);
+   // 🟢 التحقق من مسافة الـ 500 متر قبل الموافقة
+   if(o.storeLat && pos.lat){
+    const dist = getDist(pos.lat, pos.lng, o.storeLat, o.storeLng);
+    if(dist > 500){
+     return say(`أنت بعيد عن المتجر (${Math.round(dist)} متر). يجب أن تكون أقرب من 500 متر.`);
+    }
    }
-   await update(r, patch);
-   say(a==="delivered"?"تم التوصيل بنجاح!":"تم تحديث الحالة.");
-  }
- }catch(err){say("خطأ: "+err.message)}
-}
-
-$("av").onclick=act;$("my").onclick=act;
-
-async function logout(){
- if(uid){try{await set(ref(db,"presence/"+uid),{online:false,lastSeen:serverTimestamp()})}catch{}}
- clear();await signOut(auth);
-}
-$("out").onclick=logout;
-</script>
-</body>
-</html>
+   
+   await update(r, { status: "arrived_store", stepAt: Date.now() });
+   say("تم تأكيد الوصول للمتجر.");
+  }else if(a==="picked_up"){
+   const snap = await get(r);
+   const o = snap.val();
+   if(!o || o.driverId !== uid) return say("خطأ في بيانات الطلب.");
+   
+   // 🟢 التحقق من مرور دقيقة واحدة (60 ثانية)
+   const elapsedSec = Math.floor((Date.now() - (o.stepAt || 0)) / 1000);
+   if(elapsedSec < 60){
+    return say(`انتظر ${60 - elapsedSec} ثانية إضافية لاستلام الطلب.`);
+   }
+   
+   await update(r, { status: "delivering", stepAt: Date.now() });
+   say("تم استلام الطلب، أنت الآن بالطريق للزبون.");
+  }else if(a==="delive
