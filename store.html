@@ -139,7 +139,7 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 
 const ST={pending:"بانتظار سائق",waiting_store:"سائق ينتظر موافقتك",accepted:"السائق بالطريق",arrived_store:"السائق وصل",picked_up:"تم الاستلام",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
 
-let uid=null,store=null,areas={},orders={},priv={},settings={},driversOnline=0;
+let uid=null,store=null,areas={},orders={},priv={},driversData={},settings={},driversOnline=0;
 let alarmTimer = null;
 
 function playBeep() {
@@ -212,8 +212,21 @@ function start(){
   $("pulse").className="dot "+(driversOnline>0?"":"off");
  }));
  stops.push(onValue(ref(db,"areas"),s=>{ areas=s.val()||{}; drawAreas(); }));
- stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{ orders=s.val()||{}; checkTimeoutOrders(); drawOrders(); }));
+ stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{ orders=s.val()||{}; checkTimeoutOrders(); fetchDriversNames(); drawOrders(); }));
  stops.push(onValue(query(ref(db,"orderPrivate"),orderByChild("storeId"),equalTo(uid)),s=>{ priv=s.val()||{}; drawOrders(); }));
+}
+
+async function fetchDriversNames(){
+  const driverIds = [...new Set(Object.values(orders).map(o => o.driverId).filter(Boolean))];
+  for(const dId of driverIds){
+    if(!driversData[dId]){
+      const snap = await get(ref(db, "users/" + dId));
+      if(snap.exists()){
+        driversData[dId] = snap.val();
+        drawOrders();
+      }
+    }
+  }
 }
 
 async function checkTimeoutOrders() {
@@ -352,19 +365,27 @@ function card(id,o,isHistory){
  if(o.status==="cancelled")badgeCls="canc";
  if(o.status==="waiting_store")badgeCls="pending";
 
- let driverHtml = o.driverName ? `<div style="background:#f1f5ff;padding:10px;border-radius:8px;margin:10px 0;font-size:14px">
-  <b>السائق:</b> ${esc(o.driverName)} ${o.driverPhone?`| <a href="tel:${esc(o.driverPhone)}" style="color:var(--pri);font-weight:700">اتصال</a>`:""}
- </div>` : "";
+ let driverInfo = "";
+ if (o.driverId) {
+   const dObj = driversData[o.driverId] || {};
+   const dName = dObj.name || o.driverName || "سائق";
+   const dPhone = dObj.phone || dObj.username || o.driverPhone || "";
+   driverInfo = `<div style="background:#f1f5ff;padding:12px;border-radius:8px;margin:12px 0;font-size:14px;border:1px solid #bfdbfe">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span><b>السائق:</b> ${esc(dName)}</span>
+      <span style="font-weight:bold;color:var(--pri)">${esc(dPhone)}</span>
+    </div>
+    ${dPhone ? `<a href="tel:${esc(dPhone)}" style="display:block;background:#1769aa;color:#fff;text-align:center;padding:8px;border-radius:6px;text-decoration:none;font-weight:bold;margin-top:6px">📞 اتصال برقم السائق</a>` : ""}
+   </div>`;
+ }
 
  let actionHtml = "";
- // يظهر زر القبول أو الرفض للمتجر حصراً عندما يكون السائق في حالة waiting_store
  if(o.status === "waiting_store"){
    actionHtml = `<div style="display:flex; gap:8px; margin-top:10px">
     <button style="flex:2; background:var(--ok)" onclick="acceptDriver('${id}')">قبول السائق</button>
     <button style="flex:1; background:var(--bad)" onclick="cancelOrder('${id}')">رفض</button>
    </div>`;
  }
- // تم إزالة أي أزرار إلغاء أخرى للمتجر، تصبح الإدارة هي المخولة بالإلغاء بعد موافقة المتجر
 
  const storeCom = Number(o.storeCommission !== undefined ? o.storeCommission : (settings.storeCommission || 500));
  const receiveAmt = Math.max(0, (Number(o.itemPrice)||0) - storeCom);
@@ -375,7 +396,7 @@ function card(id,o,isHistory){
     <span class="badge ${badgeCls}">${ST[o.status]}</span>
   </div>
   ${stepper}
-  ${driverHtml}
+  ${driverInfo}
   <div class="summary-box" style="margin-top:16px">
     <div class="summary-row"><span>سعر الطلب:</span> <b>${fmt(o.itemPrice)} د.ع</b></div>
     <div class="summary-row"><span>أجرة التوصيل:</span> <b>${fmt(o.deliveryFee)} د.ع</b></div>
