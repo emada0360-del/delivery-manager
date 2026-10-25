@@ -58,10 +58,10 @@ main{max-width:600px;margin:auto;padding:16px}
 
 <section id="login" class="box">
 <h2 style="text-align:center;margin-top:0">دخول السائق</h2>
-<form id="lf">
+<form id="lf" onsubmit="return false;">
 <label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required autocomplete="username">
 <label>كلمة المرور</label><input id="pw" type="password" required autocomplete="current-password">
-<button id="lb" style="width:100%;margin-top:10px">دخول</button>
+<button type="button" id="lb" style="width:100%;margin-top:10px">دخول</button>
 </form>
 <div id="err"></div>
 </section>
@@ -143,19 +143,24 @@ const hasActive=()=>Object.values(mine).some(o=>o&&!FIN.includes(o.status));
 const activeEntries=()=>Object.entries(mine).filter(([,o])=>o&&!FIN.includes(o.status));
 const storeComOf=o=>Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommission||500));
 
-// 🟢 تعديل زر تسجيل الدخول ليتطابق مع هيكل النظام الأصلي
-$("lf").onsubmit=async e=>{
- e.preventDefault();
+// 🟢 زر الدخول المستقر والمضمون
+$("lb").onclick=async()=>{
  $("err").textContent="";
+ const phoneVal = $("un").value.trim();
+ const passVal = $("pw").value;
+ 
+ if(!phoneVal || !passVal){
+  $("err").textContent="يرجى إدخال رقم الهاتف وكلمة المرور.";
+  return;
+ }
+
  $("lb").disabled=true;
  $("lb").textContent="جاري...";
  
- const phoneInput = $("un").value.trim();
- const passInput = $("pw").value;
- const email = phoneInput.includes("@") ? phoneInput : phoneInput + "@baqubah.app";
+ const email = phoneVal.includes("@") ? phoneVal : phoneVal + "@baqubah.app";
 
  try{
-  await signInWithEmailAndPassword(auth, email, passInput);
+  await signInWithEmailAndPassword(auth, email, passVal);
  }catch(er){
   $("err").textContent=lerr(er);
   $("lb").disabled=false;
@@ -167,8 +172,8 @@ onAuthStateChanged(auth,async u=>{
  if(!u){show(false);return}
  let me;
  try{
-  const snap = await get(ref(db,"users/"+u.uid));
-  me = snap.val();
+  const snap=await get(ref(db,"users/"+u.uid));
+  me=snap.val();
  }catch(er){
   await signOut(auth);
   $("err").textContent="تعذّر تحميل الحساب: تأكد من الإنترنت";
@@ -376,5 +381,4 @@ function drawOrders(){
   return `<div class="card ${o.status==="waiting_store"?"waiting":""}">
    <div class="row"><b>#${esc(id.slice(-6))}</b> ${badge}</div>
    <p style="margin:6px 0;font-size:14px"><b>المتجر:</b> ${esc(o.storeName)}</p>
-   <p style="margin:6px 0;font-size:14px"><b>المنطقة:</b> ${esc(o.area)}</p>
-   ${mapLink(o)}${storeBox}${buildFinBox(o)}${c
+   <p style="margin:6px 0;font-size:14px">
