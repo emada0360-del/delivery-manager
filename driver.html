@@ -115,7 +115,6 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 let uid=null,driverData=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},pend={},mine={},cash={},privData={},settings={},stops=[];
 let pos={lat:null,lng:null},gpsId=null;
 
-/* ---------- تتبع الموقع (GPS) ---------- */
 function startGPS(){
  if(!navigator.geolocation||gpsId!==null)return;
  gpsId=navigator.geolocation.watchPosition(
@@ -126,7 +125,7 @@ function startGPS(){
 }
 
 function getDist(la1,lo1,la2,lo2){
- if(!la1||!la2)return 999999;
+ if(!la1||!la2)return 0;
  const R=6371e3,p1=la1*Math.PI/180,p2=la2*Math.PI/180,dp=(la2-la1)*Math.PI/180,dl=(lo2-lo1)*Math.PI/180;
  const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
@@ -138,6 +137,7 @@ const beep=()=>{try{wake();const o=AC.createOscillator(),g=AC.createGain();o.con
 
 const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
 
+/* 🟢 طريقة الدخول القديمة السريعة والمضمونة */
 $("lb").onclick=async()=>{
  $("err").textContent="";$("lb").disabled=true;$("lb").textContent="جاري...";
  try{await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value)}
@@ -232,7 +232,7 @@ function draw(){
   <p><b>المتجر:</b> ${esc(o.storeName)}</p><p><b>المنطقة:</b> ${esc(o.area)}</p>
   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
   ${buildFinBox(o)}
-  <div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول الطلب</button><button class="red" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):"<p style='color:#94a3b8;text-align:center;margin:10px 0'>لا توجد طلبات متاحة حالياً.</p>");
+  <div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول الطلب</button><button class="red" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):"<p style='color:#94a3b8;text-align:center;margin:10px 0'>لا توجد طلبات متاحة حالياً.</p>";
 
  const now = Date.now();
 
@@ -248,10 +248,8 @@ function draw(){
   } else if(o.status==="accepted"){
    statusBadge=`<span class="badge acc">بالطريق للمتجر</span>`;
    
-   // 🟢 فحص المسافة للمتجر (500 متر)
-   let dist = 0;
    if(o.storeLat && pos.lat){
-    dist = Math.round(getDist(pos.lat, pos.lng, o.storeLat, o.storeLng));
+    const dist = Math.round(getDist(pos.lat, pos.lng, o.storeLat, o.storeLng));
     if(dist > 500){
      distWarn = `<div style="color:var(--bad);font-size:12px;margin:6px 0;font-weight:bold">📍 أنت بعيد عن المتجر (${dist} متر). يجب أن تكون ضمن 500 متر لتضغط وصول.</div>`;
     }
@@ -261,7 +259,6 @@ function draw(){
   } else if(o.status==="arrived_store"){
    statusBadge=`<span class="badge acc">وصل للمتجر</span>`;
    
-   // 🟢 قيد دقيقة واحدة (60 ثانية) عند المتجر
    const waitSec = 60;
    const remaining = waitSec - elapsedSec;
    if(remaining > 0){
@@ -272,7 +269,6 @@ function draw(){
   } else if(["picked_up","delivering"].includes(o.status)){
    statusBadge=`<span class="badge acc">بالطريق للزبون</span>`;
    
-   // 🟢 قيد 5 دقائق (300 ثانية) للوصول للزبون
    const waitSec = 300;
    const remaining = waitSec - elapsedSec;
    if(remaining > 0){
@@ -301,8 +297,7 @@ function draw(){
  }).join(""):"<p style='color:#94a3b8;text-align:center;margin:10px 0'>ما عندك طلبات قيد التنفيذ حالياً.</p>";
 }
 
-// 🟢 تحديث العداد التنازلي كل ثانية
-setInterval(()=>{ if(uid) draw(); }, 1000);
+setInterval(()=>{if(uid&&hasActive())draw();},1000);
 
 async function act(e){
  const b=e.target.closest("button[data-a]");if(!b||b.disabled)return;
@@ -335,7 +330,6 @@ async function act(e){
    const o = snap.val();
    if(!o || o.driverId !== uid) return say("خطأ في بيانات الطلب.");
    
-   // 🟢 التحقق من مسافة الـ 500 متر قبل الموافقة
    if(o.storeLat && pos.lat){
     const dist = getDist(pos.lat, pos.lng, o.storeLat, o.storeLng);
     if(dist > 500){
@@ -350,7 +344,6 @@ async function act(e){
    const o = snap.val();
    if(!o || o.driverId !== uid) return say("خطأ في بيانات الطلب.");
    
-   // 🟢 التحقق من مرور دقيقة واحدة (60 ثانية)
    const elapsedSec = Math.floor((Date.now() - (o.stepAt || 0)) / 1000);
    if(elapsedSec < 60){
     return say(`انتظر ${60 - elapsedSec} ثانية إضافية لاستلام الطلب.`);
@@ -358,4 +351,11 @@ async function act(e){
    
    await update(r, { status: "delivering", stepAt: Date.now() });
    say("تم استلام الطلب، أنت الآن بالطريق للزبون.");
-  }else if(a==="delive
+  }else if(a==="delivered"){
+   if(!confirm("تأكيد تسليم الطلب للزبون؟"))return;
+   const snap = await get(r);
+   const o = snap.val();
+   if(!o || o.driverId !== uid) return say("خطأ في بيانات الطلب.");
+   
+   const elapsedSec = Math.floor((Date.now() - (o.stepAt || 0)) / 1000);
+   if(elapsed
