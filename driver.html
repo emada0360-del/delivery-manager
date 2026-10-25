@@ -105,7 +105,7 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const ST={accepted:"تم قبول الطلب",arrived_store:"وصلت للمتجر",picked_up:"استلمت الطلب",delivering:"بالطريق للزبون"};
 const STEP={arrive:["accepted","arrived_store"],pick:["arrived_store","picked_up"],go:["picked_up","delivering"],done:["delivering","delivered"]};
 const BTN={accepted:["arrive","وصلت للمتجر"],arrived_store:["pick","استلمت الطلب"],picked_up:["go","انطلقت للتوصيل"],delivering:["done","تأكيد التسليم"]};
-let uid=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},pend={},mine={},cash={},stops=[],busy=false;
+let uid=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},pend={},mine={},cash={},privData={},stops=[],busy=false;
 let AC=null;const wake=()=>{try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch{}};
 document.addEventListener("click",wake);document.addEventListener("touchstart",wake,{passive:true});
 
@@ -150,7 +150,7 @@ onAuthStateChanged(auth,async u=>{
  bg("start",{uid:u.uid,apiKey:cfg.apiKey,refreshToken:u.refreshToken,dbUrl:cfg.databaseURL});
 });
 function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on){clear();bg("stop")}}
-function clear(){stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};seen=null}
+function clear(){stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={};privData={};seen=null}
 
 function start(){
  clear();
@@ -159,12 +159,27 @@ function start(){
   $("off").hidden=s.val()===true;
   if(s.val()===true)onDisconnect(pr).set({online:false,lastSeen:serverTimestamp()}).then(()=>set(pr,{online:true,lastSeen:serverTimestamp()}));
  }));
- const merge=()=>{orders={...pend,...mine};draw()};
+ const merge=()=>{orders={...pend,...mine};draw();fetchPrivateData();};
  stops.push(onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{pend=s.val()||{};merge()},e=>say("خطأ تحميل الطلبات: "+e.message)));
  stops.push(onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{mine=s.val()||{};merge()},e=>say("خطأ تحميل طلباتك: "+e.message)));
  stops.push(onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{cash=s.val()||{};draw()},()=>{}));
  stops.push(onValue(ref(db,"settings"),s=>{const v=s.val()||{};lim=Number(v.debtLimit)||15000;maxA=Number(v.maxActive)||3;$("bn").textContent=v.announcement||"";$("bn").hidden=!v.announcement;draw()},()=>{}));
  stops.push(onValue(ref(db,"users/"+uid),s=>{const u=s.val();if(!u||u.isActive===false)logout()}));
+}
+
+// دالة لجلب معلومات الزبون الخاصة (رقم الهاتف والملاحظة) من جدول orderPrivate
+function fetchPrivateData(){
+ const ids = Object.keys(mine);
+ if(!ids.length) return;
+ ids.forEach(id=>{
+  if(privData[id]) return;
+  get(ref(db, "orderPrivate/" + id)).then(snap=>{
+   if(snap.exists()){
+    privData[id] = snap.val();
+    draw();
+   }
+  });
+ });
 }
 
 function buildFinBox(o) {
@@ -199,7 +214,6 @@ function draw(){
  }
  seen=new Set(av.map(([id])=>id));
 
- // الطلبات المتاحة مع رسالة المنتصف التلقائية
  $("av").innerHTML=blocked?"الاستلام متوقف لحد تسديد المستحق.":(full?'<p class="warn">وصلت للحد الأقصى ('+maxA+') من الطلبات النشطة. سلّم طلب حتى تكدر تقبل غيره.</p>':"")+(av.length?av.map(([id,o])=>`<div class="box ord"><b>طلب ${esc(id.slice(-6))}</b>
   <p><b>المتجر:</b> ${esc(o.storeName)} | <b>المنطقة:</b> ${esc(o.area)}${o.fragile?" - قابل للكسر":""}</p>
   
@@ -218,10 +232,13 @@ function draw(){
 
   <div class="row"><button data-a="accept" data-id="${esc(id)}" ${full?"disabled":""}>قبول</button><button class="gry" data-a="reject" data-id="${esc(id)}">رفض</button></div></div>`).join(""):`<div class="empty-msg">انتظر، سوف يصلك طلب قريباً</div>`);
 
- // طلباتي الحالية (جعل الحسابات المالية الخيار الأول المنسدل، مع ظهور رقم المتجر)
  $("my").innerHTML=my.length?my.map(([id,o])=>{
   const b=BTN[o.status];
-  const waLink=o.customerPhone?`https://wa.me/964${o.customerPhone.substring(o.customerPhone.startsWith('0')?1:0)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.`:"";
+  const q = privData[id] || {};
+  const customerPhone = q.customerPhone || o.customerPhone || "";
+  const customerNote = q.note || o.note || "";
+  const waLink = customerPhone ? `https://wa.me/964${customerPhone.substring(customerPhone.startsWith('0')?1:0)}?text=مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.` : "";
+  
   return `<div class="box ord"><b>طلب ${esc(id.slice(-6))}</b>
   <p><b>المتجر:</b> ${esc(o.storeName)} | <b>المنطقة:</b> ${esc(o.area)}</p>
   <p><b>الحالة:</b> ${ST[o.status]||esc(o.status)}</p>
@@ -237,12 +254,17 @@ function draw(){
    </div>
   </details>
 
-  <details><summary>📞 الزبون والملاحظات (${esc(o.customerPhone||"غير متوفر")})</summary>
-   <div class="btn-group">
-    <a href="tel:${esc(o.customerPhone)}" class="btn-group a btn-call">📞 اتصال بالزبون</a>
-    ${waLink?`<a href="${waLink}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a>`:""}
+  <details><summary>📞 الزبون والملاحظات (${esc(customerPhone||"غير متوفر")})</summary>
+   <div style="margin-top:6px">
+    ${customerPhone ? `
+     <p><b>رقم الزبون:</b> <a href="tel:${esc(customerPhone)}" style="color:#2563eb;font-weight:bold">${esc(customerPhone)}</a></p>
+     <div class="btn-group">
+      <a href="tel:${esc(customerPhone)}" class="btn-group a btn-call">📞 اتصال بالزبون</a>
+      ${waLink?`<a href="${waLink}" target="_blank" class="btn-wa">🟢 واتساب (طلب الموقع)</a>`:""}
+     </div>
+    ` : `<p style="color:#64748b">جاري تحميل رقم الزبون...</p>`}
+    ${customerNote?`<p style="color:#b45309;margin-top:6px"><b>ملاحظة الزبون:</b> ${esc(customerNote)}</p>`:""}
    </div>
-   ${o.note?`<p style="color:#b45309;margin-top:6px">ملاحظة الزبون: ${esc(o.note)}</p>`:""}
   </details>
 
   ${b?`<button class="${b[0]==="done"?"grn":""}" style="width:100%;margin-top:8px" data-a="${b[0]}" data-id="${esc(id)}">${b[1]}</button>`:""}</div>`
