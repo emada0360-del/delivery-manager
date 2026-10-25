@@ -106,7 +106,7 @@ import {getDatabase,ref,get,set,update,onValue,query,orderByChild,equalTo,onDisc
 const cfg={
  apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
  authDomain:"baqubah-delivery-e729e.firebaseapp.com",
- databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",
+ databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app",
  projectId:"baqubah-delivery-e729e",
  storageBucket:"baqubah-delivery-e729e.appspot.com",
  messagingSenderId:"450084520701",
@@ -190,7 +190,6 @@ onAuthStateChanged(auth, async u => {
  if(!u){show(false);return;}
  uid = u.uid;
  
- // 🟢 محاولة جلب بيانات السائق بأمان تام لكي لا يتجمد التطبيق إذا لم يكن المجلد موجوداً
  try {
   const snap = await get(ref(db, "users/" + u.uid));
   driverData = snap.exists() ? snap.val() : {};
@@ -352,4 +351,6 @@ async function act(e){
    const elapsedSec = Math.floor((Date.now() - (o.stepAt || 0)) / 1000);
    if(elapsedSec < 60) return say(`انتظر ${60 - elapsedSec} ثانية إضافية.`);
    await update(r, {status: "delivering", stepAt: Date.now()});
-   say("تم استل
+   say("تم استلام الطلب، بالطريق للزبون.");
+  }else if(a==="delivered"){
+   if(!confirm("تأكيد تسليم الطل
