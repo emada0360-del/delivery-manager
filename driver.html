@@ -61,7 +61,13 @@ details[open] summary { margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; 
 </section>
 
 <div id="app" hidden>
-<header><div><h2>Baqubah Delivery</h2><small id="nm"></small></div><button id="out" class="red">خروج</button></header>
+<header>
+  <div><h2>Baqubah Delivery</h2><small id="nm"></small></div>
+  <div style="display:flex; gap:8px; align-items:center;">
+    <button type="button" id="btnPip" class="grn" style="padding:7px 10px; font-size:12px;">نافذة عائمة</button>
+    <button id="out" class="red" style="padding:7px 10px; font-size:12px;">خروج</button>
+  </div>
+</header>
 <main>
 <div id="msg"></div>
 <div id="bn" class="warn" hidden></div>
@@ -86,6 +92,7 @@ details[open] summary { margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; 
 </div>
 
 <div id="mdl" hidden><div><p id="mdt"></p><div class="mr"><button id="mdy">تأكيد</button><button id="mdn" class="mn">إلغاء</button></div></div></div>
+
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
@@ -112,8 +119,56 @@ const STEP={arrive:["accepted","arrived_store"],pick:["arrived_store","picked_up
 const BTN={accepted:["arrive","وصلت للمتجر"],arrived_store:["pick","استلمت الطلب"],picked_up:["go","انطلقت للتوصيل"],delivering:["done","تأكيد التسليم"]};
 let uid=null,lim=15000,maxA=3,drvPct=10,seen=null,blocked=false,orders={},pend={},mine={},cash={},privData={},stops=[],busy=false;
 let AC=null, alertTimer=null;
+
 const wake=()=>{try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch{}};
 document.addEventListener("click",wake);document.addEventListener("touchstart",wake,{passive:true});
+
+// 🛡️ حماية الشاشة من الإغلاق التلقائي أثناء العمل
+async function keepScreenAwake() {
+  try {
+    if ('wakeLock' in navigator) {
+      await navigator.wakeLock.request('screen');
+    }
+  } catch (err) {}
+}
+window.addEventListener('load', keepScreenAwake);
+
+// 🔄 إعادة تنشيط الاتصال فور العودة للتطبيق من الخلفية
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    keepScreenAwake();
+    if (uid) {
+      // مزامنة سريعة عند العودة
+      fetchPrivateData();
+    }
+  }
+});
+
+// 🪟 النافذة العائمة لمنع تجميد المتصفح بالخلفية
+const btnPip = $('btnPip');
+if (btnPip) {
+  btnPip.onclick = async () => {
+    if ('documentPictureInPicture' in window) {
+      try {
+        const pipWindow = await window.documentPictureInPicture.requestWindow({ width: 180, height: 120 });
+        pipWindow.document.body.innerHTML = `
+          <style>
+            body { margin:0; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:#14263d; color:#fff; font-family:Tahoma,sans-serif; text-align:center; padding:8px; }
+            .badge { font-size:11px; background:#218838; padding:3px 8px; border-radius:4px; font-weight:bold; }
+            .name { font-size:12px; font-weight:bold; margin-top:6px; }
+          </style>
+          <div class="badge">🟢 متصل بالخدمة</div>
+          <div class="name">دلفري الحر - السائق</div>
+        `;
+        say("تم تفعيل النافذة العائمة بنجاح.");
+      } catch (err) {
+        say("تعذر فتح النافذة العائمة.");
+      }
+    } else {
+      say("متصفحك لا يدعم النافذة العائمة، الشاشة النشطة تعمل بكفاءة.");
+    }
+  };
+}
 
 // 🔔 تشغيل صوت Beep واهتزاز متكرر لوجود طلب متاح
 function playOrderAlert() {
@@ -131,7 +186,7 @@ function checkAvailableAlert(hasAvailable) {
   if (hasAvailable) {
     if (!alertTimer) {
       playOrderAlert();
-      alertTimer = setInterval(playOrderAlert, 3000); // يتكرر كل 3 ثوانٍ
+      alertTimer = setInterval(playOrderAlert, 3000);
     }
   } else {
     if (alertTimer) {
@@ -163,6 +218,7 @@ function clear(){stops.forEach(f=>f());stops=[];orders={};pend={};mine={};cash={
 
 function start(){
  clear();
+ keepScreenAwake();
  const pr=ref(db,"presence/"+uid);
  stops.push(onValue(ref(db,".info/connected"),s=>{
   $("off").hidden=s.val()===true;
@@ -209,7 +265,6 @@ function draw(){
  const my=all.filter(([,o])=>o.driverId===uid&&!["delivered","cancelled"].includes(o.status));
  const dn=all.filter(([,o])=>o.driverId===uid&&o.status==="delivered");
  
- // تشغيل/إيقاف تنبيه الطلبات المتاحة
  checkAvailableAlert(av.length > 0);
 
  const debt=dn.reduce((s,[,o])=>s+(o.platformDeliveryCommission||0)+(o.storeCommission||0),0)
@@ -222,8 +277,7 @@ function draw(){
  $("td").textContent=fmt(dn.filter(([,o])=>o.deliveredAt>=t0).reduce((s,[,o])=>s+(o.driverProfit||0),0));
  
  if(seen && !blocked && !full && av.some(([id])=>!seen.has(id))){
-   const newOrder = av.find(([id])=>!seen.has(id))[1];
-   // إشعار إضافي
+   playOrderAlert();
  }
  seen=new Set(av.map(([id])=>id));
 
@@ -284,9 +338,8 @@ function draw(){
  }).join(""):`<div class="empty-msg">ما عندك طلبات قيد التنفيذ حالياً.</div>`;
 }
 
-// دالة لحساب المسافة بين نقطتين جغرافيتين (بالمتر)
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371e3; // نصف قطر الأرض بالمتر
+  const R = 6371e3;
   const φ1 = lat1 * Math.PI/180;
   const φ2 = lat2 * Math.PI/180;
   const Δφ = (lat2-lat1) * Math.PI/180;
@@ -296,98 +349,29 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// استخراج خط الطول والعرض من رابط خرائط جوجل
 function extractCoordinatesFromUrl(url) {
   if (!url) return null;
   const match = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/) || url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-  if (match) {
-    return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
-  }
+  if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]) };
   return null;
 }
 
-// التحقق من موقع السائق (300 متر) قبل تأكيد الوصول للمتجر
 async function checkDriverDistance(orderData) {
   return new Promise((resolve) => {
     const storeCoords = extractCoordinatesFromUrl(orderData.storeMapUrl);
-    if (!storeCoords) {
-      // إذا لم يتوفر رابط إحداثيات واضح، نسمح بالوصول لتجنب تعطل العمل
-      resolve(true);
-      return;
-    }
-    if (!navigator.geolocation) {
-      say("خدمة تحديد الموقع غير متوفرة في جهازك.");
-      resolve(true); // السماح في حال عدم دعم المتصفح
-      return;
-    }
+    if (!storeCoords) { resolve(true); return; }
+    if (!navigator.geolocation) { resolve(true); return; }
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const driverLat = position.coords.latitude;
-        const driverLng = position.coords.longitude;
-        const distance = calculateDistance(driverLat, driverLng, storeCoords.lat, storeCoords.lng);
-        if (distance <= 300) {
-          resolve(true);
-        } else {
-          say(`عذراً، يجب أن تكون على مسافة 300 متر أو أقل من المتجر (المسافة الحالية: ${Math.round(distance)} متر).`);
-          resolve(false);
-        }
+        const distance = calculateDistance(position.coords.latitude, position.coords.longitude, storeCoords.lat, storeCoords.lng);
+        if (distance <= 300) { resolve(true); } 
+        else { say(`عذراً، يجب أن تكون على مسافة 300 متر أو أقل من المتجر (المسافة: ${Math.round(distance)} متر).`); resolve(false); }
       },
-      (error) => {
-        say("تعذّر تحديد موقعك الحالي. تأكد من تشغيل الـ GPS.");
-        resolve(true); // السماح في حال تعذر الحصول على الموقع
-      },
+      () => { resolve(true); },
       { timeout: 10000, enableHighAccuracy: true }
     );
   });
 }
 
 async function act(e){
- const b=e.target.closest("button[data-a]");if(!b||busy)return;
- const a=b.dataset.a, orderId=b.dataset.id, r=ref(db,"orders/"+orderId); busy=true;
- try{
-  let x,ok;
-  if(a==="accept"){
-   if(blocked){say("الاستلام متوقف لحد تسديد المستحق.");return}
-   if(Object.values(orders).filter(o=>o&&o.driverId===uid&&!["delivered","cancelled"].includes(o.status)).length>=maxA){say("وصلت للحد الأقصى من الطلبات النشطة.");return}
-   x=await runTransaction(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.driverId=uid;o.status="waiting_store";o.acceptedAt=Date.now();return o}});
-   ok=x.committed&&x.snapshot.val()?.driverId===uid;
-   say(ok?"تم إرسال طلب القبول للمتجر، بانتظار موافقته.":"سبقك سائق آخر أو الطلب لم يعد متاحاً.");
-  }else if(a==="reject"){
-   x=await runTransaction(r,o=>{if(o===null)return o;if(o.status==="pending"&&!o.driverId){o.rejectedBy=o.rejectedBy||{};o.rejectedBy[uid]=true;return o}});
-   say(x.committed&&x.snapshot.val()?.rejectedBy?.[uid]?"تم رفض الطلب.":"تعذّر رفض الطلب.");
-  }else if(STEP[a]){
-   if(a==="arrive"){
-     // 📍 التحقق من المسافة (300 متر) قبل تأكيد الوصول للمتجر
-     const orderData = orders[orderId];
-     const canProceed = await checkDriverDistance(orderData);
-     if(!canProceed) { busy=false; return; }
-   }
-   if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟"))) { busy=false; return; }
-   const [from,to]=STEP[a];
-   x=await runTransaction(r,o=>{
-    if(o===null)return o;
-    if(o.driverId!==uid||o.status!==from)return;
-    o.status=to;o.updatedAt=Date.now();
-    if(to==="delivered"){
-     const fee=Math.max(0,Math.round(Number(o.deliveryFee)||0)),com=Math.round(fee*drvPct/100),p=fee-com;
-     o.deliveredAt=Date.now();o.driverProfit=p;o.platformDeliveryCommission=com;
-     o.storeCommission=Number.isFinite(Number(o.storeCommission))?Number(o.storeCommission):500;
-    }
-    return o;
-   });
-   ok=x.committed&&x.snapshot.val()?.status===to;
-   say(ok?(to==="delivered"?"تم التسليم. ربحك "+fmt(x.snapshot.val().driverProfit)+" د.ع.":"تم تحديث الحالة."):"تغيّرت حالة الطلب. حدّث الصفحة.");
-  }
- }catch(err){say("خطأ: "+err.message)}
- finally{busy=false}
-}
-$("av").onclick=act;$("my").onclick=act;
-
-async function logout(){
- if(uid){try{await set(ref(db,"presence/"+uid),{online:false,lastSeen:serverTimestamp()})}catch{}}
- clear();await signOut(auth);
-}
-$("out").onclick=logout;
-</script>
-</body>
-</html>
+ const b=e.target.closest("butt
