@@ -19,7 +19,7 @@ header h2{margin:0;font-size:18px}
 nav{display:flex;gap:8px;padding:12px 20px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:60px;z-index:49;white-space:nowrap}
 nav button{background:#e6edf5;color:#14263d}
 nav button.on{background:var(--pri);color:#fff}
-main{max-width:1200px;margin:auto;padding:20px}
+main{max-width:1200px;margin:auto;padding:20px;margin-bottom:90px}
 .box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.02)}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:20px}
 .grid .box{margin:0;text-align:center}
@@ -33,8 +33,6 @@ td button{margin:2px;padding:7px 10px;font-size:12px;border-radius:6px}
 td select{margin:0;width:auto;min-width:140px;padding:6px}
 td input.pc{margin:0;width:80px;padding:6px;display:inline-block}
 .red{background:var(--bad)}.grn{background:var(--ok)}.org{background:var(--warn)}.gray{background:#6b7280}
-.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#aab4c3;margin-left:6px}
-.dot.on{background:#1fa64a;box-shadow:0 0 0 3px #1fa64a33}
 .warn{color:#b42318;font-weight:bold}
 #login{max-width:400px;margin:80px auto}
 #msg{padding:12px 16px;margin:16px 20px 0;border-radius:8px;display:none;font-weight:600}
@@ -42,15 +40,17 @@ td input.pc{margin:0;width:80px;padding:6px;display:inline-block}
 .tag{display:inline-block;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;background:#eef2f7;color:#374151}
 .tag.g{background:#e6f4ea;color:#176337}.tag.r{background:#fdecea;color:#b42318}.tag.y{background:#fef3c7;color:#b45309}
 .tm{font-size:12px;color:#64748b;white-space:nowrap}
-.row2{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.row2 button{margin:0}
-.profit{font-size:30px;font-weight:800;color:var(--ok);margin:8px 0}
-/* نافذة التأكيد: تظهر بوسط الشاشة وفوق كل شي */
-.modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,20,35,.55);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px}
-.modal{background:#fff;border-radius:14px;padding:22px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.3)}
-.modal h3{margin:0 0 12px}
-.modal .actions{display:flex;gap:10px;margin-top:18px}
-.modal .actions button{flex:1;padding:12px}
+
+/* شريط التأكيد السفلي */
+#actionToast{position:fixed;bottom:-220px;left:50%;transform:translateX(-50%);width:calc(100% - 24px);max-width:520px;background:#14263d;color:#fff;padding:14px 18px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.3);display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;z-index:1000;transition:bottom .3s ease;font-weight:600;text-align:center}
+#actionToast.show{bottom:16px}
+#actionToast button{padding:9px 16px;font-size:14px}
+
+@media print {
+  body * { visibility: hidden; }
+  #printArea, #printArea * { visibility: visible; }
+  #printArea { position: absolute; left: 0; top: 0; width: 100%; background: #fff; padding: 20px; }
+}
 </style>
 </head>
 <body>
@@ -65,7 +65,7 @@ td input.pc{margin:0;width:80px;padding:6px;display:inline-block}
 </section>
 
 <div id="app" hidden>
-<header><h2>Baqubah Delivery - الإدارة</h2><button id="out" class="red" type="button">خروج</button></header>
+<header><h2>Baqubah Delivery - الإدارة</h2><button type="button" id="out" class="red">خروج</button></header>
 <nav id="nav">
 <button type="button" class="on" data-t="t1">الرئيسية</button>
 <button type="button" data-t="t2">الطلبات</button>
@@ -75,7 +75,6 @@ td input.pc{margin:0;width:80px;padding:6px;display:inline-block}
 <button type="button" data-t="t5">المناطق</button>
 <button type="button" data-t="t6">المالية</button>
 <button type="button" data-t="t7">المسؤولون</button>
-<button type="button" data-t="t10">السجل</button>
 <button type="button" data-t="t8">الإعدادات</button>
 </nav>
 <div id="msg"></div>
@@ -87,6 +86,14 @@ td input.pc{margin:0;width:80px;padding:6px;display:inline-block}
 <div class="box">السائقون المتصلون<strong id="s3">0</strong></div>
 <div class="box">المتاجر المفعّلة<strong id="s4">0</strong></div>
 </div>
+<div class="box" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+  <div>
+    <h3 style="margin:0 0 6px">أرباح المنصة الكلية</h3>
+    <span id="platformProfit" style="font-size:24px;font-weight:bold;color:var(--ok)">***** د.ع</span>
+    <div id="profitNote" class="tm" style="margin-top:4px"></div>
+  </div>
+  <button type="button" id="btnToggleProfit" class="gray" style="font-size:13px">إظهار / إخفاء الأرباح</button>
+</div>
 <div class="box">
 <h3>الإعلانات والرسائل</h3>
 <textarea id="ann" rows="3" placeholder="اكتب إعلاناً يظهر لجميع السائقين والمتاجر..."></textarea>
@@ -97,7 +104,7 @@ td input.pc{margin:0;width:80px;padding:6px;display:inline-block}
 <section id="t9" class="tab" hidden>
 <div class="box">
   <h3 style="margin-top:0; color:var(--pri)">متابعة الطلبات الحية (Live)</h3>
-  <p style="color:#64748b; margin-bottom:16px;">هنا تظهر الطلبات الجارية الآن مع السائق المسؤول عنها.</p>
+  <p style="color:#64748b; margin-bottom:16px;">هنا تظهر الطلبات الجارية الآن مع اسم السائق ورقم هاتفه.</p>
   <div id="liveOrders" class="wrap"></div>
 </div>
 </section>
@@ -106,7 +113,6 @@ td input.pc{margin:0;width:80px;padding:6px;display:inline-block}
 <div class="box">
 <input id="q" placeholder="بحث بالمتجر أو المنطقة أو رقم الطلب">
 <select id="f"><option value="">كل الحالات</option></select>
-<div class="row2" style="margin-bottom:14px"><button type="button" id="btnDelAll" class="red">🗑 حذف جميع الطلبات</button></div>
 <div id="orders" class="wrap"></div>
 </div>
 </section>
@@ -131,27 +137,24 @@ td input.pc{margin:0;width:80px;padding:6px;display:inline-block}
 </section>
 
 <section id="t5" class="tab" hidden>
-<form id="fa" class="box"><h3>إضافة منطقة</h3>
-<input id="an" placeholder="اسم المنطقة" required>
-<input id="af" type="number" min="0" step="250" placeholder="أجرة التوصيل" required>
-<button type="submit" class="grn">إضافة المنطقة</button></form>
+<form id="fa" class="box">
+  <h3>إضافة منطقة</h3>
+  <input id="an" placeholder="اسم المنطقة" required>
+  <input id="af" type="number" min="0" step="250" placeholder="أجرة التوصيل" required>
+  <div style="display:flex;gap:10px">
+    <button type="submit" class="grn" style="flex:1">إضافة المنطقة</button>
+    <button type="button" id="btnPrintAreas" class="gray" style="background:#0369a1">طباعة / تقرير المناطق</button>
+  </div>
+</form>
 <div id="areas" class="box wrap"></div>
 </section>
 
 <section id="t6" class="tab" hidden>
-<div class="box">
-<h3 style="margin-top:0">أرباح المنصة الكلية</h3>
-<div class="row2">
-<div class="profit" id="profitVal">••••••</div>
-<button type="button" id="btnProfit" class="gray">👁 إظهار</button>
-</div>
-<div id="profitDet" class="tm"></div>
-</div>
 <div class="box"><h3>تسجيل كاش مستلم من سائق</h3>
 <select id="cd"></select>
 <input id="ca" type="number" min="1" placeholder="المبلغ">
 <input id="cn" placeholder="ملاحظة (اختياري)">
-<button id="cb" class="grn">تسجيل الكاش</button></div>
+<button type="button" id="cb" class="grn">تسجيل الكاش</button></div>
 <div class="box"><h3>سجل الكاش</h3><div id="fin" class="wrap"></div></div>
 </section>
 
@@ -177,36 +180,58 @@ td input.pc{margin:0;width:80px;padding:6px;display:inline-block}
 <div id="managers" class="box wrap"></div>
 </section>
 
-<section id="t10" class="tab" hidden>
-<div class="box">
-<h3 style="margin-top:0">سجل حركات المنصة</h3>
-<div id="logs" class="wrap"></div>
-</div>
-</section>
-
 <section id="t8" class="tab" hidden>
 <div class="box">
-<h3>إعدادات عامة</h3>
+<h3>إعدادات عامة والعمولات</h3>
 <label>حد الدين الأقصى لتعطيل السائق (دينار)</label>
 <input id="set-limit" type="number" min="0" step="1000" value="15000">
+
+<label>نسبة عمولة المتاجر الافتراضية (%)</label>
+<input id="set-store-commission" type="number" min="0" max="100" step="0.5" value="10">
+
+<label>عمولة المنصة الثابتة لكل طلب (دينار)</label>
+<input id="set-platform-commission" type="number" min="0" step="250" value="1000">
+
 <label>حذف الطلبات القديمة تلقائياً بعد (أيام)</label>
 <input id="set-days" type="number" min="1" step="1" value="30">
-<label>عمولة ثابتة على كل طلب (دينار)</label>
-<input id="set-ordfee" type="number" min="0" step="50" value="500">
-<label>نسبة عمولة المتاجر الافتراضية (%)</label>
-<input id="set-pct" type="number" min="0" max="100" step="0.5" value="0">
-<button id="btnSet" class="grn">حفظ الإعدادات</button>
-<button id="btnPctAll" class="org" style="margin-top:10px">تطبيق النسبة الافتراضية على كل المتاجر</button>
+
+<button type="button" id="btnSet" class="grn" style="margin-bottom:10px">حفظ الإعدادات</button>
+<button type="button" id="btnPctAll" class="org" style="margin-bottom:20px">تطبيق النسبة على كل المتاجر</button>
+
+<hr style="border:0;border-top:1px solid var(--line);margin:20px 0">
+
+<h3 style="color:var(--bad)">منطقة الخطر</h3>
+<p class="tm" style="white-space:normal">عند حذف الطلبات تُحفظ عمولات الطلبات المسلّمة في السجل المالي، فمستحقات السائقين وأرباح المنصة ما تتأثر.</p>
+<button type="button" id="btnDeleteAllOrders" class="red">حذف جميع الطلبات دفعة واحدة</button>
 </div>
 </section>
 </main>
 </div>
-<div id="modalHost"></div>
+
+<div id="printArea" hidden>
+  <div style="text-align:center;margin-bottom:20px">
+    <svg width="120" height="40" viewBox="0 0 120 40" style="margin:auto;display:block">
+      <rect width="120" height="40" rx="8" fill="#14263d"/>
+      <text x="60" y="25" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle" font-family="Tahoma">Baqubah</text>
+    </svg>
+    <h2 style="margin:10px 0 5px;color:#172235">تقرير أسعار ومناطق التوصيل</h2>
+    <p style="color:#64748b;margin:0;font-size:13px" id="printDate"></p>
+  </div>
+  <div id="printAreasContent"></div>
+</div>
+
+<div id="actionToast">
+  <span id="toastText">هل أنت متأكد من تنفيذ الإجراء؟</span>
+  <div style="display:flex;gap:8px">
+    <button type="button" id="toastYes" class="grn">نعم، تأكيد</button>
+    <button type="button" id="toastNo" class="gray">إلغاء</button>
+  </div>
+</div>
 
 <script type="module">
 import {initializeApp,deleteApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,push,onValue,remove,get} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {getDatabase,ref,set,update,push,onValue,get} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -227,14 +252,30 @@ const ST={pending:"قيد الانتظار",waiting_store:"بانتظار الم
 
 $("f").innerHTML+=Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
 
-let users={},orders={},areas={},fin={},pres={},settings={},logs={},started=false,showProfit=false;
+let users={},orders={},areas={},fin={},pres={},settings={},started=false;
+let showProfitFlag=false;
 
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#ffebee":"#e8f5e9";m.style.color=bad?"#b71c1c":"#176337";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
 const run=async fn=>{try{await fn()}catch(e){say(e.message,1);console.error(e)}};
 
-// تسجيل كل حركة بالمنصة مع الوقت
-async function logAct(text){
-  try{ await push(ref(db,"logs"),{text,by:(auth.currentUser&&auth.currentUser.email)||"",createdAt:Date.now()}); }catch(e){console.warn("log failed",e)}
+// شريط التأكيد السفلي: يطلع تحت، ويختفي بعد الضغط
+let confirmPending=null;
+function showToastConfirm(text){
+  return new Promise(resolve=>{
+    if(confirmPending)confirmPending(false);
+    const toast=$("actionToast");
+    $("toastText").textContent=text;
+    toast.classList.add("show");
+    const done=r=>{
+      toast.classList.remove("show");
+      $("toastYes").onclick=null;$("toastNo").onclick=null;
+      confirmPending=null;
+      resolve(r);
+    };
+    confirmPending=done;
+    $("toastYes").onclick=()=>done(true);
+    $("toastNo").onclick=()=>done(false);
+  });
 }
 
 $("btnLogin").onclick=async ()=>{
@@ -250,23 +291,27 @@ $("btnLogin").onclick=async ()=>{
 $("out").onclick=()=>signOut(auth);
 
 onAuthStateChanged(auth, async u=>{
-  if(!u){ $("login").hidden=false; $("app").hidden=true; return; }
+  if(!u){ $("login").hidden=false; $("app").hidden=true; started=false; return; }
   $("login").hidden=true; $("app").hidden=false; $("le").textContent="";
-  if(!started){started=true; start();}
+  if(!started){ started=true; start(); }
 });
 
 function fillSettings(){
- const set=(id,v,def)=>{const el=$(id);if(document.activeElement!==el)el.value=(v===undefined||v===null)?def:v};
- set("set-limit",settings.debtLimit,15000);
- set("set-days",settings.deleteOrdersAfterDays,30);
- set("set-ordfee",settings.orderCommission,500);
- set("set-pct",settings.defaultStorePercent,0);
- if(document.activeElement!==$("ann"))$("ann").value=settings.announcement||"";
+ const s=settings;
+ const put=(id,v)=>{const el=$(id);if(el&&document.activeElement!==el)el.value=v};
+ put("set-limit",s.debtLimit??15000);
+ put("set-days",s.deleteOrdersAfterDays??30);
+ put("set-store-commission",s.storeCommissionPercent??10);
+ put("set-platform-commission",s.platformCommissionFixed??1000);
+ put("ann",s.announcement||"");
 }
 
 function start(){
- const src={users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()},logs:v=>logs=v};
- for(const p in src)onValue(ref(db,p),s=>{src[p](s.val()||{});draw()},e=>say("تعذر التحميل ("+p+"): "+e.message,1));
+ const src={users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
+ for(const p in src)onValue(ref(db,p),s=>{
+   src[p](s.val()||{});
+   draw();
+ },e=>say("تعذر التحميل ("+p+"): "+e.message,1));
  autoClean();
 }
 
@@ -277,22 +322,41 @@ $("nav").onclick=e=>{const b=e.target.closest("[data-t]");if(!b)return;
 const list=r=>Object.entries(users).filter(([,u])=>u&&u.role===r);
 const online=id=>pres[id]&&pres[id].online===true;
 const deliveredOrders=id=>Object.values(orders).filter(o=>o&&o.driverId===id&&o.status==="delivered");
+const orderComm=o=>(Number(o.platformDeliveryCommission)||0)+(Number(o.storeCommission)||0);
+
+// المستحق = عمولات الطلبات المسلّمة الحالية + العمولات المؤرشفة (طلبات انحذفت) - الكاش المستلم
 const getDebt=id=>{
-  const delivered = deliveredOrders(id).reduce((s,o)=>s+(o.platformDeliveryCommission||0)+(o.storeCommission||0),0);
-  const paid = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="cash_received").reduce((s,f)=>s+f.amount,0);
-  return delivered - paid;
+  const live = deliveredOrders(id).reduce((s,o)=>s+orderComm(o),0);
+  const archived = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="archive").reduce((s,f)=>s+(Number(f.amount)||0),0);
+  const paid = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="cash_received").reduce((s,f)=>s+(Number(f.amount)||0),0);
+  return live + archived - paid;
 };
-const storePct=u=>(u&&u.commissionPercent!==undefined&&u.commissionPercent!==null)?u.commissionPercent:(settings.defaultStorePercent||0);
+const archCount=id=>Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="archive").reduce((s,f)=>s+(Number(f.count)||0),0);
+const storePct=u=>(u&&u.commissionPercent!==undefined&&u.commissionPercent!==null)?u.commissionPercent:(settings.storeCommissionPercent??10);
 
 const table=(h,rows,empty)=>rows.length?`<table><thead><tr>${h.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`:`<p style="text-align:center;color:#6b7280">${empty}</p>`;
 const mapLink=url=>{if(!url)return "—";const u=String(url).trim();return /^https?:\/\//i.test(u)?`<a href="${esc(u)}" target="_blank" style="color:var(--pri)">فتح الخريطة ↗</a>`:esc(u)};
 
-function drawProfit(){
- const delivered=Object.values(orders).filter(o=>o&&o.status==="delivered");
- const total=delivered.reduce((s,o)=>s+(o.platformDeliveryCommission||0)+(o.storeCommission||0),0);
- $("profitVal").textContent=showProfit?fmt(total)+" د.ع":"••••••";
- $("btnProfit").textContent=showProfit?"🙈 إخفاء":"👁 إظهار";
- $("profitDet").textContent=showProfit?`من ${fmt(delivered.length)} طلب مسلّم (عمولة التوصيل + عمولة المتاجر)`:"";
+// حذف طلبات مع حفظ عمولات المسلّم منها بالسجل المالي (عملية واحدة)
+async function deleteOrdersArchived(map){
+ const ids=Object.keys(map||{});
+ if(!ids.length)return 0;
+ const upd={},agg={};
+ for(const id of ids){
+  const o=map[id];
+  upd["orders/"+id]=null;
+  if(o&&o.status==="delivered"){
+   const c=orderComm(o);
+   const k=o.driverId||"_none";agg[k]=agg[k]||{amount:0,count:0};agg[k].amount+=c;agg[k].count++;
+  }
+ }
+ const now=Date.now();
+ for(const [uid,a] of Object.entries(agg)){
+  const key=push(ref(db,"finance")).key;
+  upd["finance/"+key]={type:"archive",userId:uid,userName:(users[uid]&&users[uid].name)||"",amount:a.amount,count:a.count,note:"عمولات طلبات محذوفة",createdAt:now};
+ }
+ await update(ref(db),upd);
+ return ids.length;
 }
 
 function draw(){
@@ -301,15 +365,21 @@ function draw(){
  $("s2").textContent=fmt(os.filter(o=>!["delivered","cancelled"].includes(o.status)).length);
  $("s3").textContent=fmt(drs.filter(([id,u])=>u.isActive!==false&&online(id)).length);
  $("s4").textContent=fmt(sts.filter(([,u])=>u.isActive!==false).length);
- 
+
+ const liveProfit=os.filter(o=>o.status==="delivered").reduce((s,o)=>s+orderComm(o),0);
+ const archProfit=Object.values(fin).filter(f=>f&&f.type==="archive").reduce((s,f)=>s+(Number(f.amount)||0),0);
+ $("platformProfit").textContent=showProfitFlag?fmt(liveProfit+archProfit)+" د.ع":"***** د.ع";
+ $("profitNote").textContent=showProfitFlag?`عمولة التوصيل + عمولة المتاجر (منها ${fmt(archProfit)} من طلبات محذوفة)`:"";
+
  drawOrders();
  drawLiveOrders();
- drawProfit();
 
- $("drivers").innerHTML=table(["الاسم","رقم الدخول","مسلّمة","المستحق","تاريخ الإضافة","إجراءات"],drs.map(([id,u])=>{
+ const limit=Number(settings.debtLimit??15000);
+ $("drivers").innerHTML=table(["الاسم","رقم الدخول","مسلّمة","المستحق","تاريخ التسجيل","إجراءات"],drs.map(([id,u])=>{
   const d=getDebt(id);
   return `<tr><td><b>${esc(u.name)}</b></td><td dir="ltr">${esc(u.username)}</td>
-  <td>${deliveredOrders(id).length}</td><td class="${d>=(settings.debtLimit||15000)?"warn":""}">${fmt(d)}</td><td>${tm(u.createdAt)}</td>
+  <td>${deliveredOrders(id).length+archCount(id)}</td><td class="${d>=limit?"warn":""}">${fmt(d)}</td>
+  <td>${tm(u.createdAt)}</td>
   <td><button type="button" data-tg="${esc(id)}" class="${u.isActive===false?"grn":"org"}">${u.isActive===false?"تفعيل":"تعطيل"}</button>
   <button type="button" data-zp="${esc(id)}" class="grn" ${d<=0?"disabled":""}>تصفير</button>
   <button type="button" data-del="${esc(id)}" class="red">حذف</button></td></tr>`}),"لا يوجد سائقون.");
@@ -317,7 +387,7 @@ function draw(){
  // لا نعيد رسم جدول المتاجر وانت تكتب النسبة
  const ae=document.activeElement;
  if(!(ae&&ae.tagName==="INPUT"&&$("stores").contains(ae))){
- $("stores").innerHTML=table(["الاسم","رقم الدخول","الخريطة","نسبة العمولة %","تاريخ الإضافة","إجراءات"],sts.map(([id,u])=>
+ $("stores").innerHTML=table(["الاسم","رقم الدخول","الخريطة","نسبة العمولة %","تاريخ التسجيل","إجراءات"],sts.map(([id,u])=>
   `<tr><td><b>${esc(u.name)}</b></td><td dir="ltr">${esc(u.username)}</td>
   <td>${mapLink(u.mapUrl)}</td>
   <td><input class="pc" type="number" min="0" max="100" step="0.5" id="pc-${esc(id)}" value="${esc(storePct(u))}">
@@ -327,205 +397,5 @@ function draw(){
   <button type="button" data-del="${esc(id)}" class="red">حذف</button></td></tr>`),"لا توجد متاجر.");
  }
 
- $("areas").innerHTML=table(["المنطقة","أجرة التوصيل","تاريخ الإضافة","إجراءات"],Object.entries(areas).map(([id,a])=>
-  `<tr><td><b>${esc(a.name)}</b></td><td>${fmt(a.fee)} د.ع</td><td>${tm(a.createdAt)}</td>
-  <td><button type="button" data-ta="${esc(id)}" class="org">${a.isActive===false?"تفعيل":"تعطيل"}</button>
-  <button type="button" data-del="${esc(id)}" data-kind="area" class="red">حذف</button></td></tr>`),"لا توجد مناطق.");
-
- const keep=$("cd").value;
- $("cd").innerHTML=drs.map(([id,u])=>`<option value="${esc(id)}">${esc(u.name)} (${esc(u.username)})</option>`).join("");
- if(keep)$("cd").value=keep;
-
- $("fin").innerHTML=table(["السائق","المبلغ","ملاحظة","الوقت"],Object.values(fin).filter(Boolean).sort((a,b)=>b.createdAt-a.createdAt).map(f=>
-  `<tr><td>${esc(f.userName)}</td><td style="color:var(--ok);font-weight:700">${fmt(f.amount)} د.ع</td>
-  <td>${esc(f.note)||"—"}</td><td>${tm(f.createdAt)}</td></tr>`),"لا توجد سجلات.");
-
- $("managers").innerHTML=table(["الاسم","البريد الإلكتروني","الصلاحية","تاريخ الإضافة"],Object.values(users).filter(u=>u&&(u.role==="store_manager"||u.role==="driver_manager")).map(u=>
-  `<tr><td>${esc(u.name)}</td><td dir="ltr">${esc(u.email||u.username)}</td>
-  <td>${u.role==="store_manager"?"مسؤول متاجر":"مسؤول سائقين"}</td><td>${tm(u.createdAt)}</td></tr>`),"لا يوجد مسؤولون.");
-
- $("logs").innerHTML=table(["الوقت","الحركة","بواسطة"],Object.values(logs).filter(Boolean).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,300).map(l=>
-  `<tr><td>${tm(l.createdAt)}</td><td>${esc(l.text)}</td><td dir="ltr">${esc(l.by)}</td></tr>`),"لا توجد حركات مسجلة بعد.");
-}
-
-function drawLiveOrders(){
- const live = Object.entries(orders).filter(([id,o]) => o && !["delivered", "cancelled"].includes(o.status))
-   .sort((a,b) => (b[1].createdAt||0) - (a[1].createdAt||0));
- $("liveOrders").innerHTML = table(
-   ["الطلب", "المتجر", "السائق", "رقم السائق", "الحالة", "وقت الطلب"],
-   live.map(([id,o]) => {
-     let tagClass = "y";
-     if(["accepted", "arrived_store", "picked_up", "delivering"].includes(o.status)) tagClass = "g";
-     const dr = o.driverId ? users[o.driverId] : null;
-     const name = o.driverName || (dr&&dr.name) || "";
-     const phone = o.driverPhone || (dr&&(dr.phone||dr.username)) || "";
-     const driverName = name ? `<b>${esc(name)}</b>` : '<span style="color:#94a3b8">بانتظار سائق</span>';
-     const driverPhone = phone ? `<a href="tel:${esc(phone)}" dir="ltr">${esc(phone)}</a>` : '—';
-     return `<tr><td>#${esc(id.slice(-6))}</td><td>${esc(o.storeName)}</td><td>${driverName}</td>
-       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span></td><td>${tm(o.createdAt)}</td></tr>`;
-   }), "لا توجد طلبات حية الآن."
- );
-}
-
-function drawOrders(){
- const t=$("q").value.trim().toLowerCase(),f=$("f").value;
- const rows=Object.entries(orders).filter(([id,o])=>o&&(!f||o.status===f)&&[id,o.storeName,o.area,o.driverName].join(" ").toLowerCase().includes(t))
-  .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0)).slice(0,100);
- $("orders").innerHTML=table(["الطلب","المتجر","المنطقة","وقت الطلب","آخر حركة","الحالة","إجراءات"],rows.map(([id,o])=>
-  `<tr><td>#${esc(id.slice(-6))}</td><td>${esc(o.storeName)}</td><td>${esc(o.area)}</td>
-  <td>${tm(o.createdAt)}</td><td>${tm(o.statusUpdatedAt||o.deliveredAt||o.updatedAt)}</td>
-  <td>${ST[o.status]||esc(o.status)}</td>
-  <td><select data-s="${esc(id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${o.status===k?"selected":""}>${v}</option>`).join("")}</select>
-  <button type="button" data-ss="${esc(id)}">حفظ</button>
-  <button type="button" data-del="${esc(id)}" data-kind="order" class="red">حذف</button></td></tr>`),"لا توجد طلبات.");
-}
-$("q").oninput=drawOrders;$("f").onchange=drawOrders;
-
-$("btnProfit").onclick=()=>{showProfit=!showProfit;drawProfit()};
-
-$("btnAnn").onclick=()=>run(async()=>{ await update(ref(db,"settings"),{announcement:$("ann").value.trim()}); logAct("نشر إعلان جديد"); say("تم حفظ الإعلان."); });
-$("btnSet").onclick=()=>run(async()=>{
-  const pct=Number($("set-pct").value),fee=Number($("set-ordfee").value);
-  if(!(pct>=0&&pct<=100))throw Error("النسبة يجب أن تكون بين 0 و 100.");
-  if(!(fee>=0))throw Error("العمولة غير صحيحة.");
-  if(!(await confirmBox("حفظ الإعدادات؟")))return;
-  await update(ref(db,"settings"),{ debtLimit: Number($("set-limit").value), deleteOrdersAfterDays: Number($("set-days").value), orderCommission: fee, defaultStorePercent: pct });
-  logAct(`تعديل الإعدادات (عمولة الطلب ${fee} / نسبة المتاجر ${pct}%)`);
-  say("تم حفظ الإعدادات.");
-});
-$("btnPctAll").onclick=()=>run(async()=>{
-  const pct=Number($("set-pct").value);
-  if(!(pct>=0&&pct<=100))throw Error("النسبة يجب أن تكون بين 0 و 100.");
-  if(!(await confirmBox(`تطبيق نسبة ${pct}% على جميع المتاجر؟`)))return;
-  const upd={};
-  list("store").forEach(([id])=>{upd[id+"/commissionPercent"]=pct});
-  if(Object.keys(upd).length)await update(ref(db,"users"),upd);
-  await update(ref(db,"settings"),{defaultStorePercent:pct});
-  logAct(`تطبيق نسبة ${pct}% على كل المتاجر`);
-  say("تم تطبيق النسبة على كل المتاجر.");
-});
-$("btnDelAll").onclick=()=>run(async()=>{
-  const n=Object.keys(orders).length;
-  if(!n)return say("لا توجد طلبات.");
-  if(!(await confirmBox(`حذف جميع الطلبات (${fmt(n)} طلب) نهائياً؟ لا يمكن التراجع.`)))return;
-  if(!(await confirmBox("تأكيد أخير: سيتم حذف كل الطلبات الآن!")))return;
-  await remove(ref(db,"orders"));
-  logAct(`حذف جميع الطلبات (${n})`);
-  say("تم حذف جميع الطلبات.");
-});
-
-const closeModal=()=>{$("modalHost").innerHTML=""};
-function modal(title,bodyHTML,onOk,okLabel="حفظ",okClass="grn"){
- $("modalHost").innerHTML=`<div class="modal-bg"><form class="modal" id="mform">
-  <h3>${esc(title)}</h3>${bodyHTML}
-  <div class="actions"><button type="submit" class="${okClass}">${esc(okLabel)}</button><button type="button" class="gray" id="mcancel">إلغاء</button></div>
-  </form></div>`;
- $("mcancel").onclick=closeModal;
- $("modalHost").querySelector(".modal-bg").onclick=e=>{if(e.target.classList.contains("modal-bg"))closeModal()};
- $("mform").onsubmit=async e=>{e.preventDefault();try{await onOk()}catch(err){say(err.message,1)}};
-}
-const confirmBox=text=>new Promise(res=>{
- modal("تأكيد",`<p style="margin:0;line-height:1.7">${esc(text)}</p>`,async()=>{closeModal();res(true)},"نعم","red");
- $("mcancel").onclick=()=>{closeModal();res(false)};
- $("modalHost").querySelector(".modal-bg").onclick=e=>{if(e.target.classList.contains("modal-bg")){closeModal();res(false)}};
-});
-
-document.addEventListener("click",e=>{
- const b=e.target.closest("button");if(!b||b.disabled||b.type==="submit")return;const d=b.dataset;
- run(async()=>{
-  if(d.ss){ if(await confirmBox("تغيير حالة الطلب؟")){
-      const st=document.querySelector(`select[data-s="${CSS.escape(d.ss)}"]`).value;
-      const now=Date.now();
-      const upd={status:st,statusUpdatedAt:now};
-      if(st==="delivered")upd.deliveredAt=now;
-      await update(ref(db,"orders/"+d.ss),upd);
-      logAct(`تغيير حالة الطلب #${d.ss.slice(-6)} إلى ${ST[st]}`);
-      say("تم التحديث.")} }
-  else if(d.tg){ const u=users[d.tg]; await update(ref(db,"users/"+d.tg),{isActive:u.isActive===false}); logAct(`${u.isActive===false?"تفعيل":"تعطيل"} الحساب ${u.name}`); say("تم التحديث."); }
-  else if(d.ta){ const a=areas[d.ta]; await update(ref(db,"areas/"+d.ta),{isActive:a.isActive===false}); logAct(`${a.isActive===false?"تفعيل":"تعطيل"} المنطقة ${a.name}`); say("تم التحديث."); }
-  else if(d.pc){
-    const v=Number(document.getElementById("pc-"+d.pc).value);
-    if(!(v>=0&&v<=100))throw Error("النسبة يجب أن تكون بين 0 و 100.");
-    if(await confirmBox(`حفظ نسبة ${v}% للمتجر "${users[d.pc].name}"؟`)){
-      await update(ref(db,"users/"+d.pc),{commissionPercent:v});
-      logAct(`تعديل نسبة المتجر ${users[d.pc].name} إلى ${v}%`);
-      say("تم حفظ النسبة.");
-    }
-  }
-  else if(d.zp){ resetWallet(d.zp); }
-  else if(d.del){
-    const kind=d.kind||(users[d.del]?(users[d.del].role==="driver"?"driver":"store"):"area");
-    const label=kind==="order"?`الطلب`:(kind==="area"?`المنطقة`:(users[d.del]?users[d.del].name:""));
-    if(await confirmBox(`حذف ${label} نهائياً؟`)){
-      const nm=kind==="order"?`الطلب #${d.del.slice(-6)}`:(kind==="area"?`المنطقة ${(areas[d.del]||{}).name||""}`:`الحساب ${label}`);
-      await remove(ref(db, kind==="order"?"orders/"+d.del:(kind==="area"?"areas/"+d.del:"users/"+d.del)));
-      logAct("حذف "+nm);
-      say("تم الحذف."); }
-  }
- });
-});
-
-async function resetWallet(id){
- const d=getDebt(id);
- if(d<=0)return say("لا يوجد مستحق.");
- if(!(await confirmBox(`تسجيل سداد كامل لمبلغ ${fmt(d)} د.ع للسائق "${users[id].name}"؟`)))return;
- await push(ref(db,"finance"),{type:"cash_received",userId:id,userName:users[id].name,amount:d,note:"تصفير المحفظة",createdAt:Date.now()});
- logAct(`تصفير محفظة السائق ${users[id].name} (${fmt(d)} د.ع)`);
- say("تم تصفير المحفظة.");
-}
-
-async function addUser(role,username,name,pass,extra={}){
- username=username.trim().toLowerCase();
- if(!/^[a-z0-9._-]+$/.test(username) && !username.includes("@"))throw Error("رقم المستخدم: حروف إنجليزية وأرقام فقط.");
- if(pass.length<6)throw Error("كلمة المرور 6 أحرف على الأقل.");
- if(Object.values(users).some(u=>u&&u.username===username))throw Error("رقم المستخدم مستخدم مسبقاً.");
- const sec=initializeApp(cfg,"sec"+Date.now());
- try{
-  const email = username.includes("@") ? username : username+"@baqubah.app";
-  const c=await createUserWithEmailAndPassword(getAuth(sec),email,pass);
-  const rec={role,username,name,email,mapUrl:(extra.mapUrl||"").trim(),isActive:true,createdAt:Date.now()};
-  if(role==="store")rec.commissionPercent=Number(settings.defaultStorePercent||0);
-  await set(ref(db,"users/"+c.user.uid),rec);
-  logAct(`إضافة حساب ${name} (${role})`);
- }finally{await deleteApp(sec)}
-}
-
-$("fd").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("driver",$("du").value,$("dn").value,$("dp").value);e.target.reset();say("تمت إضافة السائق.")})};
-$("fs").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("store",$("su").value,$("sn").value,$("sp").value,{mapUrl:$("sm").value});e.target.reset();say("تمت إضافة المتجر.")})};
-$("fa").onsubmit=e=>{e.preventDefault();run(async()=>{
- const name=$("an").value.trim(),fee=Number($("af").value);
- if(!name||!Number.isSafeInteger(fee)||fee<0)throw Error("بيانات غير صحيحة.");
- await set(push(ref(db,"areas")),{name,fee,isActive:true,createdAt:Date.now()});
- logAct(`إضافة منطقة ${name} (${fee})`);
- e.target.reset();say("تمت إضافة المنطقة.")})};
-
-$("fm-store").onsubmit=e=>{e.preventDefault();run(async()=>{
-  await addUser("store_manager",$("msu").value,$("msn").value,$("msp").value);
-  e.target.reset(); say("تمت إضافة مسؤول المتاجر.");
-})};
-$("fm-driver").onsubmit=e=>{e.preventDefault();run(async()=>{
-  await addUser("driver_manager",$("mdu").value,$("mdn").value,$("mdp").value);
-  e.target.reset(); say("تمت إضافة مسؤول السائقين.");
-})};
-
-$("cb").onclick=()=>run(async()=>{
- const id=$("cd").value,amount=Number($("ca").value);
- if(!id||!Number.isSafeInteger(amount)||amount<=0)throw Error("اختر سائقاً وأدخل مبلغاً صحيحاً.");
- if(!(await confirmBox("تأكيد تسجيل الكاش؟")))return;
- await set(push(ref(db,"finance")),{type:"cash_received",userId:id,userName:users[id].name,amount,note:$("cn").value.trim(),createdAt:Date.now()});
- logAct(`استلام كاش ${fmt(amount)} د.ع من ${users[id].name}`);
- $("ca").value="";$("cn").value="";say("تم تسجيل الكاش.")});
-
-async function autoClean(){
- const days = Number(settings.deleteOrdersAfterDays || 30);
- if(!days)return;
- const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
- const snap = await get(ref(db, "orders"));
- if(!snap.exists())return;
- const updates = {};
- snap.forEach(c=>{ if(c.val().createdAt < cutoff && ["delivered","cancelled"].includes(c.val().status)) updates[c.key]=null; });
- if(Object.keys(updates).length) await update(ref(db,"orders"),updates);
-}
-</script>
-</body>
-</html>
+ $("areas").innerHTML=table(["المنطقة","أجرة التوصيل","الحالة","تاريخ الإضافة","إجراءات"],Object.entries(areas).map(([id,a])=>
+  `<tr><td><b>${esc(a.
