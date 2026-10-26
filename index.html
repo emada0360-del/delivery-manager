@@ -398,4 +398,229 @@ function draw(){
  }
 
  $("areas").innerHTML=table(["المنطقة","أجرة التوصيل","الحالة","تاريخ الإضافة","إجراءات"],Object.entries(areas).map(([id,a])=>
-  `<tr><td><b>${esc(a.
+  `<tr><td><b>${esc(a.name)}</b></td><td>${fmt(a.fee)} د.ع</td><td>${a.isActive===false?'<span style="color:red">معطلة</span>':'<span style="color:green">مفعّلة</span>'}</td>
+  <td>${tm(a.createdAt)}</td>
+  <td><button type="button" data-ta="${esc(id)}" class="org">${a.isActive===false?"تفعيل":"تعطيل"}</button>
+  <button type="button" data-del="${esc(id)}" data-kind="area" class="red">حذف</button></td></tr>`),"لا توجد مناطق.");
+
+ const keep=$("cd").value;
+ $("cd").innerHTML=drs.map(([id,u])=>`<option value="${esc(id)}">${esc(u.name)} (${esc(u.username)})</option>`).join("");
+ if(keep)$("cd").value=keep;
+
+ $("fin").innerHTML=table(["السائق","المبلغ","ملاحظة","الوقت"],Object.values(fin).filter(f=>f&&f.type==="cash_received").sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(f=>
+  `<tr><td>${esc(f.userName)}</td><td style="color:var(--ok);font-weight:700">${fmt(f.amount)} د.ع</td>
+  <td>${esc(f.note)||"—"}</td><td>${tm(f.createdAt)}</td></tr>`),"لا توجد سجلات.");
+
+ $("managers").innerHTML=table(["الاسم","البريد الإلكتروني","الصلاحية","تاريخ الإنشاء"],Object.values(users).filter(u=>u&&(u.role==="store_manager"||u.role==="driver_manager")).map(u=>
+  `<tr><td>${esc(u.name)}</td><td dir="ltr">${esc(u.email||u.username)}</td>
+  <td>${u.role==="store_manager"?"مسؤول متاجر":"مسؤول سائقين"}</td>
+  <td>${tm(u.createdAt)}</td></tr>`),"لا يوجد مسؤولون.");
+}
+
+$("btnToggleProfit").onclick=()=>{showProfitFlag=!showProfitFlag;draw()};
+
+$("btnPrintAreas").onclick=()=>{
+  $("printDate").textContent="تاريخ التقرير: "+new Date().toLocaleString("ar-IQ");
+  $("printAreasContent").innerHTML=table(
+    ["ت","المنطقة","أجرة التوصيل","الحالة","تاريخ الإضافة"],
+    Object.entries(areas).map(([id,a],idx)=>`<tr>
+      <td>${idx+1}</td>
+      <td><b>${esc(a.name)}</b></td>
+      <td>${fmt(a.fee)} د.ع</td>
+      <td>${a.isActive===false?'معطلة':'مفعّلة'}</td>
+      <td>${tm(a.createdAt)}</td>
+    </tr>`),"لا توجد مناطق مسجلة للطباعة."
+  );
+  $("printArea").hidden=false;
+  window.print();
+  setTimeout(()=>{$("printArea").hidden=true},500);
+};
+
+function drawLiveOrders(){
+ const live=Object.entries(orders).filter(([id,o])=>o&&!["delivered","cancelled"].includes(o.status))
+   .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
+ $("liveOrders").innerHTML=table(
+   ["الطلب","المتجر","السائق","رقم السائق","الحالة","وقت الطلب"],
+   live.map(([id,o])=>{
+     let tagClass="y";
+     if(["accepted","arrived_store","picked_up","delivering"].includes(o.status))tagClass="g";
+     const dr=o.driverId?users[o.driverId]:null;
+     const name=o.driverName||(dr&&dr.name)||"";
+     const phone=o.driverPhone||(dr&&(dr.phone||dr.username))||"";
+     const driverName=name?`<b>${esc(name)}</b>`:'<span style="color:#94a3b8">بانتظار سائق</span>';
+     const driverPhone=phone?`<a href="tel:${esc(phone)}" dir="ltr">${esc(phone)}</a>`:'—';
+     return `<tr><td>#${esc(id.slice(-6))}</td><td>${esc(o.storeName)}</td><td>${driverName}</td>
+       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span></td><td>${tm(o.createdAt)}</td></tr>`;
+   }),"لا توجد طلبات حية الآن."
+ );
+}
+
+function drawOrders(){
+ const t=$("q").value.trim().toLowerCase(),f=$("f").value;
+ const rows=Object.entries(orders).filter(([id,o])=>o&&(!f||o.status===f)&&[id,o.storeName,o.area,o.driverName].join(" ").toLowerCase().includes(t))
+  .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0)).slice(0,100);
+ $("orders").innerHTML=table(["الطلب","المتجر","المنطقة","وقت الطلب","آخر حركة","الحالة","إجراءات"],rows.map(([id,o])=>
+  `<tr><td>#${esc(id.slice(-6))}</td><td>${esc(o.storeName)}</td><td>${esc(o.area)}</td>
+  <td>${tm(o.createdAt)}</td><td>${tm(o.statusUpdatedAt||o.deliveredAt||o.updatedAt)}</td>
+  <td>${ST[o.status]||esc(o.status)}</td>
+  <td><select data-s="${esc(id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${o.status===k?"selected":""}>${v}</option>`).join("")}</select>
+  <button type="button" data-ss="${esc(id)}">حفظ</button>
+  <button type="button" data-del="${esc(id)}" data-kind="order" class="red">حذف</button></td></tr>`),"لا توجد طلبات.");
+}
+$("q").oninput=drawOrders;$("f").onchange=drawOrders;
+
+$("btnAnn").onclick=()=>run(async()=>{
+  await update(ref(db,"settings"),{announcement:$("ann").value.trim()});
+  say("تم حفظ الإعلان.");
+});
+
+$("btnSet").onclick=()=>run(async()=>{
+  const pct=Number($("set-store-commission").value),fixed=Number($("set-platform-commission").value);
+  if(!(pct>=0&&pct<=100))throw Error("النسبة يجب أن تكون بين 0 و 100.");
+  if(!(fixed>=0))throw Error("العمولة الثابتة غير صحيحة.");
+  if(!(await showToastConfirm("حفظ الإعدادات؟")))return;
+  await update(ref(db,"settings"),{
+    debtLimit:Number($("set-limit").value),
+    deleteOrdersAfterDays:Number($("set-days").value),
+    storeCommissionPercent:pct,
+    platformCommissionFixed:fixed
+  });
+  say("تم حفظ الإعدادات.");
+});
+
+$("btnPctAll").onclick=()=>run(async()=>{
+  const pct=Number($("set-store-commission").value);
+  if(!(pct>=0&&pct<=100))throw Error("النسبة يجب أن تكون بين 0 و 100.");
+  if(!(await showToastConfirm(`تطبيق نسبة ${pct}% على جميع المتاجر؟`)))return;
+  const upd={};
+  list("store").forEach(([id])=>{upd["users/"+id+"/commissionPercent"]=pct});
+  upd["settings/storeCommissionPercent"]=pct;
+  await update(ref(db),upd);
+  say("تم تطبيق النسبة على كل المتاجر.");
+});
+
+$("btnDeleteAllOrders").onclick=()=>run(async()=>{
+  const snap=await get(ref(db,"orders"));
+  if(!snap.exists())return say("لا توجد طلبات.");
+  const map=snap.val(),n=Object.keys(map).length;
+  if(!(await showToastConfirm(`حذف جميع الطلبات (${fmt(n)} طلب)؟`)))return;
+  if(!(await showToastConfirm("تأكيد أخير: حذف كل الطلبات الآن!")))return;
+  await deleteOrdersArchived(map);
+  say("تم حذف جميع الطلبات. العمولات انحفظت بالسجل المالي.");
+});
+
+document.addEventListener("click",e=>{
+ const b=e.target.closest("button");if(!b||b.disabled||b.type==="submit")return;const d=b.dataset;
+ if(!(d.ss||d.tg||d.ta||d.pc||d.zp||d.del))return;
+ run(async()=>{
+  if(d.ss){
+    if(await showToastConfirm("تغيير حالة الطلب؟")){
+      const st=document.querySelector(`select[data-s="${CSS.escape(d.ss)}"]`).value;
+      const now=Date.now();
+      const upd={status:st,statusUpdatedAt:now};
+      if(st==="delivered")upd.deliveredAt=now;
+      await update(ref(db,"orders/"+d.ss),upd);
+      say("تم التحديث.");
+    }
+  }
+  else if(d.tg){
+    const u=users[d.tg];
+    if(await showToastConfirm(`${u.isActive===false?"تفعيل":"تعطيل"} الحساب "${u.name}"؟`)){
+      await update(ref(db,"users/"+d.tg),{isActive:u.isActive===false});say("تم التحديث.");
+    }
+  }
+  else if(d.ta){
+    const a=areas[d.ta];
+    if(await showToastConfirm(`${a.isActive===false?"تفعيل":"تعطيل"} المنطقة "${a.name}"؟`)){
+      await update(ref(db,"areas/"+d.ta),{isActive:a.isActive===false});say("تم التحديث.");
+    }
+  }
+  else if(d.pc){
+    const raw=document.getElementById("pc-"+d.pc).value.trim();
+    const v=raw===""?null:Number(raw);
+    if(v!==null&&!(v>=0&&v<=100))throw Error("النسبة يجب أن تكون بين 0 و 100.");
+    if(await showToastConfirm(v===null?`إرجاع المتجر "${users[d.pc].name}" للنسبة الافتراضية؟`:`حفظ نسبة ${v}% للمتجر "${users[d.pc].name}"؟`)){
+      await update(ref(db,"users/"+d.pc),{commissionPercent:v});
+      say("تم حفظ النسبة.");
+    }
+  }
+  else if(d.zp){ await resetWallet(d.zp); }
+  else if(d.del){
+    const kind=d.kind||(users[d.del]?(users[d.del].role==="driver"?"driver":"store"):"area");
+    const label=kind==="order"?`الطلب #${d.del.slice(-6)}`:(kind==="area"?`المنطقة "${(areas[d.del]||{}).name||""}"`:`"${users[d.del]?users[d.del].name:""}"`);
+    if(await showToastConfirm(`حذف ${label} نهائياً؟`)){
+      if(kind==="order"){
+        await deleteOrdersArchived({[d.del]:orders[d.del]});
+      }else{
+        await update(ref(db),{[(kind==="area"?"areas/":"users/")+d.del]:null});
+      }
+      say("تم الحذف.");
+    }
+  }
+ });
+});
+
+async function resetWallet(id){
+ const d=getDebt(id);
+ if(d<=0)return say("لا يوجد مستحق.");
+ if(!(await showToastConfirm(`تسجيل سداد كامل لمبلغ ${fmt(d)} د.ع للسائق "${users[id].name}"؟`)))return;
+ await push(ref(db,"finance"),{type:"cash_received",userId:id,userName:users[id].name,amount:d,note:"تصفير المحفظة",createdAt:Date.now()});
+ say("تم تصفير المحفظة.");
+}
+
+async function addUser(role,username,name,pass,extra={}){
+ username=username.trim().toLowerCase();
+ if(!/^[a-z0-9._-]+$/.test(username) && !username.includes("@"))throw Error("رقم المستخدم: حروف إنجليزية وأرقام فقط.");
+ if(pass.length<6)throw Error("كلمة المرور 6 أحرف على الأقل.");
+ if(Object.values(users).some(u=>u&&u.username===username))throw Error("رقم المستخدم مستخدم مسبقاً.");
+ const sec=initializeApp(cfg,"sec"+Date.now());
+ try{
+  const email=username.includes("@")?username:username+"@baqubah.app";
+  const c=await createUserWithEmailAndPassword(getAuth(sec),email,pass);
+  const rec={role,username,name,email,mapUrl:(extra.mapUrl||"").trim(),isActive:true,createdAt:Date.now()};
+  if(role==="store")rec.commissionPercent=Number(settings.storeCommissionPercent??10);
+  await set(ref(db,"users/"+c.user.uid),rec);
+ }finally{await deleteApp(sec)}
+}
+
+$("fd").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("driver",$("du").value,$("dn").value,$("dp").value);e.target.reset();say("تمت إضافة السائق.")})};
+$("fs").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("store",$("su").value,$("sn").value,$("sp").value,{mapUrl:$("sm").value});e.target.reset();say("تمت إضافة المتجر.")})};
+$("fa").onsubmit=e=>{e.preventDefault();run(async()=>{
+ const name=$("an").value.trim(),fee=Number($("af").value);
+ if(!name||!Number.isSafeInteger(fee)||fee<0)throw Error("بيانات غير صحيحة.");
+ await set(push(ref(db,"areas")),{name,fee,isActive:true,createdAt:Date.now()});
+ e.target.reset();say("تمت إضافة المنطقة.")})};
+
+$("fm-store").onsubmit=e=>{e.preventDefault();run(async()=>{
+  await addUser("store_manager",$("msu").value,$("msn").value,$("msp").value);
+  e.target.reset(); say("تمت إضافة مسؤول المتاجر.");
+})};
+$("fm-driver").onsubmit=e=>{e.preventDefault();run(async()=>{
+  await addUser("driver_manager",$("mdu").value,$("mdn").value,$("mdp").value);
+  e.target.reset(); say("تمت إضافة مسؤول السائقين.");
+})};
+
+$("cb").onclick=()=>run(async()=>{
+ const id=$("cd").value,amount=Number($("ca").value);
+ if(!id||!Number.isSafeInteger(amount)||amount<=0)throw Error("اختر سائقاً وأدخل مبلغاً صحيحاً.");
+ if(!(await showToastConfirm(`تأكيد تسجيل كاش ${fmt(amount)} د.ع؟`)))return;
+ await set(push(ref(db,"finance")),{type:"cash_received",userId:id,userName:users[id].name,amount,note:$("cn").value.trim(),createdAt:Date.now()});
+ $("ca").value="";$("cn").value="";say("تم تسجيل الكاش.")});
+
+// الحذف التلقائي للطلبات القديمة: تُحفظ عمولاتها بالسجل المالي قبل الحذف
+async function autoClean(){
+ try{
+  const sSnap=await get(ref(db,"settings"));
+  const days=Number((sSnap.val()||{}).deleteOrdersAfterDays??30);
+  if(!days)return;
+  const cutoff=Date.now()-(days*24*60*60*1000);
+  const snap=await get(ref(db,"orders"));
+  if(!snap.exists())return;
+  const old={};
+  snap.forEach(c=>{const o=c.val();if(o&&o.createdAt&&o.createdAt<cutoff&&["delivered","cancelled"].includes(o.status))old[c.key]=o;});
+  await deleteOrdersArchived(old);
+ }catch(e){console.warn("autoClean",e)}
+}
+</script>
+</body>
+</html>
