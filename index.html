@@ -186,17 +186,17 @@ td input.pc{margin:0;width:80px;padding:6px;display:inline-block}
 <label>حد الدين الأقصى لتعطيل السائق (دينار)</label>
 <input id="set-limit" type="number" min="0" step="1000" value="15000">
 
-<label>نسبة عمولة المتاجر الافتراضية (%)</label>
-<input id="set-store-commission" type="number" min="0" max="100" step="0.5" value="10">
+<label>عمولة المتجر لكل طلب (دينار)</label>
+<input id="set-store-commission" type="number" min="0" step="50" value="500">
 
-<label>عمولة المنصة الثابتة لكل طلب (دينار)</label>
-<input id="set-platform-commission" type="number" min="0" step="250" value="1000">
+<label>عمولة السائق (% من أجرة التوصيل)</label>
+<input id="set-driver-commission" type="number" min="0" max="100" step="0.5" value="10">
 
 <label>حذف الطلبات القديمة تلقائياً بعد (أيام)</label>
 <input id="set-days" type="number" min="1" step="1" value="30">
 
 <button type="button" id="btnSet" class="grn" style="margin-bottom:10px">حفظ الإعدادات</button>
-<button type="button" id="btnPctAll" class="org" style="margin-bottom:20px">تطبيق النسبة على كل المتاجر</button>
+<button type="button" id="btnPctAll" class="org" style="margin-bottom:20px">تطبيق المبلغ على كل المتاجر</button>
 
 <hr style="border:0;border-top:1px solid var(--line);margin:20px 0">
 
@@ -301,8 +301,8 @@ function fillSettings(){
  const put=(id,v)=>{const el=$(id);if(el&&document.activeElement!==el)el.value=v};
  put("set-limit",s.debtLimit??15000);
  put("set-days",s.deleteOrdersAfterDays??30);
- put("set-store-commission",s.storeCommissionPercent??10);
- put("set-platform-commission",s.platformCommissionFixed??1000);
+ put("set-store-commission",s.storeCommissionFixed??500);
+ put("set-driver-commission",s.driverCommissionPercent??10);
  put("ann",s.announcement||"");
 }
 
@@ -332,7 +332,7 @@ const getDebt=id=>{
   return live + archived - paid;
 };
 const archCount=id=>Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="archive").reduce((s,f)=>s+(Number(f.count)||0),0);
-const storePct=u=>(u&&u.commissionPercent!==undefined&&u.commissionPercent!==null)?u.commissionPercent:(settings.storeCommissionPercent??10);
+const storeFee=u=>(u&&u.commissionAmount!==undefined&&u.commissionAmount!==null)?u.commissionAmount:(settings.storeCommissionFixed??500);
 
 const table=(h,rows,empty)=>rows.length?`<table><thead><tr>${h.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table>`:`<p style="text-align:center;color:#6b7280">${empty}</p>`;
 const mapLink=url=>{if(!url)return "—";const u=String(url).trim();return /^https?:\/\//i.test(u)?`<a href="${esc(u)}" target="_blank" style="color:var(--pri)">فتح الخريطة ↗</a>`:esc(u)};
@@ -384,13 +384,13 @@ function draw(){
   <button type="button" data-zp="${esc(id)}" class="grn" ${d<=0?"disabled":""}>تصفير</button>
   <button type="button" data-del="${esc(id)}" class="red">حذف</button></td></tr>`}),"لا يوجد سائقون.");
 
- // لا نعيد رسم جدول المتاجر وانت تكتب النسبة
+ // لا نعيد رسم جدول المتاجر وانت تكتب المبلغ
  const ae=document.activeElement;
  if(!(ae&&ae.tagName==="INPUT"&&$("stores").contains(ae))){
- $("stores").innerHTML=table(["الاسم","رقم الدخول","الخريطة","نسبة العمولة %","تاريخ التسجيل","إجراءات"],sts.map(([id,u])=>
+ $("stores").innerHTML=table(["الاسم","رقم الدخول","الخريطة","عمولة الطلب (د.ع)","تاريخ التسجيل","إجراءات"],sts.map(([id,u])=>
   `<tr><td><b>${esc(u.name)}</b></td><td dir="ltr">${esc(u.username)}</td>
   <td>${mapLink(u.mapUrl)}</td>
-  <td><input class="pc" type="number" min="0" max="100" step="0.5" id="pc-${esc(id)}" value="${esc(storePct(u))}">
+  <td><input class="pc" type="number" min="0" step="50" id="pc-${esc(id)}" value="${esc(storeFee(u))}">
   <button type="button" data-pc="${esc(id)}" class="grn">حفظ</button></td>
   <td>${tm(u.createdAt)}</td>
   <td><button type="button" data-tg="${esc(id)}" class="${u.isActive===false?"grn":"org"}">${u.isActive===false?"تفعيل":"تعطيل"}</button>
@@ -475,28 +475,28 @@ $("btnAnn").onclick=()=>run(async()=>{
 });
 
 $("btnSet").onclick=()=>run(async()=>{
-  const pct=Number($("set-store-commission").value),fixed=Number($("set-platform-commission").value);
-  if(!(pct>=0&&pct<=100))throw Error("النسبة يجب أن تكون بين 0 و 100.");
-  if(!(fixed>=0))throw Error("العمولة الثابتة غير صحيحة.");
+  const pct=Number($("set-store-commission").value),drv=Number($("set-driver-commission").value);
+  if(!(pct>=0))throw Error("عمولة المتجر غير صحيحة.");
+  if(!(drv>=0&&drv<=100))throw Error("نسبة عمولة السائق يجب أن تكون بين 0 و 100.");
   if(!(await showToastConfirm("حفظ الإعدادات؟")))return;
   await update(ref(db,"settings"),{
     debtLimit:Number($("set-limit").value),
     deleteOrdersAfterDays:Number($("set-days").value),
-    storeCommissionPercent:pct,
-    platformCommissionFixed:fixed
+    storeCommissionFixed:pct,
+    driverCommissionPercent:drv
   });
   say("تم حفظ الإعدادات.");
 });
 
 $("btnPctAll").onclick=()=>run(async()=>{
   const pct=Number($("set-store-commission").value);
-  if(!(pct>=0&&pct<=100))throw Error("النسبة يجب أن تكون بين 0 و 100.");
-  if(!(await showToastConfirm(`تطبيق نسبة ${pct}% على جميع المتاجر؟`)))return;
+  if(!(pct>=0))throw Error("المبلغ غير صحيح.");
+  if(!(await showToastConfirm(`تطبيق عمولة ${fmt(pct)} د.ع لكل طلب على جميع المتاجر؟`)))return;
   const upd={};
-  list("store").forEach(([id])=>{upd["users/"+id+"/commissionPercent"]=pct});
-  upd["settings/storeCommissionPercent"]=pct;
+  list("store").forEach(([id])=>{upd["users/"+id+"/commissionAmount"]=pct});
+  upd["settings/storeCommissionFixed"]=pct;
   await update(ref(db),upd);
-  say("تم تطبيق النسبة على كل المتاجر.");
+  say("تم تطبيق العمولة على كل المتاجر.");
 });
 
 $("btnDeleteAllOrders").onclick=()=>run(async()=>{
@@ -538,10 +538,10 @@ document.addEventListener("click",e=>{
   else if(d.pc){
     const raw=document.getElementById("pc-"+d.pc).value.trim();
     const v=raw===""?null:Number(raw);
-    if(v!==null&&!(v>=0&&v<=100))throw Error("النسبة يجب أن تكون بين 0 و 100.");
-    if(await showToastConfirm(v===null?`إرجاع المتجر "${users[d.pc].name}" للنسبة الافتراضية؟`:`حفظ نسبة ${v}% للمتجر "${users[d.pc].name}"؟`)){
-      await update(ref(db,"users/"+d.pc),{commissionPercent:v});
-      say("تم حفظ النسبة.");
+    if(v!==null&&!(v>=0))throw Error("المبلغ غير صحيح.");
+    if(await showToastConfirm(v===null?`إرجاع المتجر "${users[d.pc].name}" للعمولة الافتراضية؟`:`حفظ عمولة ${fmt(v)} د.ع للمتجر "${users[d.pc].name}"؟`)){
+      await update(ref(db,"users/"+d.pc),{commissionAmount:v});
+      say("تم حفظ العمولة.");
     }
   }
   else if(d.zp){ await resetWallet(d.zp); }
@@ -578,7 +578,7 @@ async function addUser(role,username,name,pass,extra={}){
   const email=username.includes("@")?username:username+"@baqubah.app";
   const c=await createUserWithEmailAndPassword(getAuth(sec),email,pass);
   const rec={role,username,name,email,mapUrl:(extra.mapUrl||"").trim(),isActive:true,createdAt:Date.now()};
-  if(role==="store")rec.commissionPercent=Number(settings.storeCommissionPercent??10);
+  if(role==="store")rec.commissionAmount=Number(settings.storeCommissionFixed??500);
   await set(ref(db,"users/"+c.user.uid),rec);
  }finally{await deleteApp(sec)}
 }
