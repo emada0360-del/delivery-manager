@@ -81,7 +81,7 @@ details[open] summary { margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1; 
 
 <div class="box"><h3>طلبات متاحة</h3><div id="av"></div></div>
 <div class="box"><h3>طلباتي الحالية</h3><div id="my"></div></div>
-<div class="box"><small>ربحك 90% من أجرة التوصيل. المنصة 10% وعمولة المتجر 500 د.ع لكل طلب، تُحسب في المستحق عليك. المدير يسجل الكاش اللي تسدده.</small></div>
+<div class="box"><small>ربحك من أجرة التوصيل بعد خصم عمولة المنصة، وعمولة المتجر تُحسب لكل طلب، وكلاهما يُحسب في المستحق عليك. المدير يسجل الكاش اللي تسدده.</small></div>
 </main>
 </div>
 
@@ -110,7 +110,7 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const ST={accepted:"تم قبول الطلب",arrived_store:"وصلت للمتجر",picked_up:"استلمت الطلب",delivering:"بالطريق للزبون"};
 const STEP={arrive:["accepted","arrived_store"],pick:["arrived_store","picked_up"],go:["picked_up","delivering"],done:["delivering","delivered"]};
 const BTN={accepted:["arrive","وصلت للمتجر"],arrived_store:["pick","استلمت الطلب"],picked_up:["go","انطلقت للتوصيل"],delivering:["done","تأكيد التسليم"]};
-let uid=null,lim=15000,maxA=3,seen=null,blocked=false,orders={},pend={},mine={},cash={},privData={},stops=[],busy=false;
+let uid=null,lim=15000,maxA=3,drvPct=10,seen=null,blocked=false,orders={},pend={},mine={},cash={},privData={},stops=[],busy=false;
 let AC=null, alertTimer=null;
 const wake=()=>{try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch{}};
 document.addEventListener("click",wake);document.addEventListener("touchstart",wake,{passive:true});
@@ -172,7 +172,7 @@ function start(){
  stops.push(onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{pend=s.val()||{};merge()},e=>say("خطأ تحميل الطلبات: "+e.message)));
  stops.push(onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{mine=s.val()||{};merge()},e=>say("خطأ تحميل طلباتك: "+e.message)));
  stops.push(onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{cash=s.val()||{};draw()},()=>{}));
- stops.push(onValue(ref(db,"settings"),s=>{const v=s.val()||{};lim=Number(v.debtLimit)||15000;maxA=Number(v.maxActive)||3;$("bn").textContent=v.announcement||"";$("bn").hidden=!v.announcement;draw()},()=>{}));
+ stops.push(onValue(ref(db,"settings"),s=>{const v=s.val()||{};lim=Number(v.debtLimit)||15000;{const dp=Number(v.driverCommissionPercent??10);drvPct=(dp>=0&&dp<=100)?dp:10;}maxA=Number(v.maxActive)||3;$("bn").textContent=v.announcement||"";$("bn").hidden=!v.announcement;draw()},()=>{}));
  stops.push(onValue(ref(db,"users/"+uid),s=>{const u=s.val();if(!u||u.isActive===false)logout()}));
 }
 
@@ -191,10 +191,11 @@ function fetchPrivateData(){
 }
 
 function buildFinBox(o) {
-    const storeCom = 500;
+    const storeCom = Number.isFinite(Number(o.storeCommission)) ? Number(o.storeCommission) : 500;
     const payStore = Math.round(Number(o.itemPrice||0) - storeCom);
     const collectCustomer = Math.round(Number(o.customerTotal||0));
-    const profit = Math.round(Number(o.deliveryFee||0) * 0.9);
+    const fee0 = Math.round(Number(o.deliveryFee)||0);
+    const profit = fee0 - Math.round(fee0 * drvPct / 100);
     return `<div class="fin-box">
         <div class="fin-row" style="color:#dc2626"><span>تدفع للمتجر:</span> <b>${fmt(payStore)} د.ع</b></div>
         <div class="fin-row" style="color:#2563eb"><span>تستلم من الزبون:</span> <b>${fmt(collectCustomer)} د.ع</b></div>
@@ -364,4 +365,29 @@ async function act(e){
    if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟"))) { busy=false; return; }
    const [from,to]=STEP[a];
    x=await runTransaction(r,o=>{
-  
+    if(o===null)return o;
+    if(o.driverId!==uid||o.status!==from)return;
+    o.status=to;o.updatedAt=Date.now();
+    if(to==="delivered"){
+     const fee=Math.max(0,Math.round(Number(o.deliveryFee)||0)),com=Math.round(fee*drvPct/100),p=fee-com;
+     o.deliveredAt=Date.now();o.driverProfit=p;o.platformDeliveryCommission=com;
+     o.storeCommission=Number.isFinite(Number(o.storeCommission))?Number(o.storeCommission):500;
+    }
+    return o;
+   });
+   ok=x.committed&&x.snapshot.val()?.status===to;
+   say(ok?(to==="delivered"?"تم التسليم. ربحك "+fmt(x.snapshot.val().driverProfit)+" د.ع.":"تم تحديث الحالة."):"تغيّرت حالة الطلب. حدّث الصفحة.");
+  }
+ }catch(err){say("خطأ: "+err.message)}
+ finally{busy=false}
+}
+$("av").onclick=act;$("my").onclick=act;
+
+async function logout(){
+ if(uid){try{await set(ref(db,"presence/"+uid),{online:false,lastSeen:serverTimestamp()})}catch{}}
+ clear();await signOut(auth);
+}
+$("out").onclick=logout;
+</script>
+</body>
+</html>
