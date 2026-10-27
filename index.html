@@ -35,7 +35,7 @@ td input.pc{margin:0;width:80px;padding:6px;display:inline-block}
 .red{background:var(--bad)}.grn{background:var(--ok)}.org{background:var(--warn)}.gray{background:#6b7280}
 .warn{color:#b42318;font-weight:bold}
 #login{max-width:400px;margin:80px auto}
-#msg{padding:12px 16px;margin:16px 20px 0;border-radius:8px;display:none;font-weight:600}
+#msg{position:fixed;top:72px;left:12px;right:12px;z-index:2000;padding:12px 16px;border-radius:8px;display:none;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.2)}
 [hidden]{display:none!important}
 .tag{display:inline-block;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;background:#eef2f7;color:#374151}
 .tag.g{background:#e6f4ea;color:#176337}.tag.r{background:#fdecea;color:#b42318}.tag.y{background:#fef3c7;color:#b45309}
@@ -306,11 +306,28 @@ function fillSettings(){
  put("ann",s.announcement||"");
 }
 
+// منع إعادة رسم الجداول أثناء الضغط على زر (هذا سبب ضياع الضغطة)
+let ptr=false,drawT=null;
+document.addEventListener("pointerdown",()=>{ptr=true},true);
+document.addEventListener("pointerup",()=>{setTimeout(()=>{ptr=false},120)},true);
+document.addEventListener("pointercancel",()=>{ptr=false},true);
+function scheduleDraw(){
+ clearTimeout(drawT);
+ drawT=setTimeout(()=>{ if(ptr)return scheduleDraw(); draw(); },200);
+}
+
 function start(){
  const src={users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
+ const prev={};
  for(const p in src)onValue(ref(db,p),s=>{
-   src[p](s.val()||{});
-   draw();
+   const v=s.val()||{};
+   const key=p==="presence"
+     ? Object.entries(v).map(([k,x])=>k+":"+(x&&x.online===true)).join(",")
+     : JSON.stringify(v);
+   if(prev[p]===key)return;
+   prev[p]=key;
+   src[p](v);
+   scheduleDraw();
  },e=>say("تعذر التحميل ("+p+"): "+e.message,1));
  autoClean();
 }
