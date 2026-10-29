@@ -125,11 +125,10 @@ main{max-width:600px;margin:auto;padding:12px}
   <header>
     <button onclick="toggleSidebar()" style="background:transparent;padding:5px;font-size:20px">☰</button>
     <h2 id="drvName">السائق</h2>
-    <div style="width:24px"></div> <!-- Spacer -->
+    <div style="width:24px"></div> 
   </header>
 
   <main>
-    <!-- شريط الإحصائيات العلوي -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:15px">
       <div class="card" style="padding:10px;text-align:center;margin:0">
         <span style="font-size:11px;color:var(--text-muted)">المكتملة</span>
@@ -195,7 +194,6 @@ main{max-width:600px;margin:auto;padding:12px}
 </div>
 
 <script>
-var __d=function(t){var e=document.getElementById('diag');if(e)e.textContent=t;};
 function __set(base){return new Promise(function(res,rej){var names=['app','auth','database'],loaded=0,failed=false,t;
 names.forEach(function(n){var s=document.createElement('script');s.async=false;s.src=base(n);
 s.onload=function(){loaded++;if(loaded===3){clearTimeout(t);res();}};
@@ -252,7 +250,6 @@ const setHtml=(id,h)=>{const e=$(id);if(e._h!==h){e._h=h;e.innerHTML=h}};
 let uid=null,driver=null,settings={},isOnline=false,pos={lat:null,lng:null},debt=0,debtLimit=15000;
 let pend={},mine={},finance={},privData={},stops=[],busy=false,seenAv=null,prevMine=null,gps=null,tick=null,pendLoaded=false;
 
-// Toggle Sidebar
 window.toggleSidebar = function() {
   const sb = $("sidebar");
   const ov = $("overlay");
@@ -263,6 +260,16 @@ window.toggleSidebar = function() {
     sb.classList.add("open");
     ov.classList.add("show");
   }
+};
+
+// تم جعل الدالة عامة (Global) لكي تعمل أزرار الشاشة
+window.setStatus = function(status) {
+    if (debt >= debtLimit && status) return alert("لا يمكنك الاتصال، تجاوزت سقف الدين");
+    if (hasActive() && !status) return alert("لا يمكنك الإغلاق ولديك طلبات نشطة");
+    isOnline = status;
+    set(ref(db,"presence/"+uid),{online:isOnline,lastSeen:serverTimestamp()}).catch(e=>alert("تعذر تحديث الحالة"));
+    if(isOnline){startGPS();speak("أنت الآن متصل")}else speak("أنت الآن غير متصل");
+    draw();
 };
 
 $("lf").onsubmit=async e=>{
@@ -352,14 +359,6 @@ function stats(){
  $("warnBox").hidden=d<debtLimit;
 }
 
-function setStatus(status) {
-    if (debt >= debtLimit && status) return alert("لا يمكنك الاتصال، تجاوزت سقف الدين");
-    if (hasActive() && !status) return alert("لا يمكنك الإغلاق ولديك طلبات نشطة");
-    isOnline = status;
-    set(ref(db,"presence/"+uid),{online:isOnline,lastSeen:serverTimestamp()}).catch(e=>alert("تعذر تحديث الحالة"));
-    if(isOnline){startGPS();speak("أنت الآن متصل")}else speak("أنت الآن غير متصل");
-    draw();
-}
-
 function finBox(o){
- const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommiss
+ const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommission||500));
+ const fee=Number(o.deliveryFee)||0,pc=Math.round(fee*0.1),payStore=Math.rou
