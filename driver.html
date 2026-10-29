@@ -376,7 +376,9 @@ function __main(){
    if(!me){await signOut(auth);$("err").textContent="الحساب غير موجود بقاعدة البيانات.";return}
    if(me.role!=="driver"){await signOut(auth);$("err").textContent="هذا الحساب مو حساب سائق (الدور: "+(me.role||"غير محدد")+").";return}
    if(me.isActive===false){await signOut(auth);$("err").textContent="حسابك معطّل. راجع المدير.";return}
-   uid=u.uid;driver=me;$("err").textContent="";$("drvName").textContent=me.name||"السائق";$("sideDriverName").textContent=me.name||"السائق";
+   uid=u.uid;driver=me;
+   try{isOnline=localStorage.getItem("baqubah-driver-online-"+uid)==="true"}catch{isOnline=false}
+   $("err").textContent="";$("drvName").textContent=me.name||"السائق";$("sideDriverName").textContent=me.name||"السائق";
    show(true);start();setupDriverPush(uid);
   }catch(e){$("err").textContent="خطأ بعد الدخول: "+(e&&(e.code||e.message)||e)}
  });
@@ -403,12 +405,24 @@ function __main(){
    const connected=s.val()===true;
    $("off").hidden=connected;
    if(connected){
-    onDisconnect(pr).set({online:false,lastSeen:serverTimestamp()}).then(()=>{
-     if(isOnline)set(pr,{online:true,lastSeen:serverTimestamp()});
-    }).catch(()=>{});
+    // لا تحوّل السائق إلى غير متصل لمجرد انقطاع الإنترنت؛ ألغِ أي قاعدة قديمة تفعل ذلك.
+    onDisconnect(pr).cancel().catch(()=>{});
+    if(isOnline){set(pr,{online:true,lastSeen:serverTimestamp()}).catch(()=>{});}
    }
   },()=>{}));
-  stops.push(onValue(pr,s=>{const v=s.val()||{};if(!hasActive())isOnline=v.online===true;draw()},()=>{}));
+  stops.push(onValue(pr,s=>{
+   const v=s.val()||{};
+   if(!hasActive()){
+    let savedOnline=false;try{savedOnline=localStorage.getItem("baqubah-driver-online-"+uid)==="true"}catch{}
+    if(v.online===true){isOnline=true;try{localStorage.setItem("baqubah-driver-online-"+uid,"true")}catch{}}
+    else if(savedOnline){
+     isOnline=true;
+     // عند رجوع الإنترنت نعيد تسجيل الحالة التي اختارها السائق، بدل اعتماد offline قديم.
+     if(navigator.onLine!==false)set(pr,{online:true,lastSeen:serverTimestamp()}).catch(()=>{});
+    }else isOnline=false;
+   }
+   draw();
+  },()=>{}));
   stops.push(onValue(ref(db,"settings"),s=>{
    settings=s.val()||{};debtLimit=Number(settings.debtLimit||15000);
    $("annBox").textContent=settings.announcement||"";$("annBox").hidden=!settings.announcement;draw();
@@ -664,13 +678,17 @@ function __main(){
   if(debt>=debtLimit)return say("لا يمكنك الاتصال، تجاوزت سقف الدين");
   if(hasActive())return say("لا يمكنك الإغلاق ولديك طلبات نشطة");
   isOnline=!isOnline;
+  try{localStorage.setItem("baqubah-driver-online-"+uid,isOnline?"true":"false")}catch{}
   set(ref(db,"presence/"+uid),{online:isOnline,lastSeen:serverTimestamp()}).catch(e=>say("تعذر تحديث الحالة: "+(e.code||e.message)));
   if(isOnline){startGPS();speak("أنت الآن متصل")}else speak("أنت الآن غير متصل");
   draw();
  };
  async function logout(force){
   if(!force&&hasActive())return say("لا يمكنك الخروج ولديك طلبات نشطة!");
-  if(uid){try{await set(ref(db,"presence/"+uid),{online:false,lastSeen:serverTimestamp()})}catch{}}
+  if(uid){
+   try{localStorage.setItem("baqubah-driver-online-"+uid,"false")}catch{}
+   try{await set(ref(db,"presence/"+uid),{online:false,lastSeen:serverTimestamp()})}catch{}
+  }
   isOnline=false;clear();closeSide();document.body.classList.remove("order-focus");uid=null;driver=null;
   try{await signOut(auth)}catch{}
  }
