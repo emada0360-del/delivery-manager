@@ -54,7 +54,7 @@ main{max-width:500px;margin:auto;padding:14px;}
 .stat span{font-size:11px;color:var(--text-sub);display:block;margin-bottom:4px;}
 .stat b{font-size:16px;color:var(--accent-green);}
 
-/* Empty State with Professional Vector Icons */
+/* Empty State Vector Icons */
 .empty-state{text-align:center;padding:50px 20px;}
 .empty-icon{margin-bottom:16px;display:inline-block;width:80px;height:80px;color:var(--text-sub);}
 .empty-title{font-size:17px;font-weight:bold;color:#fff;margin-bottom:8px;line-height:1.5;}
@@ -91,10 +91,10 @@ main{max-width:500px;margin:auto;padding:14px;}
   <svg width="55" height="55" viewBox="0 0 24 24" fill="none" stroke="#2ecc71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
 </div>
 <h2 style="text-align:center;margin-top:0;">تسجيل دخول السائق</h2>
-<form id="lf" onsubmit="document.getElementById('err').textContent='جاري التحميل... انتظر لحظات';return false">
+<form id="lf">
 <label style="font-size:13px;color:var(--text-sub)">رقم الهاتف</label><input id="un" type="tel" required autocomplete="username" placeholder="07XXXXXXXXX">
 <label style="font-size:13px;color:var(--text-sub)">كلمة المرور</label><input id="pw" type="password" required autocomplete="current-password">
-<button id="lb" style="width:100%;background:var(--accent-green);color:#fff;">دخول</button>
+<button id="lb" type="submit" style="width:100%;background:var(--accent-green);color:#fff;">دخول</button>
 </form>
 <div id="err" style="color:var(--accent-red);text-align:center;margin-top:10px;font-size:13px;font-weight:bold;"></div>
 <div id="diag" style="text-align:center;font-size:12px;color:var(--text-sub);margin-top:8px;direction:ltr"></div>
@@ -145,7 +145,6 @@ main{max-width:500px;margin:auto;padding:14px;}
 <b>تنبيه:</b> وصلت للحد الأقصى من الدين. راجع الإدارة لتصفير المحفظة.
 </div>
 
-<!-- Empty State: Offline (Shield Icon) -->
 <div id="emptyOff" class="empty-state">
 <div class="empty-icon">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -154,7 +153,6 @@ main{max-width:500px;margin:auto;padding:14px;}
 <p class="empty-sub">اضغط على زر "متوفر" في الأعلى لبدء استقبال الطلبات</p>
 </div>
 
-<!-- Empty State: Online Waiting (Stopwatch Icon) -->
 <div id="emptyOn" class="empty-state" hidden>
 <div class="empty-icon">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M5 3L2 6"></path><path d="M19 3l3 3"></path></svg>
@@ -230,28 +228,37 @@ let pend={},mine={},finance={},privData={},stops=[],busy=false,seenAv=null,prevM
 $("btnMenu").onclick=()=>{$("drawer").classList.add("active");$("drawerOverlay").classList.add("active");};
 $("drawerOverlay").onclick=()=>{$("drawer").classList.remove("active");$("drawerOverlay").classList.remove("active");};
 
-$("lf").onsubmit=async e=>{
- e.preventDefault();$("err").textContent="";$("lb").disabled=true;
- try{await signInWithEmailAndPassword(auth,$("un").value.trim().toLowerCase()+"@baqubah.app",$("pw").value)}
- catch(er){$("err").textContent=er.code==="auth/invalid-credential"?"رقم الهاتف أو كلمة المرور غير صحيحة.":"خطأ: "+er.message}
- finally{$("lb").disabled=false}
-};
+$("lf").addEventListener("submit", async function(e){
+ e.preventDefault();
+ $("err").textContent="جاري تسجيل الدخول...";
+ $("lb").disabled=true;
+ try{
+  await signInWithEmailAndPassword(auth, $("un").value.trim().toLowerCase()+"@baqubah.app", $("pw").value);
+ }catch(er){
+  if(er.code==="auth/invalid-credential"||er.code==="auth/user-not-found"||er.code==="auth/wrong-password"){
+    $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة.";
+  }else{
+    $("err").textContent="خطأ: "+(er.message||er);
+  }
+  $("lb").disabled=false;
+ }
+});
 
 onAuthStateChanged(auth,async u=>{
- if(!u){show(false);return}
+ if(!u){show(false);$("lb").disabled=false;return}
  try{
   $("err").textContent="جاري فحص الحساب...";
   const me=(await get(ref(db,"users/"+u.uid))).val();
-  if(!me){await signOut(auth);$("err").textContent="الحساب غير موجود بقاعدة البيانات.";return}
-  if(me.role!=="driver"){await signOut(auth);$("err").textContent="هذا الحساب ليس حساب سائق.";return}
-  if(me.isActive===false){await signOut(auth);$("err").textContent="حسابك معطّل. راجع المدير.";return}
+  if(!me){await signOut(auth);$("err").textContent="الحساب غير موجود بقاعدة البيانات.";$("lb").disabled=false;return}
+  if(me.role!=="driver"){await signOut(auth);$("err").textContent="هذا الحساب ليس حساب سائق.";$("lb").disabled=false;return}
+  if(me.isActive===false){await signOut(auth);$("err").textContent="حسابك معطّل. راجع المدير.";$("lb").disabled=false;return}
   uid=u.uid;driver=me;$("err").textContent="";
   const driverName=me.name&&me.name!=="تجريبي"?me.name:"سائق التوصيل";
   $("drvName").textContent=driverName;
   $("menuDrvName").textContent=driverName;
   $("menuDrvPhone").textContent=me.phone||"";
   show(true);start();
- }catch(e){$("err").textContent="خطأ بعد الدخول: "+e.message}
+ }catch(e){$("err").textContent="خطأ بعد الدخول: "+e.message;$("lb").disabled=false;}
 });
 
 function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on)clear()}
@@ -345,5 +352,4 @@ function draw(){
  if(nAct>0){
   setHtml("activeList",Object.entries(act).map(([id,o])=>{
    let btn="";
-   if(o.status==="waiting_store") btn='<div style="text-align:center;padding:12px;background:#332700;color:#ffb703;border-radius:10px;font-weight:700;margin-top:10px">بانتظار موافقة المتجر...</div>';
-   else if(o.status==="accepted") btn='<button class="btn-accept" style
+   if(o.status==="waiting_store") btn='<div style="text-align:center;padding:12px;background:#332700;color:#ffb703;border-radius:10px;font-weight:700;margin-top:10px">بانتظار موا
