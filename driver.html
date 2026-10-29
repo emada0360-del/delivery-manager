@@ -358,7 +358,7 @@ function __main(){
  const setHtml=(id,h)=>{const e=$(id);if(e._h!==h){e._h=h;e.innerHTML=h}};
 
  let uid=null,driver=null,settings={},isOnline=false,pos={lat:null,lng:null},debt=0,debtLimit=15000;
- let pend={},mine={},finance={},privData={},stops=[],gps=null,tick=null,pendLoaded=false;
+ let pend={},mine={},finance={},privData={},stops=[],gps=null,tick=null,presenceTick=null,pendLoaded=false;
  let seenAv=null,prevMine=null,busy=false,connectionRef=null,sideTab="overview",dailyCount=0,totalCount=0,completedCount=0,todayProfit=0;
 
  $("lf").onsubmit=async e=>{
@@ -388,6 +388,7 @@ function __main(){
   stops.forEach(f=>{try{f()}catch{}});
   stops=[];pend={};mine={};finance={};privData={};seenAv=null;prevMine=null;pendLoaded=false;
   if(tick){clearInterval(tick);tick=null}
+  if(presenceTick){clearInterval(presenceTick);presenceTick=null}
   if(gps!==null&&navigator.geolocation){try{navigator.geolocation.clearWatch(gps)}catch{}gps=null}
  }
  function startGPS(){
@@ -448,6 +449,11 @@ function __main(){
   },eh));
   stops.push(onValue(ref(db,"users/"+uid),s=>{const u=s.val();if(!u||u.isActive===false)logout(true)},()=>{}));
   tick=setInterval(draw,5000);
+  // جدّد حالة التوفر بشكل دوري أثناء عمل التطبيق، بما فيه الخلفية إذا سمح أندرويد بذلك.
+  presenceTick=setInterval(()=>{
+   if(!uid||!isOnline||navigator.onLine===false)return;
+   set(ref(db,"presence/"+uid),{online:true,lastSeen:serverTimestamp()}).catch(()=>{});
+  },15000);
   if(pendingPushOrderId){const id=pendingPushOrderId;setTimeout(()=>focusPushedOrder(id),250);}
  }
  function resumeConnection(){
