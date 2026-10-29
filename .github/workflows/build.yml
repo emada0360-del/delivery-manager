@@ -51,7 +51,6 @@ jobs:
 
           if [ "${{ matrix.role }}" = "driver" ]; then
             npm i --legacy-peer-deps @capacitor/push-notifications@6
-
             if [ -z "$GOOGLE_SERVICES_JSON" ]; then
               echo "Missing GitHub secret GOOGLE_SERVICES_JSON"
               exit 1
@@ -77,17 +76,203 @@ jobs:
             printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
           fi
 
-      - name: Add permissions
+      - name: Add driver status notification service
+        if: matrix.role == 'driver'
         run: |
           cd app/android/app/src/main
 
-          for p in POST_NOTIFICATIONS WAKE_LOCK FOREGROUND_SERVICE ACCESS_FINE_LOCATION ACCESS_COARSE_LOCATION VIBRATE; do
-            if ! grep -q "android.permission.$p" AndroidManifest.xml; then
-              sed -i "/<\/manifest>/i <uses-permission android:name=\"android.permission.$p\" />" AndroidManifest.xml
-            fi
-          done
+          python3 - <<'PY'
+          from pathlib import Path
 
-      - name: Build debug APK
+          p = Path("AndroidManifest.xml")
+          s = p.read_text()
+
+          permissions = [
+              "POST_NOTIFICATIONS",
+              "WAKE_LOCK",
+              "FOREGROUND_SERVICE",
+              "FOREGROUND_SERVICE_SPECIAL_USE",
+              "ACCESS_NETWORK_STATE"
+          ]
+
+          for perm in permissions:
+              line = f'<uses-permission android:name="android.permission.{perm}" />'
+              if line not in s:
+                  s = s.replace("</manifest>", f"    {line}\n</manifest>")
+
+          service = """
+              <service
+                  android:name="com.baqubah.driver.DriverStatusService"
+                  android:enabled="true"
+                  android:exported="false"
+                  android:stopWithTask="false"
+                  android:foregroundServiceType="specialUse">
+                  <property
+                      android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                      android:value="Driver availability status notification" />
+              </service>
+          """
+
+          if "com.baqubah.driver.DriverStatusService" not in s:
+              s = s.replace("</application>", service + "\n</application>")
+
+          p.write_text(s)
+          PY
+
+          mkdir -p java/com/baqubah/driver
+
+          cat > java/com/baqubah/driver/DriverStatusService.java <<'JAVA'
+          package com.baqubah.driver;
+
+          import android.app.Notification;
+          import android.app.NotificationChannel;
+          import android.app.NotificationManager;
+          import android.app.PendingIntent;
+          import android.app.Service;
+          import android.content.Intent;
+          import android.os.Build;
+          import android.os.IBinder;
+          import androidx.core.app.NotificationCompat;
+
+          public class DriverStatusService extends Service {
+              public static final String ACTION_UPDATE = "com.baqubah.driver.UPDATE_STATUS";
+              public static final String ACTION_STOP = "com.baqubah.driver.STOP_STATUS";
+              public static final String EXTRA_ONLINE = "online";
+              private static final String CHANNEL_ID = "driver_status_silent";
+              private static final int NOTIFICATION_ID = 7401;
+
+              @Override
+              public void onCreate() {
+                  super.onCreate();
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      NotificationChannel channel = new NotificationChannel(
+                          CHANNEL_ID,
+                          "حالة السائق",
+                          NotificationManager.IMPORTANCE_LOW
+                      );
+                      channel.setDescription("حالة السائق في Baqubah Delivery");
+                      channel.setSound(null, null);
+                      channel.enableVibration(false);
+                      channel.setShowBadge(false);
+                      NotificationManager nm = getSystemService(NotificationManager.class);
+                      if (nm != null) nm.createNotificationChannel(channel);
+                  }
+              }
+
+              @Override
+              public int onStartCommand(Intent intent, int flags, int startId) {
+                  if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+                      stopForeground(true);
+                      stopSelf();
+                      return START_NOT_STICKY;
+                  }
+
+                  boolean online = intent != null &&
+                      intent.getBooleanExtra(EXTRA_ONLINE, false);
+
+                  startForeground(NOTIFICATION_ID, makeNotification(online));
+                  return START_STICKY;
+              }
+
+              private Notification makeNotification(boolean online) {
+                  Intent open = new Intent(this, MainActivity.class);
+                  open.setFlags(
+                      Intent.FLAG_ACTIVITY_SINGLE_TOP |
+                      Intent.FLAG_ACTIVITY_CLEAR_TOP
+                  );
+
+                  PendingIntent pi = PendingIntent.getActivity(
+                      this, 7402, open,
+                      PendingIntent.FLAG_UPDATE_CURRENT |
+                      PendingIntent.FLAG_IMMUTABLE
+                  );
+
+                  String status = online
+                      ? "متصل — جاهز لاستقبال الطلبات"
+                      : "غير متصل";
+
+                  return new NotificationCompat.Builder(this, CHANNEL_ID)
+                      .setSmallIcon(getApplicationInfo().icon)
+                      .setContentTitle("Baqubah Delivery | السائق")
+                      .setContentText(status)
+                      .setContentIntent(pi)
+                      .setOngoing(true)
+                      .setOnlyAlertOnce(true)
+                      .setSilent(true)
+                      .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                      .setPriority(NotificationCompat.PRIORITY_LOW)
+                      .build();
+              }
+
+              @Override
+              public IBinder onBind(Intent intent) {
+                  return null;
+              }
+          }
+          JAVA
+
+          cat > java/com/baqubah/driver/DriverStatusPlugin.java <<'JAVA'
+          package com.baqubah.driver;
+
+          import android.content.Intent;
+          import android.os.Build;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+
+          @CapacitorPlugin(name = "DriverStatus")
+          public class DriverStatusPlugin extends Plugin {
+              @PluginMethod
+              public void updateStatus(PluginCall call) {
+                  boolean online = call.getBoolean("online", false);
+
+                  if (!online) {
+                      Intent stop = new Intent(getContext(), DriverStatusService.class);
+                      stop.setAction(DriverStatusService.ACTION_STOP);
+                      getContext().startService(stop);
+                      call.resolve();
+                      return;
+                  }
+
+                  Intent start = new Intent(getContext(), DriverStatusService.class);
+                  start.setAction(DriverStatusService.ACTION_UPDATE);
+                  start.putExtra(DriverStatusService.EXTRA_ONLINE, true);
+
+                  if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                      getContext().startForegroundService(start);
+                  } else {
+                      getContext().startService(start);
+                  }
+
+                  call.resolve();
+              }
+          }
+          JAVA
+
+          MAIN="java/com/baqubah/driver/MainActivity.java"
+
+          if [ -f "$MAIN" ]; then
+            cat > "$MAIN" <<'JAVA'
+          package com.baqubah.driver;
+
+          import android.os.Bundle;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  registerPlugin(DriverStatusPlugin.class);
+                  super.onCreate(savedInstanceState);
+              }
+          }
+          JAVA
+          else
+            echo "MainActivity.java not found"
+            exit 1
+          fi
+
+      - name: Build APK
         run: |
           cd app/android
           chmod +x gradlew
