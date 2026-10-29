@@ -131,6 +131,20 @@ body.order-focus #emptyState{display:none!important}
 @media(min-width:700px){#availList .card.new{min-height:calc(100dvh - 30px);border-radius:22px}}
 [hidden]{display:none!important}
 @media(max-width:380px){main{padding:8px}.grid{gap:5px}.stat b{font-size:13px}.stat span{font-size:10px}.card{padding:12px}.card p{font-size:14px}.fin-box,.debt-box{padding:10px}}
+
+/* Store and area highlight */
+.store-name{color:#ff334f!important;font-weight:900}
+.area-name{color:#20c968!important;font-weight:900}
+body.light-mode{--bg:#f4f6fa;--panel:#fff;--panel2:#edf1f7;--ink:#172033;--muted:#596579;--line:#d5dce7;color-scheme:light;background:#f4f6fa;color:#172033}
+body.light-mode header{background:#fff;color:#172033;border-bottom-color:#d5dce7}
+body.light-mode .box,body.light-mode .card,body.light-mode .side-order{background:#fff;color:#172033;border-color:#d5dce7}
+body.light-mode input,body.light-mode textarea,body.light-mode select{background:#fff;color:#172033;border-color:#cbd5e1}
+body.light-mode #sidebar{background:#fff;color:#172033;border-left-color:#d5dce7}
+body.light-mode #menuBtn,body.light-mode #themeBtn{background:#edf1f7!important;color:#172033;border-color:#cbd5e1!important}
+body.light-mode .side-nav button{background:#edf1f7;color:#172033}
+body.light-mode .side-nav button.active{background:#ffe5e9;color:#b91c32}
+body.light-mode .side-empty{color:#596579}
+
 </style>
 </head>
 <body>
@@ -148,7 +162,7 @@ body.order-focus #emptyState{display:none!important}
 </section>
 
 <div id="app" hidden>
- <header id="appHeader"><div id="appHeaderTitle"><button id="menuBtn" aria-label="القائمة الجانبية">☰</button><h2 id="drvName">السائق</h2></div><span id="headerStatus" style="font-size:12px;color:#bdbdbd">بانتظار الطلب</span></header>
+ <header id="appHeader"><div id="appHeaderTitle"><button id="menuBtn" aria-label="القائمة الجانبية">☰</button><h2 id="drvName">السائق</h2></div><div style="display:flex;align-items:center;gap:8px"><button id="themeBtn" type="button" aria-label="تبديل المظهر" style="background:#303030;border:1px solid #555;padding:7px 10px">☀️</button><span id="headerStatus" style="font-size:12px;color:#bdbdbd">بانتظار الطلب</span></div></header>
  <div id="sidebarShade"></div><aside id="sidebar" aria-label="قائمة السائق">
   <div class="side-head"><strong>قائمة السائق</strong><button id="sideClose" class="side-close">✕</button></div>
   <div id="sideDriverName" style="font-weight:800;font-size:16px;margin:0 2px 12px">السائق</div>
@@ -258,6 +272,54 @@ function __main(){
   return "خطأ: "+(c||(e&&e.message)||e);
  };
  const notify=(t,b,l)=>{try{window.notifyApp&&window.notifyApp(t,b,l)}catch{}};
+ let pushSetupUid=null,pushListenersAdded=false;
+ async function setupDriverPush(userId){
+  try{
+   const P=window.Capacitor&&window.Capacitor.Plugins;
+   const Push=P&&P.PushNotifications;
+   if(!Push){console.warn("Capacitor PushNotifications plugin unavailable");return;}
+   if(pushSetupUid===userId)return;
+   pushSetupUid=userId;
+   if(!pushListenersAdded){
+    pushListenersAdded=true;
+    await Push.addListener("registration",async token=>{
+     try{
+      await set(ref(db,"pushTokens/"+userId),{
+       token:token.value,
+       role:"driver",
+       updatedAt:Date.now()
+      });
+      console.log("Driver FCM token saved");
+     }catch(e){
+      console.error("Could not save FCM token. Check RTDB rules:",e);
+      say("تعذر حفظ رمز الإشعارات؛ تحقق من صلاحيات Firebase");
+     }
+    });
+    await Push.addListener("registrationError",error=>{
+     console.error("FCM registration error:",error);
+    });
+    await Push.addListener("pushNotificationReceived",notification=>{
+     const title=notification&&notification.title||"طلب متوفر";
+     const body=notification&&notification.body||"افتح التطبيق لمشاهدة الطلب";
+     notify(title,body,body);
+     say(title+" — "+body);
+    });
+    await Push.addListener("pushNotificationActionPerformed",action=>{
+     console.log("Push notification opened:",action&&action.notification);
+    });
+   }
+   let permission=await Push.checkPermissions();
+   if(permission.receive!=="granted")permission=await Push.requestPermissions();
+   if(permission.receive!=="granted"){
+    console.warn("Notification permission not granted");
+    say("فعّل إذن الإشعارات من إعدادات الهاتف");
+    return;
+   }
+   await Push.register();
+  }catch(e){
+   console.error("Driver push setup failed:",e);
+  }
+ }
  const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";S.speak(u)}catch{}};
  let AC=null;
  const wake=()=>{try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch{}};
@@ -287,7 +349,7 @@ function __main(){
    if(me.role!=="driver"){await signOut(auth);$("err").textContent="هذا الحساب مو حساب سائق (الدور: "+(me.role||"غير محدد")+").";return}
    if(me.isActive===false){await signOut(auth);$("err").textContent="حسابك معطّل. راجع المدير.";return}
    uid=u.uid;driver=me;$("err").textContent="";$("drvName").textContent=me.name||"السائق";$("sideDriverName").textContent=me.name||"السائق";
-   show(true);start();
+   show(true);start();setupDriverPush(uid);
   }catch(e){$("err").textContent="خطأ بعد الدخول: "+(e&&(e.code||e.message)||e)}
  });
 
@@ -426,8 +488,8 @@ function __main(){
   $("availContainer").hidden=!av.length;
   setHtml("availList",av.map(([id,o])=>`<div class="card new">
    <div class="row"><b>طلب #${esc(id.slice(-6))}</b><span class="badge">طلب جديد</span></div>
-   <p><b>المتجر:</b> ${esc(o.storeName||"غير محدد")}</p>
-   <p><b>المنطقة:</b> ${esc(o.area||"غير محددة")}</p>
+   <p><b>المتجر:</b> <strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></p>
+   <p><b>المنطقة:</b> <strong class="area-name">${esc(o.area||"غير محددة")}</strong></p>
    ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" rel="noopener" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
    ${finBox(o)}
    <div style="display:flex;gap:9px;margin-top:12px">
@@ -471,8 +533,8 @@ function __main(){
    }
    return `<div class="card ${o.status==="waiting_store"?"waiting":""}">
     <div class="row"><b>طلب #${esc(id.slice(-6))}</b>${badge}</div>
-    <p><b>المتجر:</b> ${esc(o.storeName||"غير محدد")}</p>
-    <p><b>المنطقة:</b> ${esc(o.area||"غير محددة")}</p>
+    <p><b>المتجر:</b> <strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></p>
+    <p><b>المنطقة:</b> <strong class="area-name">${esc(o.area||"غير محددة")}</strong></p>
     ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" rel="noopener" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
     ${storeBox}${finBox(o)}${cust}${warn}${btn}
    </div>`;
@@ -516,6 +578,10 @@ function __main(){
  function openSide(){document.body.classList.add("menu-open");}
  function closeSide(){document.body.classList.remove("menu-open");}
  $("menuBtn").onclick=openSide;$("sideClose").onclick=closeSide;$("sidebarShade").onclick=closeSide;
+ const themeBtn=$("themeBtn");
+ const applyTheme=mode=>{document.body.classList.toggle("light-mode",mode==="light");if(themeBtn)themeBtn.textContent=mode==="light"?"🌙":"☀️";try{localStorage.setItem("baqubah-driver-theme",mode)}catch{}};
+ let savedTheme="dark";try{savedTheme=localStorage.getItem("baqubah-driver-theme")||"dark"}catch{}applyTheme(savedTheme);
+ if(themeBtn)themeBtn.onclick=()=>applyTheme(document.body.classList.contains("light-mode")?"dark":"light");
  document.querySelectorAll("[data-side]").forEach(b=>b.addEventListener("click",()=>{sideTab=b.dataset.side;renderSide();}));
  $("sideStatus").onclick=()=>{$("btnStatus").click();};
  async function act(e){
@@ -526,7 +592,7 @@ function __main(){
     if(debt>=debtLimit){say("لا يمكنك قبول الطلبات، تجاوزت سقف الدين");return}
     if(!isOnline){say("يجب أن تكون متصلاً لتقبل الطلب");return}
     const snap=await get(r),current=snap.val();
-    if(!current||current.status!=="pending"||current.driverId){say("الطلب لم يعد متاحاً، حدّث القائمة.");return}
+    if(!current||current.status!=="pending"||current.driverId){say("تم قبول الطلب المتوفر من سائق آخر قبلك");speak("تم قبول الطلب المتوفر من سائق آخر قبلك");return}
     await update(r,{driverId:uid,driverName:driver.name||"",driverPhone:driver.phone||"",status:"waiting_store",stepAt:serverTimestamp(),acceptedAt:Date.now()});
     say("تم قبول الطلب، بانتظار موافقة المتجر");speak("تم قبول الطلب، بانتظار موافقة المتجر");
    }else if(a==="reject"){
