@@ -10,175 +10,171 @@ window.notifyApp=async(t,b,l)=>{try{const P=window.Capacitor&&window.Capacitor.P
 </script>
 <style>
 :root{
---bg:#121212;
---surface:#1e1e1e;
---surface-card:#242424;
---ink:#f3f4f6;
---muted:#9ca3af;
---pri:#e11d48;
---pri-hover:#be123c;
---ok:#22c55e;
---bad:#ef4444;
---warn:#f59e0b;
---line:#333333;
+  --bg-dark:#121212;
+  --card-bg:#1e1e1e;
+  --card-border:#2c2c2c;
+  --accent-green:#2ecc71;
+  --accent-red:#e74c3c;
+  --text-main:#ffffff;
+  --text-sub:#a0a0a0;
 }
-*{box-sizing:border-box}
-body{margin:0;font-family:system-ui,-apple-system,Tahoma,Arial;background:var(--bg);color:var(--ink);padding-bottom:70px;-webkit-tap-highlight-color:transparent}
-button,input{font:inherit}
-button{border:0;border-radius:12px;padding:12px 16px;background:var(--pri);color:#fff;cursor:pointer;font-weight:700;transition:opacity .2s}
-button:active{opacity:.8}
-button:disabled{opacity:.4;cursor:not-allowed}
-input{width:100%;padding:12px;border:1px solid var(--line);background:#18181b;color:#fff;border-radius:10px;margin:7px 0 13px}
-input:focus{outline:none;border-color:var(--pri)}
-/* Header */
-header{background:#18181b;color:#fff;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50;border-bottom:1px solid var(--line)}
-.header-left{display:flex;align-items:center;gap:10px}
-.driver-avatar{width:36px;height:36px;border-radius:50%;background:var(--pri);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff}
-.driver-info h2{margin:0;font-size:14px;color:#fff}
-.driver-info span{font-size:11px;color:var(--muted)}
-.header-actions{display:flex;gap:12px;align-items:center}
-.icon-btn{background:none;border:0;color:#fff;font-size:18px;padding:6px;cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center}
-main{max-width:600px;margin:auto;padding:12px}
-/* Login box */
-#login{max-width:380px;margin:80px auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px}
-#err{color:var(--bad);font-weight:600;text-align:center;margin-top:8px;font-size:13px}
-/* Stats Row */
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
-.stat{background:var(--surface);border-radius:12px;padding:12px 6px;text-align:center;border:1px solid var(--line)}
-.stat span{font-size:11px;color:var(--muted);display:block;margin-bottom:4px}
-.stat b{font-size:15px;color:var(--pri)}
-/* Status Switcher Bar (Like Talabat) */
-.status-pill-container{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:6px;display:flex;gap:6px;margin-bottom:16px}
-.status-pill{flex:1;padding:10px;text-align:center;border-radius:20px;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;color:var(--muted);background:transparent}
-.status-pill.active-on{background:var(--ok);color:#fff}
-.status-pill.active-off{background:#3f3f46;color:#fff}
-.status-pill.blocked{background:#3f3f46;color:var(--muted);cursor:not-allowed}
-/* Empty State (Matching screenshots) */
-.empty-state{text-align:center;padding:40px 20px;background:var(--surface);border:1px solid var(--line);border-radius:16px;margin-top:20px}
-.empty-icon{width:80px;height:80px;margin:0 auto 16px;background:linear-gradient(135deg, rgba(225,29,72,0.2), rgba(244,63,94,0.1));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px}
-.empty-state p{color:var(--muted);font-size:15px;margin:0;line-height:1.6}
+*{box-sizing:border-box;font-family:system-ui,-apple-system,Tahoma,Arial,sans-serif;}
+body{margin:0;background-color:var(--bg-dark);color:var(--text-main);padding-bottom:30px;}
+input{width:100%;padding:14px;border:1px solid var(--card-border);border-radius:12px;background:#252525;color:#fff;margin:8px 0 16px;font-size:15px;}
+input:focus{outline:none;border-color:var(--accent-green);}
+button{border:0;border-radius:12px;padding:12px 18px;font-weight:bold;cursor:pointer;font-size:15px;}
+button:disabled{opacity:0.4;cursor:not-allowed;}
+
+header{background:#1a1a1a;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--card-border);position:sticky;top:0;z-index:50;}
+header h2{margin:0;font-size:18px;font-weight:700;color:#fff;}
+.icon-btn{background:transparent;color:#fff;font-size:22px;padding:4px 8px;}
+
+/* Drawer */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;opacity:0;pointer-events:none;transition:0.3s;}
+.drawer-overlay.active{opacity:1;pointer-events:auto;}
+.drawer{position:fixed;top:0;right:-280px;width:280px;height:100%;background:#1a1a1a;z-index:101;transition:0.3s;padding:20px;border-left:1px solid var(--card-border);}
+.drawer.active{right:0;}
+.drawer-header{display:flex;align-items:center;gap:12px;padding-bottom:20px;border-bottom:1px solid var(--card-border);margin-bottom:15px;}
+.avatar{width:50px;height:50px;border-radius:50%;background:#2a2a2a;display:flex;align-items:center;justify-content:center;font-size:26px;}
+.drawer-menu{list-style:none;padding:0;margin:0;}
+.drawer-menu li{padding:14px 10px;border-bottom:1px solid #252525;display:flex;align-items:center;gap:12px;color:var(--text-sub);cursor:pointer;}
+.drawer-menu li:hover{color:#fff;}
+
+main{max-width:500px;margin:auto;padding:14px;}
+
+/* Status Pill */
+.status-pill-container{background:#1a1a1a;border-radius:30px;padding:4px;display:flex;margin:12px 0 20px;border:1px solid var(--card-border);}
+.status-pill{flex:1;text-align:center;padding:12px;border-radius:25px;font-weight:bold;font-size:15px;color:var(--text-sub);cursor:pointer;transition:0.2s;}
+.status-pill.active-on{background:var(--accent-green);color:#fff;}
+.status-pill.active-off{background:#333;color:#fff;}
+
+/* Stats */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.stat{background:var(--card-bg);border-radius:12px;padding:12px 8px;text-align:center;border:1px solid var(--card-border);}
+.stat span{font-size:11px;color:var(--text-sub);display:block;margin-bottom:4px;}
+.stat b{font-size:16px;color:var(--accent-green);}
+
+/* Empty State */
+.empty-state{text-align:center;padding:50px 20px;}
+.empty-icon{font-size:75px;margin-bottom:16px;display:inline-block;}
+.empty-title{font-size:17px;font-weight:bold;color:#fff;margin-bottom:8px;line-height:1.5;}
+.empty-sub{font-size:13px;color:var(--text-sub);}
+
 /* Cards */
-.card{border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;background:var(--surface)}
-.card.new{border:2px solid var(--pri);background:var(--surface-card);box-shadow:0 4px 20px rgba(225,29,72,.15)}
-.card.waiting{border:2px solid var(--warn);background:#292524}
-.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.card p{margin:6px 0;font-size:14px;color:#d1d5db}
-/* Fin boxes */
-.fin-box{background:#18181b;border-radius:10px;padding:12px;margin:10px 0;font-size:13px;border:1px solid var(--line)}
-.fin-row{display:flex;justify-content:space-between;margin-bottom:6px;color:#d1d5db}
-.fin-row:last-child{margin-bottom:0;border-top:1px dashed var(--line);padding-top:6px;margin-top:6px;font-weight:700}
-.debt-box{background:#271c1c;border-radius:10px;padding:10px;margin:10px 0;font-size:13px;border:1px solid #451a03}
-.customer-box{background:#18181b;border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;text-align:center}
-.customer-box b{font-size:14px;color:#93c5fd;display:block;margin-bottom:8px}
-.btn-group{display:flex;gap:8px}
-.btn-group a{flex:1;padding:10px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;display:flex;justify-content:center;align-items:center;gap:5px}
-.btn-call{background:#065f46;color:#d1fae5}
-.btn-wa{background:#064e3b;color:#a7f3d0}
-.map-link{display:inline-block;background:#1e3a8a;color:#93c5fd;padding:8px 12px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700;margin:6px 0 10px}
-.warn{background:#292524;color:#fde047;padding:12px;border-radius:12px;margin-bottom:12px;border:1px solid #78350f;font-size:13px}
-.grn{background:var(--ok);color:#fff}.gry{background:#3f3f46;color:#fff}.red{background:var(--bad);color:#fff}
-#msg{padding:12px;border-radius:10px;margin-bottom:12px;display:none;background:#064e3b;color:#a7f3d0;font-weight:600;text-align:center;position:sticky;top:65px;z-index:40;border:1px solid #047857}
-[hidden]{display:none!important}
-/* Modal */
-#mdl{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:99}
-#mdl>div{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;width:min(92%,360px)}
-#mdl p{margin:0 0 16px;line-height:1.7;color:#fff}
-#mdl .mr{display:flex;gap:8px}#mdl .mr button{flex:1}
-/* Drawer Menu */
-#drawer{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;display:flex;justify-content:flex-end;transition:opacity .3s}
-#drawer .drawer-content{width:280px;background:var(--surface);height:100%;padding:20px;display:flex;flex-direction:column;border-left:1px solid var(--line)}
-.drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--line);padding-bottom:12px}
-.drawer-item{padding:12px 0;border-bottom:1px solid var(--line);color:#e5e7eb;font-size:14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.card{background:var(--card-bg);border:1px solid var(--card-border);border-radius:16px;padding:16px;margin-bottom:16px;}
+.card.new{border:2px solid var(--accent-green);box-shadow:0 0 20px rgba(46,204,113,0.15);}
+.card h4{margin:8px 0;font-size:16px;color:#fff;}
+.card p{margin:6px 0;font-size:14px;color:var(--text-sub);}
+.tag{background:#2a2a2a;color:var(--accent-green);padding:4px 10px;border-radius:8px;font-size:12px;font-weight:bold;}
+
+.fin-box{background:#161616;border-radius:10px;padding:12px;margin:12px 0;border:1px solid #282828;font-size:13px;}
+.fin-row{display:flex;justify-content:space-between;margin-bottom:6px;}
+.fin-row:last-child{margin-bottom:0;border-top:1px dashed #333;padding-top:6px;margin-top:6px;font-weight:bold;}
+
+.btn-group{display:flex;gap:10px;margin-top:14px;}
+.btn-group button,.btn-group a{flex:1;text-align:center;padding:12px;border-radius:10px;text-decoration:none;font-weight:bold;font-size:14px;}
+.btn-accept{background:var(--accent-green);color:#fff;}
+.btn-reject{background:var(--accent-red);color:#fff;}
+.btn-call{background:#252525;color:#fff;border:1px solid var(--card-border);}
+
+#login{max-width:380px;margin:40px auto;background:var(--card-bg);padding:24px;border-radius:20px;border:1px solid var(--card-border);}
+#msg{padding:12px;border-radius:10px;margin-bottom:14px;display:none;background:#2e7d32;color:#fff;text-align:center;position:sticky;top:70px;z-index:40;font-weight:bold;}
+[hidden]{display:none!important;}
+#mdl{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:99;}
+#mdl>div{background:var(--card-bg);border-radius:16px;padding:20px;width:min(90%,350px);border:1px solid var(--card-border);text-align:center;}
 </style>
 </head>
 <body>
-<!-- Login Section -->
-<section id="login" class="box" style="background:var(--surface)">
-<div style="text-align:center;margin-bottom:20px">
-<div style="width:64px;height:64px;background:var(--pri);border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:28px">🐼</div>
-<h2 style="margin:0;color:#fff">دخول السائق <small style="font-size:11px;color:var(--muted)">v18</small></h2>
-</div>
-<form id="lf" onsubmit="document.getElementById('err').textContent='جاري تحميل المكتبات... انتظر قليلاً';return false">
-<label style="font-size:13px;color:var(--muted)">رقم الهاتف</label><input id="un" type="tel" required autocomplete="username" autocapitalize="none" placeholder="07XXXXXXXXX">
-<label style="font-size:13px;color:var(--muted)">كلمة المرور</label><input id="pw" type="password" required autocomplete="current-password">
-<button id="lb" style="width:100%;margin-top:10px">دخول</button>
+
+<section id="login">
+<div style="text-align:center;margin-bottom:15px;"><span style="font-size:45px;">🐼</span></div>
+<h2 style="text-align:center;margin-top:0;">دخول السائق <small style="font-size:12px;color:var(--text-sub)">v18</small></h2>
+<form id="lf" onsubmit="document.getElementById('err').textContent='جاري التحميل... انتظر لحظات';return false">
+<label style="font-size:13px;color:var(--text-sub)">رقم الهاتف</label><input id="un" type="tel" required autocomplete="username" placeholder="07XXXXXXXXX">
+<label style="font-size:13px;color:var(--text-sub)">كلمة المرور</label><input id="pw" type="password" required autocomplete="current-password">
+<button id="lb" style="width:100%;background:var(--accent-green);color:#fff;">تسجيل الدخول</button>
 </form>
-<div id="err"></div>
-<div id="diag" style="text-align:center;font-size:11px;color:var(--muted);margin-top:10px;direction:ltr"></div>
+<div id="err" style="color:var(--accent-red);text-align:center;margin-top:10px;font-size:13px;font-weight:bold;"></div>
+<div id="diag" style="text-align:center;font-size:12px;color:var(--text-sub);margin-top:8px;direction:ltr"></div>
 </section>
-<!-- Main App Section -->
+
 <div id="app" hidden>
 <header>
-<div class="header-left">
-<div class="driver-avatar" id="drvAvatar">س</div>
-<div class="driver-info">
+<button class="icon-btn" id="btnMenu">☰</button>
 <h2 id="drvName">السائق</h2>
-<span>مكلف بالتوصيل</span>
-</div>
-</div>
-<div class="header-actions">
-<button class="icon-btn" id="menuBtn">☰</button>
-</div>
+<div style="width:24px;"></div>
 </header>
+
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer">
+<div class="drawer-header">
+<div class="avatar">🐼</div>
+<div>
+<b id="menuDrvName" style="display:block;font-size:15px;">السائق</b>
+<span id="menuDrvPhone" style="font-size:12px;color:var(--text-sub);">07XXXXXXXXX</span>
+</div>
+</div>
+<ul class="drawer-menu">
+<li id="menuOut" style="color:var(--accent-red);">🚪 تسجيل الخروج</li>
+</ul>
+</div>
+
 <main>
 <div id="msg"></div>
-<div id="off" class="warn" hidden>لا يوجد اتصال بالإنترنت. لن تصلك طلبات جديدة.</div>
+<div class="status-pill-container">
+<div id="pillOn" class="status-pill">متوفر</div>
+<div id="pillOff" class="status-pill active-off">غير متوفر</div>
+</div>
+
 <div class="grid">
 <div class="stat"><span>الطلبات المكتملة</span><b id="statDone">0</b></div>
 <div class="stat"><span>محفظتي (دين)</span><b id="statDebt">0</b></div>
 <div class="stat"><span>أرباحي اليوم</span><b id="statProfit">0</b></div>
 </div>
-<div id="warnBox" class="warn" hidden><b>تنبيه:</b> وصلت للحد الأقصى من الدين. راجع الإدارة لتصفير المحفظة.</div>
-<!-- Status Switcher Pill (Talabat Style) -->
-<div class="status-pill-container" id="statusContainer">
-<div id="btnOn" class="status-pill">متوفر</div>
-<div id="btnOff" class="status-pill active-off">غير متوفر</div>
+
+<div id="warnBox" style="background:#3a1818;color:#f87171;padding:10px;border-radius:10px;margin-bottom:12px;font-size:13px;text-align:center;" hidden>
+<b>تنبيه:</b> وصلت للحد الأقصى من الدين. راجع الإدارة لتصفير المحفظة.
 </div>
-<div id="annBox" class="warn" hidden></div>
-<!-- Empty State when offline / waiting -->
-<div id="emptyContainer" class="empty-state">
-<div class="empty-icon" id="emptyIcon">📦</div>
-<p id="emptyText">يرجى تحويل حالتك إلى متوفر لإستقبال طلبات جديدة</p>
+
+<div id="emptyOff" class="empty-state">
+<div class="empty-icon">🛡️</div>
+<div class="empty-title">يرجى تحويل حالتك إلى متوفر<br>لإستقبال طلبات جديدة</div>
+<p class="empty-sub">اضغط على زر "متوفر" في الأعلى لبدء استقبال الطلبات</p>
 </div>
+
+<div id="emptyOn" class="empty-state" hidden>
+<div class="empty-icon">⏱️</div>
+<div class="empty-title">يرجى الإنتظار، سيصلك طلب قريباً</div>
+<p class="empty-sub">أنت الآن متصل وبانتظار المتاجر لإرسال الطلبات</p>
+</div>
+
 <div id="availContainer" hidden>
-<h3 style="font-size:15px;color:#fff;margin:10px 0">الطلبات المتاحة</h3>
+<h3 style="font-size:15px;color:var(--text-sub);margin:10px 0;">الطلبات المتاحة</h3>
 <div id="availList"></div>
 </div>
+
 <div id="activeContainer" hidden>
-<h3 style="font-size:15px;color:#fff;margin:10px 0">طلباتي الحالية</h3>
+<h3 style="font-size:15px;color:var(--text-sub);margin:10px 0;">طلباتي الحالية</h3>
 <div id="activeList"></div>
 </div>
 </main>
 </div>
-<!-- Drawer Menu -->
-<div id="drawer" hidden>
-<div class="drawer-content">
-<div class="drawer-header">
-<h3 style="margin:0;color:#fff">القائمة الرئيسية</h3>
-<button class="icon-btn" id="closeDrawer" style="font-size:20px">×</button>
-</div>
-<div class="drawer-item" onclick="alert('نسخة السائق المحدثة 2026')"><span>👤 الملف الشخصي</span> <span>></span></div>
-<div class="drawer-item" onclick="alert('قريباً')"><span>💰 الحسابات المالية</span> <span>></span></div>
-<div class="drawer-item" onclick="alert('قريباً')"><span>⚙️ الإعدادات</span> <span>></span></div>
-<div style="margin-top:auto">
-<button id="out" class="red" style="width:100%">تسجيل الخروج</button>
-</div>
-</div>
-</div>
-<!-- Confirmation Modal -->
-<div id="mdl" hidden><div><p id="mdt"></p><div class="mr"><button id="mdy">تأكيد</button><button id="mdn" class="gry">إلغاء</button></div></div></div>
+
+<div id="mdl" hidden><div><p id="mdt" style="margin-bottom:18px;line-height:1.5;"></p><div style="display:flex;gap:10px;"><button id="mdy" style="flex:1;background:var(--accent-green);color:#fff;">تأكيد</button><button id="mdn" style="flex:1;background:#333;color:#fff;">إلغاء</button></div></div></div>
+
 <script>
 var __d=function(t){var e=document.getElementById('diag');if(e)e.textContent=t;};
 function __set(base){return new Promise(function(res,rej){var names=['app','auth','database'],loaded=0,failed=false,t;
 names.forEach(function(n){var s=document.createElement('script');s.async=false;s.src=base(n);
-s.onload=function(){loaded++;__d('تم تحميل '+loaded+' من 3 ...');if(loaded===3){clearTimeout(t);res();}};
+s.onload=function(){loaded++;__d('تم تحميل '+loaded+' من 3 مكتبات...');if(loaded===3){clearTimeout(t);res();}};
 s.onerror=function(){if(!failed){failed=true;clearTimeout(t);rej(new Error('فشل تحميل '+base(n)));}};
 document.head.appendChild(s);});
-t=setTimeout(function(){if(!failed&&loaded<3){failed=true;rej(new Error('انتهت المهلة'));}},90000);});}
+t=setTimeout(function(){if(!failed&&loaded<3){failed=true;rej(new Error('انتهت مهلة التحميل'));}},90000);});}
 function __load(){var bases=[function(n){return 'https://www.gstatic.com/firebasejs/10.14.1/firebase-'+n+'-compat.js';},function(n){return 'https://cdn.jsdelivr.net/npm/firebase@10.14.1/firebase-'+n+'-compat.js';},function(n){return 'https://cdnjs.cloudflare.com/ajax/libs/firebase/10.14.1/firebase-'+n+'-compat.min.js';}],i=0;
-function next(){if(i>=bases.length)return Promise.reject(new Error('تعذر تحميل مكتبات Firebase'));__d('جاري التحميل (مصدر '+(i+1)+' من 3) ...');var b=bases[i++];return __set(b).catch(function(){return next();});}
+function next(){if(i>=bases.length)return Promise.reject(new Error('تعذر تحميل مكتبات Firebase'));__d('جاري الاتصال بمصدر ('+(i+1)+' من 3)...');var b=bases[i++];return __set(b).catch(function(){return next();});}
 return next();}
 </script>
+
 <script>
 function __main(){
 const ref=(d,p)=>p?d.ref(p):d.ref();
@@ -194,138 +190,197 @@ const serverTimestamp=()=>firebase.database.ServerValue.TIMESTAMP;
 const signInWithEmailAndPassword=(a,e,p)=>a.signInWithEmailAndPassword(e,p);
 const signOut=a=>a.signOut();
 const onAuthStateChanged=(a,cb)=>a.onAuthStateChanged(cb);
+
 const cfg={
-apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
-authDomain:"baqubah-delivery-e729e.firebaseapp.com",
-databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",
-projectId:"baqubah-delivery-e729e",
-storageBucket:"baqubah-delivery-e729e.firebasestorage.app",
-messagingSenderId:"450084520701",
-appId:"1:450084520701:web:719e2040338540ce36f494"
+ apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
+ authDomain:"baqubah-delivery-e729e.firebaseapp.com",
+ databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",
+ projectId:"baqubah-delivery-e729e",
+ storageBucket:"baqubah-delivery-e729e.firebasestorage.app",
+ messagingSenderId:"450084520701",
+ appId:"1:450084520701:web:719e2040338540ce36f494"
 };
 firebase.initializeApp(cfg);
 const auth=firebase.auth(),db=firebase.database();
-const =id=>document.getElementById(id);
+const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-US");
-const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const ask=t=>new Promise(r=>{("mdt").textContent=t;("mdl").hidden=false;const f=v=>{("mdl").hidden=true;r(v)};("mdy").onclick=()=>f(true);("mdn").onclick=()=>f(false)});
-const lerr=e=>{const c=e&&e.code||"";
-if(c==="auth/network-request-failed")return "تأكد من الإنترنت وحاول مرة ثانية.";
-if(c==="auth/too-many-requests")return "محاولات كثيرة، انتظر شوي وحاول.";
-if(["auth/invalid-credential","auth/user-not-found","auth/wrong-password","auth/invalid-email"].includes(c))return "رقم الهاتف أو كلمة المرور غير صحيحة.";
-return "خطأ: "+(c||(e&&e.message)||e);};
-const notify=(t,b,l)=>{try{window.notifyApp&&window.notifyApp(t,b,l)}catch{}};
-const speak=t=>{try{const S=window.speechSynthesis;if(!S)return;S.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ar-SA";S.speak(u)}catch{}};
-let AC=null;const wake=()=>{try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();AC.resume()}catch{}};
-document.addEventListener("click",wake);document.addEventListener("touchstart",wake,{passive:true});
-const beep=()=>{try{wake();const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);o.frequency.value=880;g.gain.value=.4;o.start();o.stop(AC.currentTime+.35);navigator.vibrate&&navigator.vibrate([200,100,200])}catch{}};
-const say=t=>{const m=("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
-const setHtml=(id,h)=>{const e=(id);if(e._h!==h){e._h=h;e.innerHTML=h}};
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ask=t=>new Promise(r=>{$("mdt").textContent=t;$("mdl").hidden=false;const f=v=>{$("mdl").hidden=true;r(v)};$("mdy").onclick=()=>f(true);$("mdn").onclick=()=>f(false)});
+const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
+const setHtml=(id,h)=>{const e=$(id);if(e._h!==h){e._h=h;e.innerHTML=h}};
+
 let uid=null,driver=null,settings={},isOnline=false,pos={lat:null,lng:null},debt=0,debtLimit=15000;
 let pend={},mine={},finance={},privData={},stops=[],busy=false,seenAv=null,prevMine=null,gps=null,tick=null,pendLoaded=false;
-("lf").onsubmit=async e=>{
-e.preventDefault();("err").textContent="";("lb").disabled=true;
-try{await signInWithEmailAndPassword(auth,("un").value.trim().toLowerCase()+"@baqubah.app",("pw").value)}
-catch(er){("err").textContent=lerr(er)}
-finally{$("lb").disabled=false}
+
+$("btnMenu").onclick=()=>{$("drawer").classList.add("active");$("drawerOverlay").classList.add("active");};
+$("drawerOverlay").onclick=()=>{$("drawer").classList.remove("active");$("drawerOverlay").classList.remove("active");};
+
+$("lf").onsubmit=async e=>{
+ e.preventDefault();$("err").textContent="";$("lb").disabled=true;
+ try{await signInWithEmailAndPassword(auth,$("un").value.trim().toLowerCase()+"@baqubah.app",$("pw").value)}
+ catch(er){$("err").textContent=er.code==="auth/invalid-credential"?"رقم الهاتف أو كلمة المرور غير صحيحة.":"خطأ: "+er.message}
+ finally{$("lb").disabled=false}
 };
+
 onAuthStateChanged(auth,async u=>{
-if(!u){show(false);return}
-try{
-("err").textContent="جاري فحص الحساب...";
-const me=(await get(ref(db,"users/"+u.uid))).val();
-if(!me){await signOut(auth);("err").textContent="الحساب غير موجود بقاعدة البيانات.";return}
-if(me.role!"driver"){await signOut(auth);$("err").textContent="هذا الحساب مو حساب سائق.";return}
-if(me.isActive=false){await signOut(auth);("err").textContent="حسابك معطّل. راجع المدير.";return}
-uid=u.uid;driver=me;("err").textContent="";
-$("drvName").textContent=me.name||"السائق";
-("drvAvatar").textContent=(me.name||"س").charAt(0);
-show(true);start();
-}catch(e){("err").textContent="خطأ بعد الدخول: "+(e&&(e.code||e.message)||e)}
+ if(!u){show(false);return}
+ try{
+  $("err").textContent="جاري فحص الحساب...";
+  const me=(await get(ref(db,"users/"+u.uid))).val();
+  if(!me){await signOut(auth);$("err").textContent="الحساب غير موجود بقاعدة البيانات.";return}
+  if(me.role!=="driver"){await signOut(auth);$("err").textContent="هذا الحساب ليس حساب سائق.";return}
+  if(me.isActive===false){await signOut(auth);$("err").textContent="حسابك معطّل. راجع المدير.";return}
+  uid=u.uid;driver=me;$("err").textContent="";
+  $("drvName").textContent=me.name||"السائق";
+  $("menuDrvName").textContent=me.name||"السائق";
+  $("menuDrvPhone").textContent=me.phone||"";
+  show(true);start();
+ }catch(e){$("err").textContent="خطأ بعد الدخول: "+e.message}
 });
-function show(on){("login").hidden=on;("app").hidden=!on;if(!on)clear()}
+
+function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on)clear()}
 function clear(){stops.forEach(f=>{try{f()}catch{}});stops=[];pend={};mine={};finance={};privData={};seenAv=null;prevMine=null;pendLoaded=false;
-if(tick){clearInterval(tick);tick=null}
-if(gps!==null&&navigator.geolocation){try{navigator.geolocation.clearWatch(gps)}catch{}gps=null}}
+ if(tick){clearInterval(tick);tick=null}
+ if(gps!==null&&navigator.geolocation){try{navigator.geolocation.clearWatch(gps)}catch{}gps=null}}
+
 function startGPS(){
-if(gps!==null||!navigator.geolocation)return;
-try{gps=navigator.geolocation.watchPosition(p=>{pos.lat=p.coords.latitude;pos.lng=p.coords.longitude},()=>{},{enableHighAccuracy:true})}catch{}
+ if(gps!==null||!navigator.geolocation)return;
+ try{gps=navigator.geolocation.watchPosition(p=>{pos.lat=p.coords.latitude;pos.lng=p.coords.longitude},()=>{},{enableHighAccuracy:true})}catch{}
 }
+
 const activeOf=()=>{const a={};for(const k in mine){const o=mine[k];if(o&&!["delivered","cancelled"].includes(o.status))a[k]=o}return a};
 const hasActive=()=>Object.keys(activeOf()).length>0;
-const eh=e=>say("خطأ تحميل البيانات: "+(e&&(e.code||e.message)||e));
+
 function start(){
-clear();startGPS();
-const pr=ref(db,"presence/"+uid);
-stops.push(onValue(ref(db,".info/connected"),s=>{
-$("off").hidden=s.val()===true;
-if(s.val()=true){onDisconnect(pr).set({online:false,lastSeen:serverTimestamp()}).then(()=>{if(isOnline)set(pr,{online:true,lastSeen:serverTimestamp()})}).catch(()=>{})}
-},()=>{}));
-stops.push(onValue(pr,s=>{const v=s.val()||{};if(!hasActive())isOnline=v.online=true;draw()},()=>{}));
-stops.push(onValue(ref(db,"settings"),s=>{
-settings=s.val()||{};debtLimit=Number(settings.debtLimit||15000);
-("annBox").textContent=settings.announcement\vert{}\vert{}"";("annBox").hidden=!settings.announcement;draw()
-},()=>{}));
-stops.push(onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{finance=s.val()||{};draw()},()=>{}));
-stops.push(onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{pend=s.val()||{};pendLoaded=true;draw()},eh));
-stops.push(onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
-mine=s.val()||{};
-if(prevMine){
-for(const id in mine){const o=mine[id],p=prevMine[id];
-if(p&&o&&p.status!o.status){
-if(p.status="waiting_store"&&o.status==="accepted"){notify("تمت الموافقة","المتجر وافق على طلبك، توجه للمتجر");speak("المتجر وافق على طلبك");say("المتجر وافق على طلبك")}
-else if(o.status==="cancelled"){notify("تم إلغاء الطلب","المتجر ألغى الطلب");speak("تم إلغاء الطلب");say("تم إلغاء الطلب")}
-}}
+ clear();startGPS();
+ const pr=ref(db,"presence/"+uid);
+ stops.push(onValue(ref(db,".info/connected"),s=>{
+  if(s.val()===true){onDisconnect(pr).set({online:false,lastSeen:serverTimestamp()}).then(()=>{if(isOnline)set(pr,{online:true,lastSeen:serverTimestamp()})}).catch(()=>{})}
+ },()=>{}));
+ stops.push(onValue(pr,s=>{const v=s.val()||{};if(!hasActive())isOnline=v.online===true;updatePill();draw()},()=>{}));
+ stops.push(onValue(ref(db,"settings"),s=>{settings=s.val()||{};debtLimit=Number(settings.debtLimit||15000);draw()},()=>{}));
+ stops.push(onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{finance=s.val()||{};draw()},()=>{}));
+ stops.push(onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{pend=s.val()||{};pendLoaded=true;draw()},()=>{}));
+ stops.push(onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{mine=s.val()||{};draw()},()=>{}));
+ tick=setInterval(draw,5000);
 }
-prevMine=mine;fetchPrivate();draw()
-},eh));
-stops.push(onValue(ref(db,"users/"+uid),s=>{const u=s.val();if(!u||u.isActive===false)logout(true)},()=>{}));
-tick=setInterval(draw,5000);
-}
-function fetchPrivate(){
-Object.keys(activeOf()).forEach(id=>{
-if(privData[id])return;
-get(ref(db,"orderPrivate/"+id)).then(s=>{if(s.exists()){privData[id]=s.val();draw()}}).catch(()=>{});
-});
-}
+
 function stats(){
-let d=0,tp=0,n=0;const t0=new Date().setHours(0,0,0,0);
-for(const id in mine){const o=mine[id];
-if(o&&o.status==="delivered"){n++;
-const sc=Number(o.storeCommission!undefined?o.storeCommission:(settings.storeCommission||500));
-d+=Math.round(Number(o.platformDeliveryCommission)||0)+Math.round(sc);
-if(o.deliveredAt>=t0)tp+=Math.round(Number(o.driverProfit)||0);
-}}
-for(const id in finance){const f=finance[id];if(f&&f.type="cash_received")d-=Math.round(Number(f.amount)||0)}
-if(d<0)d=0;debt=d;
-("statDone").textContent=n;("statDebt").textContent=fmt(d)+" د.ع";$("statProfit").textContent=fmt(tp)+" د.ع";
-$("warnBox").hidden=d<debtLimit;
+ let d=0,tp=0,n=0;const t0=new Date().setHours(0,0,0,0);
+ for(const id in mine){const o=mine[id];
+  if(o&&o.status==="delivered"){n++;
+   const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommission||500));
+   d+=Math.round(Number(o.platformDeliveryCommission)||0)+Math.round(sc);
+   if(o.deliveredAt>=t0)tp+=Math.round(Number(o.driverProfit)||0);
+  }}
+ for(const id in finance){const f=finance[id];if(f&&f.type==="cash_received")d-=Math.round(Number(f.amount)||0)}
+ if(d<0)d=0;debt=d;
+ $("statDone").textContent=n;$("statDebt").textContent=fmt(d)+" د.ع";$("statProfit").textContent=fmt(tp)+" د.ع";
+ $("warnBox").hidden=d<debtLimit;
 }
-function ui(){
-const act=hasActive();
-const boOn=("btnOn"),boOff=("btnOff"),stCont=$("statusContainer");
-if(debt>=debtLimit&&!act){
-isOnline=false;
-stCont.className="status-pill-container";
-boOn.className="status-pill blocked";
-boOff.className="status-pill active-off";
-$("emptyIcon").textContent="⚠️";
-$("emptyText").textContent="محظور: تجاوزت سقف الدين المسموح. راجع الإدارة لتصفير الحساب.";
-return;
+
+$("pillOn").onclick=()=>{
+ if(debt>=debtLimit)return say("تجاوزت سقف الدين، لا يمكنك الاتصال");
+ isOnline=true;set(ref(db,"presence/"+uid),{online:isOnline,lastSeen:serverTimestamp()});updatePill();startGPS();draw();
+};
+$("pillOff").onclick=()=>{
+ if(hasActive())return say("لديك طلب نشط، لا يمكنك الإغلاق");
+ isOnline=false;set(ref(db,"presence/"+uid),{online:isOnline,lastSeen:serverTimestamp()});updatePill();draw();
+};
+
+function updatePill(){
+ if(isOnline){$("pillOn").className="status-pill active-on";$("pillOff").className="status-pill";}
+ else{$("pillOn").className="status-pill";$("pillOff").className="status-pill active-off";}
 }
-if(act){
-isOnline=true;
-boOn.className="status-pill active-on";
-boOff.className="status-pill";
-return;
+
+function draw(){
+ if(!uid)return;
+ stats();
+ const act=activeOf(),nAct=Object.keys(act).length;
+ const av=Object.entries(pend).filter(([id,o])=>o&&!o.driverId&&(!o.rejectedBy||!o.rejectedBy[uid]));
+
+ $("emptyOff").hidden=isOnline;
+ $("emptyOn").hidden=!isOnline||av.length>0||nAct>0;
+
+ $("availContainer").hidden=!isOnline||av.length===0;
+ $("activeContainer").hidden=nAct===0;
+
+ if(isOnline&&av.length>0){
+  setHtml("availList",av.map(([id,o])=>`
+   <div class="card new">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+     <span class="tag">طلب جديد</span>
+     <b style="font-size:13px;color:var(--text-sub);">#${esc(id.slice(-5))}</b>
+    </div>
+    <h4>${esc(o.storeName)}</h4>
+    <p>📍 المنطقة: <b>${esc(o.area)}</b></p>
+    <div class="fin-box">
+     <div class="fin-row"><span>قيمة التوصيل:</span> <b>${fmt(o.deliveryFee)} د.ع</b></div>
+     <div class="fin-row" style="color:var(--accent-green)"><span>ربحك الصافي:</span> <b>${fmt(Number(o.deliveryFee)*0.9)} د.ع</b></div>
+    </div>
+    <div class="btn-group">
+     <button class="btn-accept" data-a="accept" data-id="${esc(id)}">موافق</button>
+     <button class="btn-reject" data-a="reject" data-id="${esc(id)}">رفض الطلب</button>
+    </div>
+   </div>
+  `).join(""));
+ }
+
+ if(nAct>0){
+  setHtml("activeList",Object.entries(act).map(([id,o])=>{
+   let btn="";
+   if(o.status==="waiting_store") btn='<div style="text-align:center;padding:12px;background:#332700;color:#ffb703;border-radius:10px;font-weight:700;margin-top:10px">بانتظار موافقة المتجر...</div>';
+   else if(o.status==="accepted") btn='<button class="btn-accept" style="width:100%;margin-top:10px" data-a="arrive" data-id="'+esc(id)+'">وصلت للمتجر</button>';
+   else if(o.status==="arrived_store") btn='<button class="btn-accept" style="width:100%;margin-top:10px" data-a="pick" data-id="'+esc(id)+'">تم استلام الطلب</button>';
+   else if(["picked_up","delivering"].includes(o.status)) btn='<button class="btn-accept" style="width:100%;margin-top:10px" data-a="done" data-id="'+esc(id)+'">تم التوصيل للزبون</button>';
+
+   return `
+    <div class="card">
+     <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span class="tag" style="background:#1e3a8a;color:#93c5fd;">طلب نشط</span>
+      <b style="font-size:13px;color:var(--text-sub);">#${esc(id.slice(-5))}</b>
+     </div>
+     <h4>${esc(o.storeName)}</h4>
+     <p>📍 المنطقة: <b>${esc(o.area)}</b></p>
+     ${btn}
+    </div>
+   `;
+  }).join(""));
+ }
 }
-if(isOnline){
-boOn.className="status-pill active-on";
-boOff.className="status-pill";
-$("emptyIcon").textContent="⏱️";
-$("emptyText").textContent="يرجى الإنتظار، سيصلك طلب قريباً...";
-}else{
-boOn.className="status-pill";
-boOff.className="status-pill active-off";
-$("emptyIcon").textContent="📦";
-$("emptyText").tex
+
+async function handleAction(e){
+ const b=e.target.closest("button[data-a]");if(!b||busy)return;
+ const a=b.dataset.a,id=b.dataset.id,r=ref(db,"orders/"+id);busy=true;
+ try{
+  if(a==="accept"){
+   if(debt>=debtLimit){say("لا يمكنك قبول الطلبات، تجاوزت سقف الدين");return}
+   await update(r,{driverId:uid,driverName:driver.name||"",driverPhone:driver.phone||"",status:"waiting_store",stepAt:serverTimestamp(),acceptedAt:Date.now()});
+   say("تم قبول الطلب، بانتظار موافقة المتجر");
+  }else if(a==="reject"){
+   await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]:true});say("تم رفض الطلب.");
+  }else{
+   const o=mine[id];if(!o)return;
+   const map={arrive:"arrived_store",pick:"picked_up",done:"delivered"},ns=map[a];if(!ns)return;
+   if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟")))return;
+   const patch={status:ns,stepAt:serverTimestamp()};
+   if(ns==="delivered"){const fee=Number(o.deliveryFee)||0,p=Math.round(fee*0.9);patch.deliveredAt=Date.now();patch.driverProfit=p;patch.platformDeliveryCommission=Math.round(fee-p)}
+   await update(r,patch);say("تم تحديث حالة الطلب");
+  }
+ }catch(er){say("فشلت العملية: "+er.message)}
+ finally{busy=false;draw()}
+}
+
+$("availList").onclick=handleAction;
+$("activeList").onclick=handleAction;
+
+$("menuOut").onclick=async()=>{
+ await set(ref(db,"presence/"+uid),{online:false,lastSeen:serverTimestamp()}).catch(()=>{});
+ clear();uid=null;await signOut(auth);location.reload();
+};
+
+}
+__load().then(function(){__main();document.getElementById('err').textContent='';}).catch(function(e){document.getElementById('err').textContent='خطأ تحميل المكتبات: '+e.message;});
+</script>
+</body>
+</html>
