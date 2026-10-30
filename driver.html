@@ -35,6 +35,7 @@ window.notifyApp=async(t,b,l)=>{
 --m-phone:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 4h4l2 5-2.500 1.500a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z'/%3E%3C/svg%3E");
 --m-map:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14'/%3E%3C/svg%3E");
 --m-user:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21a8 8 0 0 1 16 0'/%3E%3C/svg%3E");
+--m-clock:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.200' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E");
 --m-sun:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3Cpath d='M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.500 1.500M17.500 17.500L19 19M19 5l-1.500 1.500M6.500 17.500L5 19'/%3E%3C/svg%3E");
 --m-moon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 14.500A8 8 0 0 1 9.500 4a8 8 0 1 0 10.500 10.500z'/%3E%3C/svg%3E")}
 html.light-mode,body.light-mode{--bg:#f3f4f7;--bar:#fff;--panel:#fff;--panel2:#eceef3;--ink:#1b1f2a;--muted:#667085;--line:#dde1e8;color-scheme:light}
@@ -114,10 +115,8 @@ body.light-mode .btn-wa{background:#d8f7e2;color:#176534}
 /* New order = big card: green clock on top, accept (wide) + reject at the bottom */
 #availList .card.new{min-height:calc(100dvh - 110px);display:flex;flex-direction:column;justify-content:center;margin:0;padding:20px 16px;border:1.5px solid #5a2a31;background:radial-gradient(ellipse at top,#3a2128,var(--panel) 62%);box-shadow:0 0 30px #d9002f22}
 body.light-mode #availList .card.new{background:linear-gradient(#fff,#f7f8fb);border-color:#f0b8c0}
-#availList .card.new>.row{order:-1}
-#availList .card.new::before{content:"";width:96px;height:96px;margin:0 auto 8px;animation:pl 2.200s ease-in-out infinite;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Ccircle cx='48' cy='48' r='46' fill='%234caf50' fill-opacity='.14'/%3E%3Ccircle cx='48' cy='48' r='36' fill='%234caf50' fill-opacity='.25'/%3E%3Ccircle cx='48' cy='48' r='26' fill='%234caf50'/%3E%3Cpath d='M48 36v13l8 5' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
 @keyframes pl{50%{transform:scale(1.07)}}
-@media(prefers-reduced-motion:reduce){#availList .card.new::before{animation:none}}
+@media(prefers-reduced-motion:reduce){.h-new .hero-ic{animation:none}}
 #availList .card>div:last-child{display:flex;gap:10px;margin-top:18px}
 #availList .card>div:last-child button{flex:1;min-height:54px;font-size:16px}
 #availList .card>div:last-child button:first-child{background:var(--ok);flex:1.6}
@@ -182,6 +181,20 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
 .wait-msg{text-align:center;padding:15px;border-radius:18px;font-weight:700;margin-top:10px;background:#3a3020;color:#ffda9a}
 body.light-mode .f-pay,body.light-mode .far{color:#c62828}body.light-mode .f-get{color:#1565c0}body.light-mode .f-profit{color:#1b7a3a}
 body.light-mode .n2{color:#805b00}body.light-mode .wait-msg{background:#fff7e6;color:#805b00}
+
+/* Status hero + tabs (details / financial) */
+.hero{text-align:center;margin:6px 0 4px}
+.hero-ic{width:84px;height:84px;margin:8px auto 22px;border-radius:50%;display:grid;place-items:center;background:var(--hc);box-shadow:0 0 0 10px var(--h1),0 0 0 20px var(--h2)}
+.hero-ic::before{content:"";width:40px;height:40px;background:#fff;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+.h-new{--hc:#4caf50;--h1:#4caf5033;--h2:#4caf5014}.h-wait{--hc:#e0a030;--h1:#e0a03033;--h2:#e0a03014}
+.h-store{--hc:#2f8de4;--h1:#2f8de433;--h2:#2f8de414}.h-at{--hc:#4caf50;--h1:#4caf5033;--h2:#4caf5014}.h-cust{--hc:#00a99d;--h1:#00a99d33;--h2:#00a99d14}
+.h-new .hero-ic,.h-wait .hero-ic{--m:var(--m-clock)}.h-store .hero-ic,.h-at .hero-ic{--m:var(--m-store)}.h-cust .hero-ic{--m:var(--m-user)}
+.h-new .hero-ic{animation:pl 2.200s ease-in-out infinite}
+.hero-t{font-size:22px;font-weight:800}
+.hero-s{color:var(--muted);font-size:14px;margin-top:6px}
+.tabs{display:flex;gap:4px;padding:5px;background:var(--panel2);border-radius:32px;margin:16px 0 12px}
+.tab{flex:1;padding:12px 6px;background:none;color:var(--muted);font-size:15px}
+.tab.on{background:var(--pri);color:#fff}
 </style>
 </head>
 <body>
@@ -597,6 +610,21 @@ function __main(){
    Promise.resolve(plugin.updateStatus({online})).catch(()=>{lastNativeDriverStatus=null;});
   }catch(_){lastNativeDriverStatus=null;}
  }
+ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة المتجر"],accepted:["h-store","بالطريق للمتجر"],arrived_store:["h-at","وصلت للمتجر"],picked_up:["h-cust","في الطريق الى الزبون"],delivering:["h-cust","في الطريق الى الزبون"]}[o.status]||["h-new","طلب جديد"];return `<div class="hero ${m[0]}"><i class="hero-ic"></i><div class="hero-t">${m[1]}</div><div class="hero-s">قيمة التوصيل ${fmt(Number(o.deliveryFee)||0)} د.ع</div></div>`}
+ const tabSt={};
+ function tabOpen(id){const t=tabSt[id]||"d",i=esc(id);return `<div class="tabs"><button type="button" class="tab ${t==="d"?"on":""}" data-tab="d" data-id="${i}">التفاصيل</button><button type="button" class="tab ${t==="f"?"on":""}" data-tab="f" data-id="${i}">الحساب المالي</button></div><div class="pane" data-pane="d" ${t==="d"?"":"hidden"}>`}
+ function tabMid(id){return `</div><div class="pane" data-pane="f" ${(tabSt[id]||"d")==="f"?"":"hidden"}>`}
+ document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest(".tab");if(!b)return;const c=b.closest(".card");if(!c)return;tabSt[b.dataset.id]=b.dataset.tab;c.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));c.querySelectorAll(".pane").forEach(p=>{p.hidden=p.dataset.pane!==b.dataset.tab})});
+ let alertT=null,alertN=0;
+ function ring(){
+  try{wake();const t=(f,d,l)=>{const o=AC.createOscillator(),g=AC.createGain();o.type="square";o.frequency.value=f;g.gain.value=.3;o.connect(g);g.connect(AC.destination);o.start(AC.currentTime+d);o.stop(AC.currentTime+d+l)};t(880,0,.22);t(1180,.3,.22);t(880,.6,.22);t(1180,.9,.22)}catch{}
+  try{navigator.vibrate&&navigator.vibrate([500,200,500,200,500])}catch{}
+  try{const H=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Haptics;if(H&&H.vibrate)H.vibrate({duration:700})}catch{}
+ }
+ function alertLoop(on){
+  if(on&&!alertT){alertN=0;alertT=setInterval(()=>{alertN++;ring();if(alertN%4===0)speak("طلب جديد");if(alertN%6===0&&document.hidden)notify("طلب جديد","لديك طلب متوفر بانتظار القبول أو الرفض.")},2500)}
+  else if(!on&&alertT){clearInterval(alertT);alertT=null;try{navigator.vibrate&&navigator.vibrate(0)}catch{}try{window.speechSynthesis&&window.speechSynthesis.cancel()}catch{}}
+ }
  function draw(){
   if(!uid)return;
   stats();ui();syncNativeDriverStatus();
@@ -621,14 +649,15 @@ function __main(){
    }
    seenAv=new Set(av.map(([id])=>id));
   }else{seenAv=null}
-  document.body.classList.toggle("order-focus",av.length>0);
+  document.body.classList.toggle("order-focus",av.length>0);alertLoop(av.length>0);
   $("availContainer").hidden=!av.length;
   setHtml("availList",av.map(([id,o])=>`<div class="card new" id="order-${esc(id)}">
-   <div class="row"><b>طلب #${esc(id.slice(-6))}</b><span class="badge">طلب جديد</span></div>
+   <div class="row"><b>طلب #${esc(id.slice(-6))}</b></div>
+   ${heroOf(o)}${tabOpen(id)}
    <div class="tl"><i class="tl-ic s"></i><div class="tl-b"><small>المتجر</small><strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></div></div>
    <div class="tl"><i class="tl-ic c"></i><div class="tl-b"><small>المنطقة</small><strong class="area-name">${esc(o.area||"غير محددة")}</strong></div></div>
    ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" rel="noopener" class="map-link">فتح موقع المتجر على الخريطة</a>`:""}
-   ${finBox(o)}
+   ${tabMid(id)}${finBox(o)}</div>
    <div style="display:flex;gap:9px;margin-top:12px">
     <button style="flex:2" data-a="accept" data-id="${esc(id)}">موافق — قبول الطلب</button>
     <button class="red" style="flex:1" data-a="reject" data-id="${esc(id)}">رفض</button>
@@ -669,11 +698,12 @@ function __main(){
     </div>`;
    }
    return `<div class="card ${o.status==="waiting_store"?"waiting":""}" id="order-${esc(id)}">
-    <div class="row"><b>طلب #${esc(id.slice(-6))}</b>${badge}</div>
+    <div class="row"><b>طلب #${esc(id.slice(-6))}</b></div>
+    ${heroOf(o)}${tabOpen(id)}
     <div class="tl"><i class="tl-ic s"></i><div class="tl-b"><small>المتجر</small><strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></div></div>
     <div class="tl"><i class="tl-ic c"></i><div class="tl-b"><small>المنطقة</small><strong class="area-name">${esc(o.area||"غير محددة")}</strong></div></div>
     ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" rel="noopener" class="map-link">فتح موقع المتجر على الخريطة</a>`:""}
-    ${storeBox}${finBox(o)}${cust}${warn}${btn}
+    ${storeBox}${cust}${warn}${tabMid(id)}${finBox(o)}</div>${btn}
    </div>`;
   }).join(""));
   const empty= nAct===0&&av.length===0;
@@ -727,7 +757,7 @@ function __main(){
  $("sideStatus").onclick=()=>{$("btnStatus").click();};
  async function act(e){
   const b=e.target.closest("button[data-a]");if(!b||busy||b.disabled)return;
-  const a=b.dataset.a,id=b.dataset.id,r=ref(db,"orders/"+id);busy=true;
+  const a=b.dataset.a,id=b.dataset.id,r=ref(db,"orders/"+id);busy=true;if(a==="accept"||a==="reject")alertLoop(false);
   try{
    if(a==="accept"){
     if(debt>=debtLimit){say("لا يمكنك قبول الطلبات، تجاوزت سقف الدين");return}
@@ -773,7 +803,7 @@ function __main(){
    try{localStorage.setItem("baqubah-driver-online-"+uid,"false")}catch{}
    try{await set(ref(db,"presence/"+uid),{online:false,lastSeen:serverTimestamp()})}catch{}
   }
-  isOnline=false;clear();closeSide();document.body.classList.remove("order-focus");uid=null;driver=null;
+  isOnline=false;alertLoop(false);clear();closeSide();document.body.classList.remove("order-focus");uid=null;driver=null;
   try{await signOut(auth)}catch{}
  }
  $("out").onclick=()=>logout(false);
