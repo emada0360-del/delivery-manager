@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#101010">
+<meta name="theme-color" content="#1c1c1c">
 <title>Baqubah Delivery | السائق</title>
 <script>
 window.notifyApp=async(t,b,l)=>{
@@ -29,189 +29,180 @@ window.notifyApp=async(t,b,l)=>{
 })();
 </script>
 <style>
-:root{--bg:#101010;--panel:#212121;--panel2:#303030;--ink:#f7f7f7;--muted:#bdbdbd;--pri:#ff4054;--ok:#4caf50;--bad:#f44336;--warn:#ffb74d;--line:#3c3c3c}
+:root{--bg:#1c1c1c;--bar:#141414;--panel:#262626;--panel2:#333;--ink:#f5f5f5;--muted:#b0b0b0;--line:#3a3a3a;--pri:#d9002f;--coral:#ff5252;--ok:#4caf50;--bad:#f44336;
+--m-pin:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s7-6.2 7-11.5a7 7 0 0 0-14 0C5 14.800 12 21 12 21z'/%3E%3Ccircle cx='12' cy='9.500' r='2.500'/%3E%3C/svg%3E");
+--m-store:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 9l1.500-5h13L20 9M4 9v11h16V9M4 9c0 2 3 2 4 0 1 2 3 2 4 0 1 2 3 2 4 0 1 2 4 2 4 0M10 20v-5h4v5'/%3E%3C/svg%3E");
+--m-phone:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 4h4l2 5-2.500 1.500a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z'/%3E%3C/svg%3E");
+--m-map:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14'/%3E%3C/svg%3E");
+--m-user:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21a8 8 0 0 1 16 0'/%3E%3C/svg%3E");
+--m-sun:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3Cpath d='M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.500 1.500M17.500 17.500L19 19M19 5l-1.500 1.500M6.500 17.500L5 19'/%3E%3C/svg%3E");
+--m-moon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 14.500A8 8 0 0 1 9.500 4a8 8 0 1 0 10.500 10.500z'/%3E%3C/svg%3E")}
+html.light-mode,body.light-mode{--bg:#f3f4f7;--bar:#fff;--panel:#fff;--panel2:#eceef3;--ink:#1b1f2a;--muted:#667085;--line:#dde1e8;color-scheme:light}
 *{box-sizing:border-box}
 html{background:var(--bg);color-scheme:dark}
-body{margin:0;font-family:system-ui,Tahoma,Arial,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));min-height:100vh}
+body{margin:0;font-family:system-ui,Tahoma,Arial,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
 button,input{font:inherit}
 button{border:0;border-radius:30px;padding:13px 18px;background:var(--pri);color:#fff;cursor:pointer;font-weight:800;transition:filter .15s}
-button:active{filter:brightness(.85)}
-button:disabled{opacity:.45;cursor:not-allowed}
-input{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;margin:7px 0 15px;background:#303030;color:#fff}
-header{background:#191919;color:#fff;padding:13px 16px;padding-top:calc(13px + env(safe-area-inset-top,0px));display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;z-index:50;border-bottom:1px solid #303030}
-header h2{margin:0;font-size:17px;font-weight:850}
-header button{padding:9px 15px;font-size:13px}
+button:active{filter:brightness(.85)}button:disabled{opacity:.45;cursor:not-allowed}
+input{width:100%;padding:14px;border:1px solid var(--line);border-radius:16px;margin:7px 0 15px;background:var(--panel2);color:var(--ink)}
+label{font-size:13px;color:var(--muted)}
+[hidden]{display:none!important}
+.ic{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.av{width:40px;height:40px;flex:none;border-radius:50%}
+.hbtn{width:42px;height:42px;padding:0;display:grid;place-items:center;background:var(--panel2);color:var(--ink);border-radius:50%}
+
+/* Icons drawn in CSS for elements the script builds */
+.area-name::before,.btn-call::before,.map-link::before,#themeBtn::before{content:"";display:inline-block;width:1.15em;height:1.15em;background:currentColor;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat;vertical-align:-.2em;margin-inline-end:6px}
+.store-name{--m:var(--m-store);color:#ff4054!important;font-weight:900}
+.area-name{--m:var(--m-pin);display:inline-flex;align-items:center;background:var(--coral);color:#fff!important;padding:7px 14px;border-radius:30px;font-weight:800}
+.btn-call{--m:var(--m-phone)}.map-link{--m:var(--m-map)}
+#themeBtn{--m:var(--m-sun);font-size:0}
+#themeBtn::before{width:22px;height:22px;margin:0}
+body.light-mode #themeBtn{--m:var(--m-moon)}
+
+/* Header */
+header{position:sticky;top:calc(6px + env(safe-area-inset-top,0px));z-index:50;margin:calc(6px + env(safe-area-inset-top,0px)) 10px 0;padding:6px;background:var(--bar);border-radius:34px;display:flex;justify-content:space-between;align-items:center;gap:8px;box-shadow:0 4px 14px #0004}
+#appHeaderTitle{display:flex;align-items:center;gap:8px;min-width:0}
+header h2{margin:0;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header>div:last-child{display:flex;align-items:center;gap:8px}
+#headerStatus{background:var(--pri);color:#fff;padding:10px 14px;border-radius:30px;font-size:12px;font-weight:800;white-space:nowrap}
+
 main{width:100%;max-width:650px;margin:auto;padding:12px}
-.box{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:18px;margin:12px}
-#login{max-width:390px;margin:45px auto;background:#202020;border:1px solid #393939}
-#login h2{font-size:23px}
-#login button{width:100%;background:var(--pri);border-radius:30px;padding:15px}
-#err{color:#ff7777;font-weight:700;text-align:center;margin-top:10px;line-height:1.7}
-#diag{direction:ltr;text-align:center;font-size:12px;color:#aaa;margin-top:8px}
-.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}
-.stat{background:var(--panel);border:1px solid #393939;border-radius:15px;padding:13px 5px;text-align:center;min-width:0}
-.stat span{font-size:11px;color:var(--muted);display:block;margin-bottom:7px;line-height:1.5}
-.stat b{font-size:15px;color:#fff;overflow-wrap:anywhere}
-.status-btn{width:100%;padding:17px 12px;font-size:16px;border-radius:35px;margin-bottom:14px;display:flex;justify-content:center;align-items:center;gap:10px;border:1px solid #424242}
-.status-btn.on{background:var(--ok);color:white}
-.status-btn.off{background:#353535;color:#eee}
-.status-btn.blocked{background:#555;color:#ddd}
-.dot{width:11px;height:11px;flex-shrink:0;border-radius:50%;background:#fff}
-h3{font-size:19px;margin:20px 4px 12px}
-#availContainer,#activeContainer{margin-top:18px}
-.card{position:relative;background:var(--panel);border:1px solid #424242;border-radius:22px;padding:16px;margin-bottom:15px;overflow:hidden}
-.card.new{border:1px solid #525252;background:#212121;box-shadow:0 5px 18px #0003}
-.card.waiting{border:1px solid #8a641f;background:#28231b}
-.card>.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:15px}
-.card>.row>b{background:#4caf50;color:white;padding:8px 14px;border-radius:30px;font-size:15px}
-.card p{margin:11px 0;font-size:15px;line-height:1.7;color:#e5e5e5;overflow-wrap:anywhere}
-.card p>b{color:#fff}
-.badge{background:#353535;color:#fff;padding:8px 12px;border-radius:30px;font-size:12px;font-weight:800}
+#mainStats{display:none!important}
+#availContainer>h3,#activeContainer>h3{display:none}
+
+/* Messages */
+#msg{display:none;position:sticky;top:84px;z-index:40;padding:12px 15px;border-radius:18px;margin-bottom:12px;background:#263c2b;color:#baffc4;font-weight:700;text-align:center;border:1px solid #3d6445;line-height:1.6}
+.warn{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:13px;margin-bottom:12px;line-height:1.7}
+#off,#warnBox{background:#3a1f22;color:#ffb0b0;border-color:#6a3236}
+body.light-mode #off,body.light-mode #warnBox{background:#fff0f0;color:#a51d2d;border-color:#f2c5ca}
+body.light-mode #msg{background:#e7f8eb;color:#166534;border-color:#b7e3c1}
+
+/* Empty state (illustration + text at the bottom, like the reference) */
+#emptyState{display:none;min-height:calc(100dvh - 130px);flex-direction:column;align-items:center;justify-content:flex-end;text-align:center;padding:20px 16px 8vh}
+#emptyState svg{width:190px;height:190px;margin-bottom:20px;filter:drop-shadow(0 8px 26px #ff405433)}
+.ill-on{display:none}
+body:has(:is(#sideStatus,#btnStatus).on) .ill-on{display:block}
+body:has(:is(#sideStatus,#btnStatus).on) .ill-off{display:none}
+#emptyTitle{font-size:21px;font-weight:800;margin-bottom:10px}
+#emptyText{font-size:14px;line-height:1.9;max-width:290px;color:var(--muted)}
+
+/* Order cards */
+.card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:26px;padding:16px;margin-bottom:14px}
+.card.waiting{border-color:#8a641f}
+.card>.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.card>.row>b{background:var(--ok);color:#fff;padding:8px 16px;border-radius:30px;font-size:15px;direction:ltr}
+.badge{background:var(--panel2);padding:8px 13px;border-radius:30px;font-size:12px;font-weight:800}
 .badge.wait{background:#6c4d15;color:#ffe3a0}
-.fin-box{background:#292929;border:1px solid #404040;border-radius:15px;padding:13px;margin:13px 0;font-size:13px;color:#eee}
+.card p{margin:9px 0;padding:11px 14px;background:var(--panel2);border-radius:16px;font-size:15px;line-height:1.7;overflow-wrap:anywhere}
+.fin-box,.customer-box{background:var(--panel2);border:1px solid var(--line);border-radius:18px;padding:13px;margin:12px 0;font-size:13px}
 .fin-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;line-height:1.6}
-.fin-row span{color:#ccc}
+.fin-row span{color:var(--muted)}
 .fin-row b{text-align:left;overflow-wrap:anywhere}
-.fin-row:last-child{border-top:1px solid #484848;padding-top:9px;margin-top:5px;margin-bottom:0}
-.debt-box{background:#302222;border:1px solid #583232;border-radius:15px;padding:13px;margin:12px 0;font-size:13px;color:#ff8585}
-.customer-box{background:#292929;border:1px solid #414141;border-radius:15px;padding:13px;margin:12px 0;text-align:center}
-.customer-box b{font-size:14px;color:#fff;display:block;margin-bottom:10px;line-height:1.7}
+.fin-row:last-child{border-top:1px solid var(--line);padding-top:9px;margin-top:5px;margin-bottom:0}
+.debt-box{background:#3a2326;border:1px solid #66353a;color:#ff9a9a;border-radius:18px;padding:13px;margin:12px 0;font-size:13px}
+body.light-mode .debt-box{background:#fff0f0;color:#a51d2d;border-color:#f2c5ca}
+.customer-box{text-align:center}
+.customer-box b{display:block;margin-bottom:10px;line-height:1.7;font-size:14px}
 .btn-group{display:flex;gap:8px}
-.btn-group a{flex:1;min-width:0;padding:12px 6px;border-radius:30px;text-decoration:none;font-weight:800;font-size:12px;display:flex;justify-content:center;align-items:center;gap:5px}
-.btn-call{background:#393939;color:#fff}
+.btn-group a{flex:1;min-width:0;padding:12px 6px;border-radius:30px;text-decoration:none;font-weight:800;font-size:12px;display:flex;justify-content:center;align-items:center}
+.btn-call{background:var(--panel);color:var(--ink)}
 .btn-wa{background:#285c38;color:#c6ffd6}
-.map-link{display:block;text-align:center;background:#343434;color:#fff;padding:12px;border-radius:30px;text-decoration:none;font-size:14px;font-weight:800;margin:12px 0;border:1px solid #484848}
-.warn{background:#302719;color:#ffda9a;padding:13px;border-radius:13px;margin-bottom:12px;border:1px solid #594421;line-height:1.7}
-#off,#warnBox{background:#351f20!important;color:#ffaaaa!important;border-color:#653537}
-#annBox{background:#292929;color:#fff;border-color:#454545}
+body.light-mode .btn-wa{background:#d8f7e2;color:#176534}
+.map-link{display:block;text-align:center;background:var(--panel2);color:var(--ink);padding:12px;border-radius:30px;text-decoration:none;font-size:14px;font-weight:800;margin:12px 0;border:1px solid var(--line)}
+
+/* New order = big card: green clock on top, accept (wide) + reject at the bottom */
+#availList .card.new{min-height:calc(100dvh - 110px);display:flex;flex-direction:column;justify-content:center;margin:0;padding:20px 16px;border:1.5px solid #5a2a31;background:radial-gradient(ellipse at top,#3a2128,var(--panel) 62%);box-shadow:0 0 30px #d9002f22}
+body.light-mode #availList .card.new{background:linear-gradient(#fff,#f7f8fb);border-color:#f0b8c0}
+#availList .card.new>.row{order:-1}
+#availList .card.new::before{content:"";width:96px;height:96px;margin:0 auto 8px;animation:pl 2.200s ease-in-out infinite;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Ccircle cx='48' cy='48' r='46' fill='%234caf50' fill-opacity='.14'/%3E%3Ccircle cx='48' cy='48' r='36' fill='%234caf50' fill-opacity='.25'/%3E%3Ccircle cx='48' cy='48' r='26' fill='%234caf50'/%3E%3Cpath d='M48 36v13l8 5' fill='none' stroke='%23fff' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
+@keyframes pl{50%{transform:scale(1.07)}}
+@media(prefers-reduced-motion:reduce){#availList .card.new::before{animation:none}}
+#availList .card>div:last-child{display:flex;gap:10px;margin-top:18px}
+#availList .card>div:last-child button{flex:1;min-height:54px;font-size:16px}
+#availList .card>div:last-child button:first-child{background:var(--ok);flex:1.6}
+#availList .card>div:last-child button:last-child{background:var(--bad)}
+#activeList .card>button{width:100%;min-height:52px;font-size:16px;margin-top:6px}
+
+/* Sidebar */
+#sidebarShade{position:fixed;inset:0;background:#000a;z-index:100;display:none}
+#sidebar{position:fixed;top:0;bottom:0;right:0;width:min(88vw,360px);background:var(--panel);border-left:1px solid var(--line);z-index:101;transform:translateX(105%);transition:transform .22s ease;overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 14px calc(18px + env(safe-area-inset-bottom,0px))}
+body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:block}
+.side-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.side-head .av{width:62px;height:62px}
+.side-head>div{flex:1;min-width:0}
+.side-head strong{display:block;font-size:18px}
+#sideDriverName{color:var(--muted);font-size:14px;margin-top:3px;overflow-wrap:anywhere}
+.status-btn{width:100%;display:flex;justify-content:center;align-items:center;gap:10px;padding:16px 12px;font-size:16px;border-radius:35px;border:1px solid var(--line)}
+.status-btn.on{background:var(--ok);color:#fff}
+.status-btn.off{background:var(--panel2);color:var(--ink)}
+.status-btn.blocked{background:#666;color:#ddd}
+.dot{width:11px;height:11px;flex:none;border-radius:50%;background:currentColor}
+.side-nav{display:flex;flex-direction:column;margin:12px 0}
+.side-nav button{display:flex;align-items:center;gap:14px;background:none;color:var(--ink);border-radius:16px;padding:14px 8px;font-size:15px;font-weight:700;text-align:right}
+.side-nav button span{flex:1}
+.side-nav button .ic:last-child{width:18px;height:18px;color:var(--muted)}
+.side-nav button.active{background:var(--panel2);color:#ff4054}
+.side-panel{background:var(--panel2);border-radius:18px;padding:13px;margin:10px 0}
+.side-panel h3{margin:0 0 10px;font-size:16px}
+.side-stat{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;line-height:1.6}
+.side-stat b{text-align:left}
+.side-order{padding:12px 0;border-bottom:1px solid var(--line);font-size:13px;line-height:1.8}
+.side-stat:last-child,.side-order:last-child{border-bottom:0}
+.side-empty{color:var(--muted);font-size:13px;line-height:1.8;padding:8px 0}
+#out{display:flex;justify-content:center;align-items:center;gap:8px;width:100%;margin-top:12px;background:var(--bad)}
 .grn{background:var(--ok)}.gry{background:#555}.red{background:var(--bad)}
-#msg{padding:12px 15px;border-radius:14px;margin-bottom:12px;display:none;background:#263c2b;color:#baffc4;font-weight:700;text-align:center;position:sticky;top:76px;z-index:40;border:1px solid #3d6445;line-height:1.6}
-#emptyState{display:none;min-height:42vh;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:30px 15px;color:#aaa}
-.empty-icon{width:100px;height:100px;border-radius:50%;background:#292929;border:2px solid #414141;display:flex;align-items:center;justify-content:center;font-size:43px;margin-bottom:22px;color:#ff7b88}
-#emptyTitle{font-size:22px;font-weight:800;color:#fff;margin-bottom:10px}
-#emptyText{font-size:14px;line-height:1.9;max-width:280px}
-#mdl{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:99;padding:18px}
-#mdl>div{background:#252525;color:#fff;border:1px solid #444;border-radius:22px;padding:20px;width:min(100%,360px)}
+
+/* Login */
+#login{max-width:390px;margin:40px auto;padding:22px;background:var(--panel);border:1px solid var(--line);border-radius:28px}
+#login .av{display:block;width:84px;height:84px;margin:0 auto 12px}
+#login h2{text-align:center;margin:0 0 18px;font-size:22px}
+#login button{width:100%;padding:15px;margin-top:6px}
+#err{color:#ff7777;font-weight:700;text-align:center;margin-top:10px;line-height:1.7}
+#diag{direction:ltr;text-align:center;font-size:12px;color:var(--muted);margin-top:8px}
+
+/* Confirm dialog */
+#mdl{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:200;padding:18px}
+#mdl>div{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:24px;padding:20px;width:min(100%,360px)}
 #mdl p{margin:0 0 18px;line-height:1.8}
 #mdl .mr{display:flex;gap:10px}
 #mdl .mr button{flex:1;min-height:48px}
-#availList .card>div:last-child button{min-height:52px;border-radius:30px;font-size:15px}
-#availList .card>div:last-child button:first-child{background:#4caf50}
-#availList .card>div:last-child button:last-child{background:#f44336}
-#activeList .card>button{min-height:52px;border-radius:30px;font-size:16px}
 
-#appHeaderTitle{display:flex;align-items:center;gap:10px;min-width:0}
-#menuBtn{background:#303030;border:1px solid #444;font-size:22px;padding:5px 14px;min-width:48px}
-#out{background:#f44336}
-#sidebarShade{position:fixed;inset:0;background:#000a;z-index:100;display:none}
-#sidebar{position:fixed;top:0;bottom:0;right:0;width:min(88vw,370px);background:#171717;border-left:1px solid #444;z-index:101;transform:translateX(105%);transition:transform .22s ease;overflow-y:auto;padding:calc(15px + env(safe-area-inset-top,0px)) 14px calc(18px + env(safe-area-inset-bottom,0px))}
-body.menu-open #sidebar{transform:translateX(0)}body.menu-open #sidebarShade{display:block}
-.side-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 2px 16px;border-bottom:1px solid #383838;margin-bottom:12px}
-.side-head strong{font-size:19px}.side-close{background:#333;padding:7px 13px}
-.side-nav{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.side-nav button{background:#2b2b2b;border:1px solid #404040;border-radius:12px;text-align:right;padding:12px 10px;font-size:13px}
-.side-nav button.active{background:#4b2027;border-color:#ff4054;color:#fff}
-.side-panel{background:#222;border:1px solid #3c3c3c;border-radius:15px;padding:13px;margin:10px 0}
-.side-panel h3{margin:0 0 12px;font-size:16px}
-.side-stat{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #383838;font-size:13px;line-height:1.6}
-.side-stat:last-child{border-bottom:0}.side-stat b{color:#fff;text-align:left}
-.side-order{padding:12px 0;border-bottom:1px solid #3c3c3c;font-size:13px;line-height:1.8}.side-order:last-child{border-bottom:0}
-.side-order b{color:#fff}.side-empty{color:#aaa;font-size:13px;line-height:1.8;padding:8px 0}
-#mainStats{display:none!important}#mainAnn{margin-top:8px}
-#emptyState{min-height:65vh;padding:25px 16px}
-#emptyState .empty-icon{width:112px;height:112px;font-size:48px;background:#252525;border-color:#3d3d3d}
-#emptyTitle{font-size:23px}
-#availContainer,#activeContainer{margin-top:0}
-#availContainer>h3,#activeContainer>h3{display:none}
-#availList .card.new{min-height:calc(100dvh - 26px);border:2px solid #ff4054;border-radius:0;margin:0;padding:22px 18px calc(24px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;justify-content:center;box-shadow:0 0 35px #ff405422;background:radial-gradient(ellipse at top,#382126 0,#212121 60%)}
-#availList .card.new>.row{justify-content:space-between}
-#availList .card.new>.row>b{font-size:18px;padding:10px 16px;background:#4caf50}
-#availList .card.new p{font-size:18px;margin:12px 0}
-#availList .card.new .fin-box,#availList .card.new .debt-box{font-size:14px}
-#availList .card.new>div:last-child{margin-top:20px!important}
-#availList .card.new>div:last-child button{min-height:62px;font-size:17px}
-body.order-focus header{display:none}body.order-focus main{padding:0;max-width:none}body.order-focus #msg,body.order-focus #off{position:fixed;top:0;left:8px;right:8px;z-index:90}
-body.order-focus #availContainer{margin:0}body.order-focus #activeContainer{padding:10px}
-body.order-focus #emptyState{display:none!important}
-@media(min-width:700px){#availList .card.new{min-height:calc(100dvh - 30px);border-radius:22px}}
-[hidden]{display:none!important}
-@media(max-width:380px){main{padding:8px}.grid{gap:5px}.stat b{font-size:13px}.stat span{font-size:10px}.card{padding:12px}.card p{font-size:14px}.fin-box,.debt-box{padding:10px}}
-
-/* Store and area highlight */
-.store-name{color:#ff334f!important;font-weight:900}
-.area-name{color:#20c968!important;font-weight:900}
-body.light-mode{--bg:#f4f6fa;--panel:#fff;--panel2:#edf1f7;--ink:#172033;--muted:#596579;--line:#d5dce7;color-scheme:light;background:#f4f6fa;color:#172033}
-body.light-mode header{background:#fff;color:#172033;border-bottom-color:#d5dce7}
-body.light-mode .box,body.light-mode .card,body.light-mode .side-order{background:#fff;color:#172033;border-color:#d5dce7}
-body.light-mode input,body.light-mode textarea,body.light-mode select{background:#fff;color:#172033;border-color:#cbd5e1}
-body.light-mode #sidebar{background:#fff;color:#172033;border-left-color:#d5dce7}
-body.light-mode #menuBtn,body.light-mode #themeBtn{background:#edf1f7!important;color:#172033;border-color:#cbd5e1!important}
-body.light-mode .side-nav button{background:#edf1f7;color:#172033}
-body.light-mode .side-nav button.active{background:#ffe5e9;color:#b91c32}
-body.light-mode .side-empty{color:#596579}
-
-
-/* Theme contrast fix: override fixed dark colors when light mode is selected */
-html.light-mode{color-scheme:light!important;background:#f4f6fa}
-html:not(.light-mode){color-scheme:dark}
-body.light-mode{background:#f4f6fa!important;color:#172033!important}
-body.light-mode #login,
-body.light-mode .box,
-body.light-mode .card,
-body.light-mode .side-panel,
-body.light-mode .side-order,
-body.light-mode .customer-box,
-body.light-mode .fin-box,
-body.light-mode #mdl>div,
-body.light-mode #annBox,
-body.light-mode .stat,
-body.light-mode #availList .card.new{background:#fff!important;color:#172033!important;border-color:#d5dce7!important}
-body.light-mode #availList .card.new{background:linear-gradient(180deg,#fff,#f7f9fc)!important;box-shadow:0 5px 18px #15223812!important}
-body.light-mode header{background:#fff!important;color:#172033!important;border-bottom-color:#d5dce7!important}
-body.light-mode h1,body.light-mode h2,body.light-mode h3,
-body.light-mode label,body.light-mode p,body.light-mode .card p,
-body.light-mode .card p>b,body.light-mode .side-panel h3,
-body.light-mode .side-stat,body.light-mode .side-stat b,
-body.light-mode .side-order,body.light-mode .side-order b,
-body.light-mode #emptyTitle,body.light-mode #emptyText,
-body.light-mode #login h2,body.light-mode .customer-box b,
-body.light-mode .fin-box,body.light-mode .fin-row,
-body.light-mode .stat b{color:#172033!important}
-body.light-mode .stat span,body.light-mode #diag,
-body.light-mode #emptyState,body.light-mode .side-empty,
-body.light-mode .fin-row span,body.light-mode #headerStatus{color:#596579!important}
-body.light-mode input,body.light-mode textarea,body.light-mode select{background:#fff!important;color:#172033!important;border-color:#cbd5e1!important}
-body.light-mode input::placeholder,body.light-mode textarea::placeholder{color:#778196!important;opacity:1}
-body.light-mode #sidebar{background:#fff!important;color:#172033!important;border-left-color:#d5dce7!important}
-body.light-mode .side-nav button,body.light-mode #menuBtn,body.light-mode #themeBtn,
-body.light-mode .side-close{background:#edf1f7!important;color:#172033!important;border-color:#cbd5e1!important}
-body.light-mode .side-nav button.active{background:#ffe5e9!important;color:#b91c32!important}
-body.light-mode .side-stat,body.light-mode .side-order{border-bottom-color:#e2e8f0!important}
-body.light-mode .fin-row:last-child{border-top-color:#d5dce7!important}
-body.light-mode .badge{background:#e8edf5!important;color:#253047!important}
-body.light-mode .badge.wait{background:#fff0c2!important;color:#805b00!important}
-body.light-mode .fin-box{background:#f1f5f9!important;border-color:#d5dce7!important}
-body.light-mode .customer-box{background:#f1f5f9!important}
-body.light-mode .btn-call{background:#e2e8f0!important;color:#172033!important}
-body.light-mode .btn-wa{background:#d8f7e2!important;color:#176534!important}
-body.light-mode .map-link{background:#e8edf5!important;color:#172033!important;border-color:#cbd5e1!important}
-body.light-mode .card.waiting{background:#fff8e8!important;border-color:#f1d49a!important}
-body.light-mode .card.new>.row>b,body.light-mode .status-btn.on{color:#fff!important}
-body.light-mode .status-btn.off,body.light-mode .status-btn.blocked{background:#e2e8f0!important;color:#334155!important;border-color:#cbd5e1!important}
-body.light-mode #annBox{background:#fff!important;color:#172033!important}
-body.light-mode #off,body.light-mode #warnBox{background:#fff0f0!important;color:#a51d2d!important;border-color:#f2c5ca!important}
-body.light-mode #msg{background:#e7f8eb!important;color:#166534!important;border-color:#b7e3c1!important}
-body.light-mode .warn{background:#fff7e6!important;color:#805b00!important;border-color:#f0dcae!important}
-body.light-mode .debt-box{background:#fff0f0!important;color:#a51d2d!important;border-color:#f2c5ca!important}
-body.light-mode #mdl{background:#0007!important}
-body.light-mode .empty-icon{background:#edf1f7!important;border-color:#d5dce7!important}
-body.light-mode #availList .card.new p{color:#172033!important}
-
+/* Timeline rows (store / customer area) */
+.tl{display:flex;align-items:center;gap:12px;position:relative;margin:10px 0}
+.tl+.tl::before{content:"";position:absolute;inset-inline-start:20px;top:-14px;height:18px;border-inline-start:2px dashed var(--line)}
+.tl-ic{width:42px;height:42px;flex:none;border-radius:50%;background:var(--panel2);color:var(--muted);display:grid;place-items:center}
+.tl-ic::before{content:"";width:22px;height:22px;background:currentColor;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
+.tl-ic.s{--m:var(--m-store)}.tl-ic.c{--m:var(--m-user)}
+.tl-b{flex:1;min-width:0;background:var(--panel2);border-radius:16px;padding:10px 14px;overflow-wrap:anywhere}
+.tl-b small{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
+.tl-b strong{font-size:17px}
+.f-pay{color:#ff8585}.f-get{color:#b9d9ff}.f-profit{color:#9ff0ae}.far{color:#ff8585;font-size:12px}.n2{color:#ffda9a}
+.note{margin-bottom:8px;font-size:13px;color:var(--muted)}
+.wait-msg{text-align:center;padding:15px;border-radius:18px;font-weight:700;margin-top:10px;background:#3a3020;color:#ffda9a}
+body.light-mode .f-pay,body.light-mode .far{color:#c62828}body.light-mode .f-get{color:#1565c0}body.light-mode .f-profit{color:#1b7a3a}
+body.light-mode .n2{color:#805b00}body.light-mode .wait-msg{background:#fff7e6;color:#805b00}
 </style>
 </head>
 <body>
+<!-- Drawn icons (SVG sprite) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <symbol id="panda" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#d9002f"/><circle cx="12" cy="13" r="5" fill="#111"/><circle cx="36" cy="13" r="5" fill="#111"/><ellipse cx="24" cy="26" rx="14" ry="13" fill="#fff"/><ellipse cx="18" cy="24" rx="3.600" ry="4.600" fill="#111" transform="rotate(20 18 24)"/><ellipse cx="30" cy="24" rx="3.600" ry="4.600" fill="#111" transform="rotate(-20 30 24)"/><circle cx="18.500" cy="24" r="1.200" fill="#fff"/><circle cx="29.500" cy="24" r="1.200" fill="#fff"/><ellipse cx="24" cy="30" rx="2.600" ry="1.800" fill="#111"/><path d="M21 33q3 2.500 6 0" fill="none" stroke="#111" stroke-width="1.400" stroke-linecap="round"/></symbol>
+ <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
+ <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+ <symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></symbol>
+ <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/></symbol>
+ <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.500l3 3 5-6"/></symbol>
+ <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM4 7l12-3v3M16 14h2"/></symbol>
+ <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+ <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3l8 4v10l-8 4-8-4V7zM4 7l8 4 8-4M12 11v10"/></symbol>
+ <symbol id="i-chev" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></symbol>
+ <symbol id="i-out" viewBox="0 0 24 24"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3M15 8l4 4-4 4M19 12H9"/></symbol>
+</svg>
+
 <section id="login" class="box">
- <h2 style="text-align:center;margin-top:0">دخول السائق <small style="font-size:11px;color:#aaa">v19 — اتصال وإشعارات محسّنة</small></h2>
+ <svg class="av"><use href="#panda"/></svg>
+ <h2>دخول السائق <small style="font-size:11px;color:#aaa">v20 — واجهة جديدة</small></h2>
  <form id="lf">
   <label for="un">رقم الهاتف</label>
   <input id="un" type="tel" required autocomplete="username" autocapitalize="none" placeholder="07XXXXXXXXX">
@@ -224,38 +215,57 @@ body.light-mode #availList .card.new p{color:#172033!important}
 </section>
 
 <div id="app" hidden>
- <header id="appHeader"><div id="appHeaderTitle"><button id="menuBtn" aria-label="القائمة الجانبية">☰</button><h2 id="drvName">السائق</h2></div><div style="display:flex;align-items:center;gap:8px"><button id="themeBtn" type="button" aria-label="تبديل المظهر" style="background:#303030;border:1px solid #555;padding:7px 10px">☀️</button><span id="headerStatus" style="font-size:12px;color:#bdbdbd">بانتظار الطلب</span></div></header>
- <div id="sidebarShade"></div><aside id="sidebar" aria-label="قائمة السائق">
-  <div class="side-head"><strong>قائمة السائق</strong><button id="sideClose" class="side-close">✕</button></div>
-  <div id="sideDriverName" style="font-weight:800;font-size:16px;margin:0 2px 12px">السائق</div>
+ <header id="appHeader">
+  <div id="appHeaderTitle">
+   <button id="menuBtn" class="hbtn" aria-label="القائمة الجانبية"><svg class="ic"><use href="#i-menu"/></svg></button>
+   <svg class="av"><use href="#panda"/></svg>
+   <h2 id="drvName">السائق</h2>
+  </div>
+  <div>
+   <button id="themeBtn" class="hbtn" type="button" aria-label="تبديل المظهر"></button>
+   <span id="headerStatus">بانتظار الطلب</span>
+  </div>
+ </header>
+
+ <div id="sidebarShade"></div>
+ <aside id="sidebar" aria-label="قائمة السائق">
+  <div class="side-head">
+   <svg class="av"><use href="#panda"/></svg>
+   <div><strong>طلباتي - توصيل</strong><div id="sideDriverName">السائق</div></div>
+   <button id="sideClose" class="hbtn side-close" aria-label="إغلاق"><svg class="ic"><use href="#i-x"/></svg></button>
+  </div>
+  <button id="sideStatus" class="status-btn off"><span class="dot"></span><span id="sideStatusTxt">غير متصل</span></button>
   <div class="side-nav">
-   <button data-side="overview" class="active">📊 ملخص الحساب</button>
-   <button data-side="history">🧾 حركات السائق</button>
-   <button data-side="completed">✅ الطلبات المكتملة</button>
-   <button data-side="debt">💰 الديون والمحفظة</button>
-   <button data-side="today">📅 طلبات اليوم</button>
-   <button data-side="all">📦 كل الطلبات</button>
+   <button data-side="overview" class="active"><svg class="ic"><use href="#i-chart"/></svg><span>ملخص الحساب</span><svg class="ic"><use href="#i-chev"/></svg></button>
+   <button data-side="history"><svg class="ic"><use href="#i-receipt"/></svg><span>حركات السائق</span><svg class="ic"><use href="#i-chev"/></svg></button>
+   <button data-side="completed"><svg class="ic"><use href="#i-check"/></svg><span>الطلبات المكتملة</span><svg class="ic"><use href="#i-chev"/></svg></button>
+   <button data-side="debt"><svg class="ic"><use href="#i-wallet"/></svg><span>الديون والمحفظة</span><svg class="ic"><use href="#i-chev"/></svg></button>
+   <button data-side="today"><svg class="ic"><use href="#i-cal"/></svg><span>طلبات اليوم</span><svg class="ic"><use href="#i-chev"/></svg></button>
+   <button data-side="all"><svg class="ic"><use href="#i-box"/></svg><span>كل الطلبات</span><svg class="ic"><use href="#i-chev"/></svg></button>
   </div>
   <div id="sideContent"></div>
-  <button id="sideStatus" class="status-btn off" style="margin-top:14px"><span class="dot"></span><span id="sideStatusTxt">غير متصل</span></button>
-  <button id="out" class="red" style="width:100%;margin-top:5px">تسجيل الخروج</button>
+  <button id="out" class="red"><svg class="ic"><use href="#i-out"/></svg>تسجيل الخروج</button>
  </aside>
+
  <main>
   <div id="msg"></div>
   <div id="off" class="warn" hidden>لا يوجد اتصال بالإنترنت. قد لا تصلك الطلبات الجديدة.</div>
-  <div id="mainStats" class="grid">
-   <div class="stat"><span>الطلبات المكتملة</span><b id="statDone">0</b></div>
-   <div class="stat"><span>محفظتي (دين)</span><b id="statDebt">0</b></div>
-   <div class="stat"><span>أرباحي اليوم</span><b id="statProfit">0</b></div>
+  <div id="mainStats">
+   <b id="statDone">0</b><b id="statDebt">0</b><b id="statProfit">0</b>
   </div>
   <button id="btnStatus" class="status-btn off" hidden><span class="dot"></span><span id="statusTxt">غير متصل (مغلق)</span></button>
   <div id="warnBox" class="warn" hidden><b>تنبيه:</b> وصلت للحد الأقصى من الدين. راجع الإدارة.</div>
   <div id="annBox" class="warn" hidden></div>
+
   <div id="emptyState">
-   <div class="empty-icon">✓</div>
-   <div id="emptyTitle">بانتظار الطلبات</div>
-   <div id="emptyText">عندما يصلك طلب جديد، سيظهر هنا مع تفاصيل المتجر والزبون وأزرار القبول والرفض.</div>
+   <!-- stopwatch: available / waiting -->
+   <svg class="ill-on" viewBox="0 0 160 160"><defs><linearGradient id="gw" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7d89"/><stop offset="1" stop-color="#ffd3dc"/></linearGradient></defs><path d="M42 28h42L74 70h12L52 128l8-46H36z" fill="#ff4d57"/><rect x="80" y="26" width="24" height="12" rx="5" fill="#ffd6dc"/><rect x="112" y="40" width="12" height="12" rx="4" fill="#ffc0cb" transform="rotate(45 118 46)"/><circle cx="92" cy="90" r="44" fill="url(#gw)"/><path d="M72 90l14 14 26-28" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+   <!-- shield: unavailable -->
+   <svg class="ill-off" viewBox="0 0 160 160"><defs><linearGradient id="gs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9a76"/><stop offset="1" stop-color="#ffd9e6"/></linearGradient></defs><rect x="20" y="28" width="84" height="84" rx="12" fill="#ff5a5a"/><path d="M86 44c14 9 30 12 40 13 0 38-14 62-40 78-26-16-40-40-40-78 10-1 26-4 40-13z" fill="url(#gs)" stroke="#fff" stroke-width="3"/><path d="M68 88l13 13 24-26" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".7"/></svg>
+   <div id="emptyTitle">يرجى الانتظار، سيصلك طلبٌ قريباً</div>
+   <div id="emptyText">فعّل حالتك إلى «متصل» من القائمة لاستقبال الطلبات.</div>
   </div>
+
   <div id="availContainer" hidden><h3>الطلبات المتاحة</h3><div id="availList"></div></div>
   <div id="activeContainer" hidden><h3>طلباتي الحالية</h3><div id="activeList"></div></div>
  </main>
@@ -560,9 +570,9 @@ function __main(){
   const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommission||500));
   const fee=Number(o.deliveryFee)||0,pc=Math.round(fee*0.1),payStore=Math.round((Number(o.itemPrice)||0)-sc),collect=Math.round(Number(o.customerTotal)||0),profit=Math.round(fee*0.9);
   return `<div class="fin-box">
-   <div class="fin-row" style="color:#ff8585"><span>تدفع للمتجر:</span><b>${fmt(payStore)} د.ع</b></div>
-   <div class="fin-row" style="color:#b9d9ff"><span>تستلم من الزبون:</span><b>${fmt(collect)} د.ع</b></div>
-   <div class="fin-row" style="color:#9ff0ae"><span>ربحك الصافي (الكروة):</span><b>${fmt(profit)} د.ع</b></div>
+   <div class="fin-row f-pay"><span>تدفع للمتجر:</span><b>${fmt(payStore)} د.ع</b></div>
+   <div class="fin-row f-get"><span>تستلم من الزبون:</span><b>${fmt(collect)} د.ع</b></div>
+   <div class="fin-row f-profit"><span>ربحك الصافي (الكروة):</span><b>${fmt(profit)} د.ع</b></div>
   </div>
   <div class="debt-box">
    <div class="fin-row" style="margin-bottom:5px"><span>عمولة المنصة (10%):</span><b>${fmt(pc)} د.ع</b></div>
@@ -615,9 +625,9 @@ function __main(){
   $("availContainer").hidden=!av.length;
   setHtml("availList",av.map(([id,o])=>`<div class="card new" id="order-${esc(id)}">
    <div class="row"><b>طلب #${esc(id.slice(-6))}</b><span class="badge">طلب جديد</span></div>
-   <p><b>المتجر:</b> <strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></p>
-   <p><b>المنطقة:</b> <strong class="area-name">${esc(o.area||"غير محددة")}</strong></p>
-   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" rel="noopener" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
+   <div class="tl"><i class="tl-ic s"></i><div class="tl-b"><small>المتجر</small><strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></div></div>
+   <div class="tl"><i class="tl-ic c"></i><div class="tl-b"><small>المنطقة</small><strong class="area-name">${esc(o.area||"غير محددة")}</strong></div></div>
+   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" rel="noopener" class="map-link">فتح موقع المتجر على الخريطة</a>`:""}
    ${finBox(o)}
    <div style="display:flex;gap:9px;margin-top:12px">
     <button style="flex:2" data-a="accept" data-id="${esc(id)}">موافق — قبول الطلب</button>
@@ -629,12 +639,12 @@ function __main(){
    let btn="",warn="",badge="";const q=privData[id]||{},st=typeof o.stepAt==="number"?o.stepAt:0;
    if(o.status==="waiting_store"){
     badge='<span class="badge wait">بانتظار موافقة المتجر</span>';
-    btn='<div style="text-align:center;padding:15px;background:#302719;color:#ffda9a;border-radius:15px;font-weight:700;margin-top:10px">يرجى الانتظار حتى يوافق المتجر على طلبك...</div>';
+    btn='<div class="wait-msg">يرجى الانتظار حتى يوافق المتجر على طلبك...</div>';
    }else if(o.status==="accepted"){
     badge='<span class="badge">بالطريق للمتجر</span>';
     if(o.storeLat!=null&&o.storeLng!=null&&pos.lat!=null){
      const d=getDist(pos.lat,pos.lng,Number(o.storeLat),Number(o.storeLng));
-     if(d>300)warn=`<p style="color:#ff8585;font-size:12px">أنت بعيد عن المتجر (${Math.round(d)}م)</p>`;
+     if(d>300)warn=`<p class="far">أنت بعيد عن المتجر (${Math.round(d)}م)</p>`;
     }
     btn=`<button class="grn" style="width:100%;margin-top:10px" data-a="arrive" data-id="${esc(id)}">وصلت للمتجر</button>`;
    }else if(o.status==="arrived_store"){
@@ -645,7 +655,7 @@ function __main(){
     btn=`<button class="grn" style="width:100%;margin-top:10px" ${ok?"":"disabled"} data-a="done" data-id="${esc(id)}">${ok?"تم التوصيل للزبون":"انتظر 5 دقائق..."}</button>`;
    }
    const storePhone=String(o.storePhone||"");
-   const storeBox=`<div class="customer-box"><b>هاتف المتجر: <span dir="ltr">${esc(storePhone||"غير متوفر")}</span></b>${storePhone?`<div class="btn-group"><a href="tel:${esc(storePhone)}" class="btn-call">📞 اتصال بالمتجر</a></div>`:""}</div>`;
+   const storeBox=`<div class="customer-box"><b>هاتف المتجر: <span dir="ltr">${esc(storePhone||"غير متوفر")}</span></b>${storePhone?`<div class="btn-group"><a href="tel:${esc(storePhone)}" class="btn-call">اتصال بالمتجر</a></div>`:""}</div>`;
    let cust="";
    if(q.customerPhone&&o.status!=="waiting_store"){
     const cp=String(q.customerPhone);
@@ -653,16 +663,16 @@ function __main(){
     const international=digits.startsWith("964")?digits:(digits.startsWith("0")?"964"+digits.slice(1):"964"+digits);
     const wa="https://wa.me/"+international+"?text="+encodeURIComponent("مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.");
     cust=`<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(cp)}</span></b>
-     ${q.customerName?`<div style="margin-bottom:8px;font-size:13px;color:#ccc">الاسم: ${esc(q.customerName)}</div>`:""}
-     ${q.note?`<div style="margin-bottom:8px;font-size:13px;color:#ffda9a">ملاحظة: ${esc(q.note)}</div>`:""}
-     <div class="btn-group"><a href="tel:${esc(cp)}" class="btn-call">📞 اتصال</a><a href="${esc(wa)}" target="_blank" rel="noopener" class="btn-wa">واتساب — طلب الموقع</a></div>
+     ${q.customerName?`<div class="note">الاسم: ${esc(q.customerName)}</div>`:""}
+     ${q.note?`<div class="note n2">ملاحظة: ${esc(q.note)}</div>`:""}
+     <div class="btn-group"><a href="tel:${esc(cp)}" class="btn-call">اتصال</a><a href="${esc(wa)}" target="_blank" rel="noopener" class="btn-wa">واتساب — طلب الموقع</a></div>
     </div>`;
    }
    return `<div class="card ${o.status==="waiting_store"?"waiting":""}" id="order-${esc(id)}">
     <div class="row"><b>طلب #${esc(id.slice(-6))}</b>${badge}</div>
-    <p><b>المتجر:</b> <strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></p>
-    <p><b>المنطقة:</b> <strong class="area-name">${esc(o.area||"غير محددة")}</strong></p>
-    ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" rel="noopener" class="map-link">📍 فتح موقع المتجر على الخريطة</a>`:""}
+    <div class="tl"><i class="tl-ic s"></i><div class="tl-b"><small>المتجر</small><strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></div></div>
+    <div class="tl"><i class="tl-ic c"></i><div class="tl-b"><small>المنطقة</small><strong class="area-name">${esc(o.area||"غير محددة")}</strong></div></div>
+    ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" rel="noopener" class="map-link">فتح موقع المتجر على الخريطة</a>`:""}
     ${storeBox}${finBox(o)}${cust}${warn}${btn}
    </div>`;
   }).join(""));
@@ -710,7 +720,7 @@ function __main(){
  function closeSide(){document.body.classList.remove("menu-open");}
  $("menuBtn").onclick=openSide;$("sideClose").onclick=closeSide;$("sidebarShade").onclick=closeSide;
  const themeBtn=$("themeBtn");
- const applyTheme=mode=>{const light=mode==="light";document.body.classList.toggle("light-mode",light);document.documentElement.classList.toggle("light-mode",light);document.documentElement.style.colorScheme=light?"light":"dark";if(themeBtn)themeBtn.textContent=light?"🌙":"☀️";try{localStorage.setItem("baqubah-driver-theme",mode)}catch{}};
+ const applyTheme=mode=>{const light=mode==="light";document.body.classList.toggle("light-mode",light);document.documentElement.classList.toggle("light-mode",light);document.documentElement.style.colorScheme=light?"light":"dark";try{localStorage.setItem("baqubah-driver-theme",mode)}catch{}};
  let savedTheme="dark";try{savedTheme=localStorage.getItem("baqubah-driver-theme")||"dark"}catch{}applyTheme(savedTheme);
  if(themeBtn)themeBtn.onclick=()=>applyTheme(document.body.classList.contains("light-mode")?"dark":"light");
  document.querySelectorAll("[data-side]").forEach(b=>b.addEventListener("click",()=>{sideTab=b.dataset.side;renderSide();}));
@@ -769,7 +779,7 @@ function __main(){
  $("out").onclick=()=>logout(false);
  window.__ok=true;
 }
-__load().then(()=>{__main();__d("جاهز ✓");document.getElementById("err").textContent=""})
+__load().then(()=>{__main();__d("جاهز");document.getElementById("err").textContent=""})
 .catch(e=>{document.getElementById("err").textContent="خطأ: "+(e&&e.message||e);__d("فشل التحميل")});
 </script>
 </body>
