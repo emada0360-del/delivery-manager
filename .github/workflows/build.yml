@@ -12,11 +12,11 @@ jobs:
       matrix:
         include:
           - role: driver
-            name: سوبر دلفري حر
+            name: Baqubah Driver
             id: com.baqubah.driver
             page: driver.html
           - role: store
-            name: سوبر دلفري - المتجر
+            name: Baqubah Store
             id: com.baqubah.store
             page: store.html
 
@@ -88,22 +88,18 @@ jobs:
           import os
 
           def create_icon(size, filename):
-              # Dark modern background
               img = Image.new('RGBA', (size, size), (18, 18, 24, 255))
               draw = ImageDraw.Draw(img)
               
-              # Outer ring / badge (Red delivery theme)
               margin = size // 10
               draw.ellipse([margin, margin, size - margin, size - margin], fill=(225, 29, 72, 255))
               
-              # Inner motorcycle / delivery box stylized shape (White)
               box_w = size // 2.5
               box_h = size // 3
               x0 = (size - box_w) // 2
               y0 = (size - box_h) // 2 + size // 20
               draw.rounded_rectangle([x0, y0, x0 + box_w, y0 + box_h], radius=size//16, fill=(255, 255, 255, 255))
               
-              # Wheels representation
               wheel_r = size // 8
               draw.ellipse([x0 - wheel_r//2, y0 + box_h - wheel_r//2, x0 + wheel_r*1.5, y0 + box_h + wheel_r*1.5], fill=(18, 18, 24, 255))
               draw.ellipse([x0 + box_w - wheel_r*1.5, y0 + box_h - wheel_r//2, x0 + box_w + wheel_r//2, y0 + box_h + wheel_r*1.5], fill=(18, 18, 24, 255))
@@ -125,7 +121,6 @@ jobs:
               create_icon(size, f"{path_base}/ic_launcher_round.png")
           PY
 
-          # If driver, add Firebase dependencies and background service
           if [ "${{ matrix.role }}" = "driver" ]; then
               python3 - <<'PY'
               from pathlib import Path
@@ -206,10 +201,10 @@ jobs:
                       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                           NotificationChannel channel = new NotificationChannel(
                               CHANNEL_ID,
-                              "حالة السائق",
+                              "Driver Status",
                               NotificationManager.IMPORTANCE_LOW
                           );
-                          channel.setDescription("حالة السائق في سوبر دلفري حر");
+                          channel.setDescription("Driver Status Service");
                           channel.setSound(null, null);
                           channel.enableVibration(false);
                           channel.setShowBadge(false);
@@ -247,12 +242,12 @@ jobs:
                       );
 
                       String status = online
-                          ? "متصل — جاهز لاستقبال الطلبات"
-                          : "غير متصل";
+                          ? "Online — Ready for orders"
+                          : "Offline";
 
                       return new NotificationCompat.Builder(this, CHANNEL_ID)
                           .setSmallIcon(getApplicationInfo().icon)
-                          .setContentTitle("سوبر دلفري حر | السائق")
+                          .setContentTitle("Baqubah Driver")
                           .setContentText(status)
                           .setContentIntent(pi)
                           .setOngoing(true)
@@ -315,7 +310,7 @@ jobs:
                 cat > "$MAIN" <<'JAVA'
               package com.baqubah.driver;
 
-              .import android.os.Bundle;
+              import android.os.Bundle;
               import com.getcapacitor.BridgeActivity;
 
               public class MainActivity extends BridgeActivity {
