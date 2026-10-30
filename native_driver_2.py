@@ -41,6 +41,11 @@ public class DriverStatusService extends Service {
     private boolean hasActive = false;
     private boolean watching = false;
     private String lastAlert = null;
+    private String statusText = "Online - starting";
+    private String err = null;
+    private boolean conn = false;
+    private com.google.firebase.database.DatabaseReference connRef;
+    private ValueEventListener connL;
 
     @Override
     public void onCreate() {
@@ -102,6 +107,7 @@ public class DriverStatusService extends Service {
                         uid = null;
                         evaluate();
                     }
+                    refreshStatus();
                 }
             };
             FirebaseAuth.getInstance().addAuthStateListener(authL);
@@ -124,7 +130,7 @@ public class DriverStatusService extends Service {
                     evaluate();
                 }
                 @Override
-                public void onCancelled(DatabaseError e) {}
+                public void onCancelled(DatabaseError e) { err = e.getMessage(); refreshStatus(); }
             };
             pendQ.addValueEventListener(pendL);
             mineQ = db.getReference("orders").orderByChild("driverId").equalTo(id);
@@ -144,12 +150,26 @@ public class DriverStatusService extends Service {
                 public void onCancelled(DatabaseError e) {}
             };
             mineQ.addValueEventListener(mineL);
+            connRef = db.getReference(".info/connected");
+            connL = new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot s) {
+                    Object b = s.getValue();
+                    conn = Boolean.TRUE.equals(b);
+                    refreshStatus();
+                }
+                @Override
+                public void onCancelled(DatabaseError e) {}
+            };
+            connRef.addValueEventListener(connL);
         } catch (Exception e) {}
     }
 
     private void detachQueries() {
         try { if (pendQ != null && pendL != null) pendQ.removeEventListener(pendL); } catch (Exception e) {}
         try { if (mineQ != null && mineL != null) mineQ.removeEventListener(mineL); } catch (Exception e) {}
+        try { if (connRef != null && connL != null) connRef.removeEventListener(connL); } catch (Exception e) {}
+        connRef = null; connL = null; conn = false;
         pendQ = null; pendL = null; mineQ = null; mineL = null;
         pend = null; hasActive = false;
     }
@@ -216,6 +236,16 @@ public class DriverStatusService extends Service {
         if (nm != null) nm.cancel(ALERT_ID);
     }
 
+    private void refreshStatus() {
+        if (err != null) statusText = "Online - error: " + err;
+        else if (uid == null) statusText = "Online - open the app and sign in again";
+        else statusText = conn ? "Online - listening for orders" : "Online - reconnecting...";
+        try {
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm != null) nm.notify(NOTIFICATION_ID, makeNotification(true));
+        } catch (Exception e) {}
+    }
+
     private void cleanup() {
         try { if (authL != null) FirebaseAuth.getInstance().removeAuthStateListener(authL); } catch (Exception e) {}
         authL = null;
@@ -240,7 +270,7 @@ public class DriverStatusService extends Service {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(getApplicationInfo().icon)
             .setContentTitle("Baqubah Driver")
-            .setContentText(online ? "Online - Ready for orders" : "Offline")
+            .setContentText(online ? statusText : "Offline")
             .setContentIntent(pi)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
