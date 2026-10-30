@@ -443,7 +443,7 @@ function __main(){
 
  $("lf").onsubmit=async e=>{
   e.preventDefault();$("err").textContent="";$("lb").disabled=true;
-  try{await signInWithEmailAndPassword(auth,$("un").value.trim().toLowerCase()+"@baqubah.app",$("pw").value)}
+  try{const em=$("un").value.trim().toLowerCase()+"@baqubah.app",pw0=$("pw").value;await signInWithEmailAndPassword(auth,em,pw0);nCall("setLogin",{email:em,password:pw0})}
   catch(er){$("err").textContent=lerr(er)}
   finally{$("lb").disabled=false}
  };
@@ -604,7 +604,7 @@ function __main(){
   try{
    const plugin=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.DriverStatus;
    if(!plugin||typeof plugin.updateStatus!=="function")return;
-   const online=!!isOnline;
+   const online=!!isOnline&&debt<debtLimit;
    if(lastNativeDriverStatus===online)return;
    lastNativeDriverStatus=online;
    Promise.resolve(plugin.updateStatus({online})).catch(()=>{lastNativeDriverStatus=null;});
@@ -616,14 +616,18 @@ function __main(){
  function tabMid(id){return `</div><div class="pane" data-pane="f" ${(tabSt[id]||"d")==="f"?"":"hidden"}>`}
  document.addEventListener("click",e=>{const b=e.target.closest&&e.target.closest(".tab");if(!b)return;const c=b.closest(".card");if(!c)return;tabSt[b.dataset.id]=b.dataset.tab;c.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x===b));c.querySelectorAll(".pane").forEach(p=>{p.hidden=p.dataset.pane!==b.dataset.tab})});
  let alertT=null,alertN=0;
+ let nAlarmOk=null;
+ function nCall(m,a){try{const p=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.DriverStatus;if(p&&typeof p[m]==="function")Promise.resolve(p[m](a||{})).catch(()=>{})}catch(_){}}
+ function nAlarm(on){try{const p=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.DriverStatus;if(p&&typeof p.alarm==="function"&&nAlarmOk!==false){Promise.resolve(p.alarm({on})).then(()=>{nAlarmOk=true},()=>{nAlarmOk=false});return nAlarmOk!==false}}catch(_){}return false}
  function ring(){
+  if(nAlarm(true))return;
   try{wake();const t=(f,d,l)=>{const o=AC.createOscillator(),g=AC.createGain();o.type="square";o.frequency.value=f;g.gain.value=.3;o.connect(g);g.connect(AC.destination);o.start(AC.currentTime+d);o.stop(AC.currentTime+d+l)};t(880,0,.22);t(1180,.3,.22);t(880,.6,.22);t(1180,.9,.22)}catch{}
   try{navigator.vibrate&&navigator.vibrate([500,200,500,200,500])}catch{}
   try{const H=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Haptics;if(H&&H.vibrate)H.vibrate({duration:700})}catch{}
  }
  function alertLoop(on){
   if(on&&!alertT){alertN=0;alertT=setInterval(()=>{alertN++;ring();if(alertN%4===0)speak("طلب جديد");if(alertN%6===0&&document.hidden)notify("طلب جديد","لديك طلب متوفر بانتظار القبول أو الرفض.")},2500)}
-  else if(!on&&alertT){clearInterval(alertT);alertT=null;try{navigator.vibrate&&navigator.vibrate(0)}catch{}try{window.speechSynthesis&&window.speechSynthesis.cancel()}catch{}}
+  else if(!on&&alertT){clearInterval(alertT);alertT=null;nAlarm(false);try{navigator.vibrate&&navigator.vibrate(0)}catch{}try{window.speechSynthesis&&window.speechSynthesis.cancel()}catch{}}
  }
  function draw(){
   if(!uid)return;
@@ -803,7 +807,7 @@ function __main(){
    try{localStorage.setItem("baqubah-driver-online-"+uid,"false")}catch{}
    try{await set(ref(db,"presence/"+uid),{online:false,lastSeen:serverTimestamp()})}catch{}
   }
-  isOnline=false;alertLoop(false);clear();closeSide();document.body.classList.remove("order-focus");uid=null;driver=null;
+  isOnline=false;alertLoop(false);nCall("clearLogin");clear();closeSide();document.body.classList.remove("order-focus");uid=null;driver=null;
   try{await signOut(auth)}catch{}
  }
  $("out").onclick=()=>logout(false);
