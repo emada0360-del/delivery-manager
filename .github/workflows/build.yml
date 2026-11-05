@@ -316,6 +316,7 @@ jobs:
         run: |
           python3 native_driver_1.py
           python3 native_driver_2.py
+          python3 native_driver_3.py
 
       - name: Build APK
         run: |
