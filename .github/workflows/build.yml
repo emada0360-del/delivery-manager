@@ -83,6 +83,7 @@ jobs:
 
           python3 - <<'PY'
           import os
+          import shutil
           from pathlib import Path
           from PIL import Image, ImageDraw
 
@@ -92,16 +93,16 @@ jobs:
           def create_icon(size, filename):
               img = Image.new('RGBA', (size, size), (18, 18, 24, 255))
               draw = ImageDraw.Draw(img)
-              
+
               margin = size // 10
               draw.ellipse([margin, margin, size - margin, size - margin], fill=(225, 29, 72, 255))
-              
+
               box_w = size // 2.5
               box_h = size // 3
               x0 = (size - box_w) // 2
               y0 = (size - box_h) // 2 + size // 20
               draw.rounded_rectangle([x0, y0, x0 + box_w, y0 + box_h], radius=size//16, fill=(255, 255, 255, 255))
-              
+
               wheel_r = size // 8
               draw.ellipse([x0 - wheel_r//2, y0 + box_h - wheel_r//2, x0 + wheel_r*1.5, y0 + box_h + wheel_r*1.5], fill=(18, 18, 24, 255))
               draw.ellipse([x0 + box_w - wheel_r*1.5, y0 + box_h - wheel_r//2, x0 + box_w + wheel_r//2, y0 + box_h + wheel_r*1.5], fill=(18, 18, 24, 255))
@@ -121,6 +122,9 @@ jobs:
               path_base = f"app/src/main/res/{folder}"
               create_icon(size, f"{path_base}/ic_launcher.png")
               create_icon(size, f"{path_base}/ic_launcher_round.png")
+
+          # Remove the default adaptive icons so the custom PNG icons are used on Android 8+
+          shutil.rmtree("app/src/main/res/mipmap-anydpi-v26", ignore_errors=True)
 
           if role == "driver":
               p = Path("app/build.gradle")
@@ -146,7 +150,7 @@ jobs:
               for perm in permissions:
                   line = f'<uses-permission android:name="android.permission.{perm}" />'
                   if line not in s:
-                      s = s.replace("</manifest>", f"    {line}\n</manifest>")
+                      s = s.replace("<application", f"{line}\n    <application", 1)
 
               service = """
                   <service
@@ -235,7 +239,7 @@ jobs:
                       );
 
                       String status = online
-                          ? "Online 鈥� Ready for orders"
+                          ? "Online - Ready for orders"
                           : "Offline";
 
                       return new NotificationCompat.Builder(this, CHANNEL_ID)
@@ -314,6 +318,12 @@ jobs:
       - name: Driver background reliability
         if: matrix.role == 'driver'
         run: |
+          for f in native_driver_1.py native_driver_2.py native_driver_3.py; do
+            if [ ! -f "$f" ]; then
+              echo "Missing file in repo root: $f"
+              exit 1
+            fi
+          done
           python3 native_driver_1.py
           python3 native_driver_2.py
           python3 native_driver_3.py
