@@ -203,14 +203,3 @@ patch(PKG / "MainActivity.java", [
 ])
 
 print("[native_driver_3] تم: location + heartbeat + watchdog + wifi lock + permissions")
-
-# ---------------------------------------------------------------- native_driver_4
-# يشغّل native_driver_4.py تلقائياً (استقبال FCM + فتح التطبيق فوق القفل)
-# حتى ما نحتاج نعدّل build.yml. إذا الملف مو موجود نتخطاه بدون ما نكسر البناء.
-import runpy
-
-if Path("native_driver_4.py").exists():
-    runpy.run_path("native_driver_4.py", run_name="__main__")
-else:
-    print("[native_driver_3] native_driver_4.py غير موجود، تم التخطي")
-  
