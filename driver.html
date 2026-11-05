@@ -10,24 +10,8 @@ window.notifyApp=async(t,b,l)=>{
  try{
   const P=window.Capacitor&&window.Capacitor.Plugins;
   if(!P||!P.LocalNotifications)return;
-  await P.LocalNotifications.createChannel({
-    id:'orders',
-    name:'Orders',
-    importance:5,
-    sound:'default',
-    vibration:true,
-    visibility:1
-  });
-  await P.LocalNotifications.schedule({
-    notifications:[{
-      id:Math.floor(Math.random()*2e9),
-      title:t,
-      body:b,
-      largeBody:l||b,
-      channelId:'orders',
-      sound:'default'
-    }]
-  });
+  await P.LocalNotifications.createChannel({id:'orders',name:'Orders',importance:5,sound:'default',vibration:true});
+  await P.LocalNotifications.schedule({notifications:[{id:Math.floor(Math.random()*2e9),title:t,body:b,largeBody:l||b,channelId:'orders'}]});
  }catch(e){}
 };
 (async()=>{
@@ -37,6 +21,7 @@ window.notifyApp=async(t,b,l)=>{
   if(P.LocalNotifications){
    try{await P.LocalNotifications.requestPermissions();}catch(e){console.warn("Local notification permission:",e);}
   }
+  // Enable background mode only if that native plugin was actually installed.
   if(P.BackgroundMode){
    try{await P.BackgroundMode.enable();}catch(e){console.warn("Background mode could not start:",e);}
   }
@@ -81,7 +66,7 @@ header{position:sticky;top:calc(6px + env(safe-area-inset-top,0px));z-index:50;m
 #appHeaderTitle{display:flex;align-items:center;gap:8px;min-width:0}
 header h2{margin:0;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header>div:last-child{display:flex;align-items:center;gap:8px}
-#headerStatus{background:var(--pri);color:#fff;padding:10px 14px;border-radius:30px;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer}
+#headerStatus{background:var(--pri);color:#fff;padding:10px 14px;border-radius:30px;font-size:12px;font-weight:800;white-space:nowrap}
 
 main{width:100%;max-width:650px;margin:auto;padding:12px}
 #mainStats{display:none!important}
@@ -94,7 +79,7 @@ main{width:100%;max-width:650px;margin:auto;padding:12px}
 body.light-mode #off,body.light-mode #warnBox{background:#fff0f0;color:#a51d2d;border-color:#f2c5ca}
 body.light-mode #msg{background:#e7f8eb;color:#166534;border-color:#b7e3c1}
 
-/* Empty state */
+/* Empty state (illustration + text at the bottom, like the reference) */
 #emptyState{display:none;min-height:calc(100dvh - 130px);flex-direction:column;align-items:center;justify-content:flex-end;text-align:center;padding:20px 16px 8vh}
 #emptyState svg{width:190px;height:190px;margin-bottom:20px;filter:drop-shadow(0 8px 26px #ff405433)}
 .ill-on{display:none}
@@ -127,6 +112,7 @@ body.light-mode .debt-box{background:#fff0f0;color:#a51d2d;border-color:#f2c5ca}
 body.light-mode .btn-wa{background:#d8f7e2;color:#176534}
 .map-link{display:block;text-align:center;background:var(--panel2);color:var(--ink);padding:12px;border-radius:30px;text-decoration:none;font-size:14px;font-weight:800;margin:12px 0;border:1px solid var(--line)}
 
+/* New order = big card: green clock on top, accept (wide) + reject at the bottom */
 #availList .card.new{min-height:calc(100dvh - 110px);display:flex;flex-direction:column;justify-content:center;margin:0;padding:20px 16px;border:1.5px solid #5a2a31;background:radial-gradient(ellipse at top,#3a2128,var(--panel) 62%);box-shadow:0 0 30px #d9002f22}
 body.light-mode #availList .card.new{background:linear-gradient(#fff,#f7f8fb);border-color:#f0b8c0}
 @keyframes pl{50%{transform:scale(1.07)}}
@@ -181,7 +167,7 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
 #mdl .mr{display:flex;gap:10px}
 #mdl .mr button{flex:1;min-height:48px}
 
-/* Timeline rows */
+/* Timeline rows (store / customer area) */
 .tl{display:flex;align-items:center;gap:12px;position:relative;margin:10px 0}
 .tl+.tl::before{content:"";position:absolute;inset-inline-start:20px;top:-14px;height:18px;border-inline-start:2px dashed var(--line)}
 .tl-ic{width:42px;height:42px;flex:none;border-radius:50%;background:var(--panel2);color:var(--muted);display:grid;place-items:center}
@@ -196,7 +182,7 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
 body.light-mode .f-pay,body.light-mode .far{color:#c62828}body.light-mode .f-get{color:#1565c0}body.light-mode .f-profit{color:#1b7a3a}
 body.light-mode .n2{color:#805b00}body.light-mode .wait-msg{background:#fff7e6;color:#805b00}
 
-/* Status hero + tabs */
+/* Status hero + tabs (details / financial) */
 .hero{text-align:center;margin:6px 0 4px}
 .hero-ic{width:84px;height:84px;margin:8px auto 22px;border-radius:50%;display:grid;place-items:center;background:var(--hc);box-shadow:0 0 0 10px var(--h1),0 0 0 20px var(--h2)}
 .hero-ic::before{content:"";width:40px;height:40px;background:#fff;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
@@ -212,7 +198,7 @@ body.light-mode .n2{color:#805b00}body.light-mode .wait-msg{background:#fff7e6;c
 </style>
 </head>
 <body>
-<!-- Drawn icons -->
+<!-- Drawn icons (SVG sprite) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
  <symbol id="panda" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#d9002f"/><circle cx="12" cy="13" r="5" fill="#111"/><circle cx="36" cy="13" r="5" fill="#111"/><ellipse cx="24" cy="26" rx="14" ry="13" fill="#fff"/><ellipse cx="18" cy="24" rx="3.600" ry="4.600" fill="#111" transform="rotate(20 18 24)"/><ellipse cx="30" cy="24" rx="3.600" ry="4.600" fill="#111" transform="rotate(-20 30 24)"/><circle cx="18.500" cy="24" r="1.200" fill="#fff"/><circle cx="29.500" cy="24" r="1.200" fill="#fff"/><ellipse cx="24" cy="30" rx="2.600" ry="1.800" fill="#111"/><path d="M21 33q3 2.500 6 0" fill="none" stroke="#111" stroke-width="1.400" stroke-linecap="round"/></symbol>
  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
@@ -250,7 +236,7 @@ body.light-mode .n2{color:#805b00}body.light-mode .wait-msg{background:#fff7e6;c
   </div>
   <div>
    <button id="themeBtn" class="hbtn" type="button" aria-label="تبديل المظهر"></button>
-   <span id="headerStatus" title="اضغط للتحديث اليدوي">بانتظار الطلب</span>
+   <span id="headerStatus">بانتظار الطلب</span>
   </div>
  </header>
 
@@ -263,5 +249,4 @@ body.light-mode .n2{color:#805b00}body.light-mode .wait-msg{background:#fff7e6;c
   </div>
   <button id="sideStatus" class="status-btn off"><span class="dot"></span><span id="sideStatusTxt">غير متصل</span></button>
   <div class="side-nav">
-   <button data-side="overview" class="active"><svg class="ic"><use href="#i-chart"/></svg><span>ملخص الحساب</span><svg class="ic"><use href="#i-chev"/></svg></button>
-   <button data-side="history"><svg class="ic"><use href="#i-receipt"
+   <button data-side="overview" class="active"><svg class="ic"><use href="#i-chart"/></svg><span>ملخص الحساب</span><sv
