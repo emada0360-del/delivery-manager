@@ -141,6 +141,52 @@ body[data-tab=hist] #createBox,body[data-tab=hist] #activeContainer,body[data-ta
 body[data-tab=new] #activeContainer,body[data-tab=new] #historyContainer,body[data-tab=new] #activeEmpty{display:none!important}
 #btnHistory{display:none}
 #activeEmpty{text-align:center;color:var(--muted);padding:34px 10px}
+
+/* ===== v3: بدون صعود ونزول + سحب جانبي مثل تطبيق السائق ===== */
+html,body{height:100%}
+body{overflow:hidden;padding-bottom:0}
+#app{display:flex;flex-direction:column;height:100dvh}
+header{padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px}
+header h2{font-size:15px}.pill{padding:5px 11px;font-size:12px}
+main{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px))}
+#tabs{position:static;margin:0 0 8px;padding:4px;border-radius:14px;flex:none}
+#tabs button{padding:9px 4px;font-size:13px;border-radius:11px}
+#msg,#announcement{flex:none}
+#announcement{padding:8px 12px;font-size:12.5px;margin-bottom:8px;border-radius:14px}
+#activeContainer{flex:1;min-height:0;display:flex;flex-direction:column}
+#activeContainer>h3{display:none}
+#chips{flex:none;display:flex;gap:7px;overflow-x:auto;padding:2px 2px 8px;scrollbar-width:none}
+#chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:0;border-radius:999px;padding:7px 14px;font:700 13px var(--font);color:#fff;background:#8a99ab;direction:ltr;opacity:.7;letter-spacing:.4px}
+.chip.on{opacity:1;box-shadow:0 0 0 2px var(--ink) inset}
+.chip.wait{background:#d98a00}.chip.ask{background:#e0284a}.chip.go{background:#2f7df6}.chip.at{background:#0e9f9a}.chip.cust{background:#8a4dff}
+#activeOrders{flex:1;min-height:0;display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -10px;padding:0 10px}
+#activeOrders::-webkit-scrollbar{display:none}
+#activeOrders .card{flex:0 0 94%;scroll-snap-align:center;height:100%;margin:0;overflow-y:auto;scrollbar-width:none;padding:10px 12px;border-radius:18px}
+#activeOrders .card::-webkit-scrollbar{display:none}
+#historyContainer{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none}
+#historyContainer .card{padding:10px 12px;margin-bottom:8px;border-radius:16px}
+.card-top{margin-bottom:6px}.card-top b{font-size:12px;padding:3px 9px}.badge{padding:3px 10px;font-size:12px}
+.elapsed{margin-bottom:6px;font-size:12px}.elapsed b{font-size:17px}
+.steps{margin:2px 0 8px}.steps::before,.steps::after{top:10px}
+.st{font-size:11px}.st i{width:22px;height:22px;font-size:11px;margin-bottom:3px;box-shadow:0 0 0 3px var(--surface)}
+.drv{padding:8px 10px;margin:0 0 8px;border-radius:14px}
+.drv-av{width:32px;height:32px;font-size:14px}.drv-meta b{font-size:14px}.drv-meta span{font-size:12px}
+.call{margin-top:7px;padding:8px;font-size:13px;border-radius:11px}
+.card .summary-box{margin:0 0 6px;padding:2px 12px;border-radius:13px}
+.summary-row{padding:5px 0;font-size:13px}.summary-row:nth-child(2) b{font-size:16px}
+.meta{font-size:12.5px;line-height:1.6;margin:0}
+.actions{margin-top:auto;padding-top:8px;position:sticky;bottom:0;background:var(--surface)}
+.actions button{min-height:44px;font-size:14.5px;padding:8px}
+#createBox{flex:1;min-height:0;overflow-y:auto;margin:0;padding:12px;border-radius:18px;scrollbar-width:none}
+#createBox h3{display:none}
+#createBox label{font-size:12px}
+input,select,textarea{height:40px;padding:0 12px;border-radius:11px;margin:3px 0 8px;font-size:14px}
+.search-dropdown{margin-bottom:6px}.search-dropdown input{margin-bottom:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#createBox .summary-box{padding:2px 12px;margin:2px 0 8px;border-radius:13px}
+#btnCreate{min-height:46px;font-size:15.5px}
+#activeEmpty{padding:24px 10px;font-size:14px}
 </style>
 </head>
 <body>
@@ -168,7 +214,7 @@ body[data-tab=new] #activeContainer,body[data-tab=new] #historyContainer,body[da
 <div id="activeEmpty" class="box">لا توجد طلبات نشطة حالياً</div>
 <div id="activeContainer" hidden>
   <h3>الطلبات النشطة</h3>
-  <div id="activeOrders"></div>
+  <div id="chips"></div><div id="activeOrders"></div>
 </div>
 
 <div class="box" id="createBox">
@@ -181,10 +227,9 @@ body[data-tab=new] #activeContainer,body[data-tab=new] #historyContainer,body[da
 </div>
 <label>سعر الطلب (دينار)</label>
 <input id="price" type="number" min="500" step="250" placeholder="مثال: 10000" inputmode="numeric">
-<label>رقم هاتف الزبون</label>
-<input id="phone" type="tel" placeholder="07XXXXXXXXX" maxlength="11">
-<label>اسم الزبون (اختياري)</label>
-<input id="cname" placeholder="مثال: أبو محمد">
+<div class="two"><div><label>رقم هاتف الزبون</label>
+<input id="phone" type="tel" placeholder="07XXXXXXXXX" maxlength="11"></div><div><label>اسم الزبون (اختياري)</label>
+<input id="cname" placeholder="مثال: أبو محمد"></div></div>
 <label>ملاحظة أو عنوان (اختياري)</label>
 <input id="note" placeholder="مثال: قرب الجامع">
 <div class="summary-box">
@@ -509,6 +554,9 @@ function drawOrders(){
  const history=os.filter(([,o])=>["delivered","cancelled"].includes(o.status));
 
  $("activeContainer").hidden = !active.length;$("actN").textContent=active.length;$("activeEmpty").hidden=active.length>0;
+ {const ids=active.map(([id])=>id);if(!selO||!ids.includes(selO))selO=ids[0]||null;
+  const h=ids.map(id=>`<button type="button" class="chip ${chipCls(orders[id])} ${selO===id?"on":""}" data-sel="${esc(id)}">${esc(id.slice(-6))}</button>`).join("");
+  if($("chips")._h!==h){$("chips")._h=h;$("chips").innerHTML=h}}
  $("activeOrders").innerHTML = active.map(([id,o])=>card(id,o,false)).join("");
  $("historyOrders").innerHTML = history.length ? history.map(([id,o])=>card(id,o,true)).join("") : "<p style='color:var(--muted);text-align:center'>لا يوجد سجل.</p>";
  tick();
@@ -542,7 +590,7 @@ function card(id,o,isHistory){
  }
  const storeCom=Number(o.storeCommission!==undefined?o.storeCommission:getStoreCom());
  const receiveAmt=Math.max(0,(Number(o.itemPrice)||0)-storeCom);
- return `<div class="card">
+ return `<div class="card" id="o-${esc(id)}">
   <div class="card-top"><b>#${esc(id.slice(-6))}</b><span class="badge ${badgeCls}">${ST[o.status]||""}</span></div>
   ${top}${driverInfo}
   <div class="summary-box">
@@ -578,6 +626,11 @@ function resumeStore(){
 document.addEventListener("visibilitychange",resumeStore);
 window.addEventListener("focus",resumeStore);
 window.addEventListener("online",resumeStore);
+let selO=null,scT=null;
+function chipCls(o){const t=o&&o.status;return t==="pending"?"wait":t==="waiting_store"?"ask":t==="accepted"?"go":t==="arrived_store"?"at":"cust"}
+function markO(sc){document.querySelectorAll("#chips .chip").forEach(x=>x.classList.toggle("on",x.dataset.sel===selO));if(sc){const on=document.querySelector("#chips .chip.on");if(on)on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"})}}
+$("chips").onclick=e=>{const b=e.target.closest("[data-sel]");if(!b)return;selO=b.dataset.sel;markO(false);const c=document.getElementById("o-"+selO);if(c)c.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"})};
+$("activeOrders").addEventListener("scroll",()=>{cancelAnimationFrame(scT);scT=requestAnimationFrame(()=>{const p=$("activeOrders"),r=p.getBoundingClientRect(),c=r.left+r.width/2;let best=null,bd=1e9;p.querySelectorAll(".card").forEach(x=>{const q=x.getBoundingClientRect(),dd=Math.abs(q.left+q.width/2-c);if(dd<bd){bd=dd;best=x}});if(best){const id=best.id.replace("o-","");if(id!==selO){selO=id;markO(true)}}})},{passive:true});
 function goTab(t){document.body.dataset.tab=t;$("tabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.t===t));window.scrollTo(0,0)}
 document.body.dataset.tab="active";$("historyOrders").hidden=false;
 $("tabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(b)goTab(b.dataset.t)};
