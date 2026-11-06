@@ -148,6 +148,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <button type="button" data-t="t5">المناطق</button>
 <button type="button" data-t="t6">المالية</button>
 <button type="button" data-t="t7">المسؤولون</button>
+<button type="button" data-t="t10">الزبائن</button>
 <button type="button" data-t="t8">الإعدادات</button>
 </nav>
 <div id="msg"></div>
@@ -253,6 +254,22 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div id="managers" class="box wrap"></div>
 </section>
 
+<section id="t10" class="tab" hidden>
+<div class="box"><h3>مطاعم تطبيق الزبون</h3>
+<p class="sub">فعّل "يظهر للزبون" وضع رابط المنيو (يفتح داخل التطبيق). أرقام المتاجر لا تظهر للزبون أبداً.</p>
+<div id="custRest" class="wrap"></div></div>
+<div class="box"><h3>أسعار الكروة حسب البعد عن المطعم</h3>
+<p class="sub">الصيغة: «كم:سعر» مفصولة بفواصل. مثال: 2:3000,4:4500,6:6000 يعني حتى 2 كم = 3000، وحتى 4 كم = 4500، وحتى 6 كم = 6000. وما فوق آخر رقم غير متاح.</p>
+<input id="custFees" dir="ltr" placeholder="2:3000,4:4500,6:6000"><button type="button" id="btnCustFees" class="grn">حفظ الأسعار</button></div>
+<div class="box"><h3>الزبائن وحظر الأجهزة</h3><p class="sub">الحظر يمنع الجهاز نفسه من تسجيل الدخول أو فتح حساب جديد. (يعتمد على معرّف الجهاز داخل الـAPK، وفي المتصفح على معرّف محلي أضعف.)</p><div id="custUsers" class="wrap"></div></div>
+<div class="box"><h3>الزونات على الخارطة</h3>
+<p class="sub">اضغط على الخارطة لتحديد المركز، اكتب الاسم ونصف القطر ثم أضف. الزبون خارج الزونات المفتوحة لا يستطيع الطلب.</p>
+<div id="custMap" style="height:340px;border-radius:14px;margin-bottom:10px"></div>
+<input id="zName" placeholder="اسم الزون"><input id="zRad" type="number" min="0.5" step="0.5" value="3" placeholder="نصف القطر (كم)">
+<button type="button" id="btnZone" class="grn">إضافة زون</button>
+<div id="custZones" class="wrap" style="margin-top:10px"></div></div>
+</section>
+
 <section id="t8" class="tab" hidden>
 <div class="box">
 <h3>إعدادات عامة والعمولات</h3>
@@ -337,7 +354,7 @@ const ST={pending:"بانتظار سائق",waiting_store:"بانتظار موا
 
 $("f").innerHTML+=Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
 
-let users={},orders={},areas={},fin={},pres={},settings={},started=false;
+let custers={},banned={},custZones={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
 let showProfitFlag=false;
 
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fde8ec":"#dff5ea";m.style.color=bad?"#b0002a":"#0b7a4e";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
@@ -403,7 +420,7 @@ function scheduleDraw(){
 }
 
 function start(){
- const src={users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
+ const src={users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customerZones:v=>custZones=v,customers:v=>custers=v,bannedDevices:v=>banned=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
  const prev={};
  for(const p in src)onValue(ref(db,p),s=>{
    const v=s.val()||{};
@@ -422,6 +439,77 @@ $("nav").onclick=e=>{const b=e.target.closest("[data-t]");if(!b)return;
  document.querySelectorAll(".tab").forEach(x=>x.hidden=x.id!==b.dataset.t);
  document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("on",x===b))};
 
+
+// ===== تطبيق الزبون: المطاعم + الكروة + الزونات =====
+let cMap=null,cPick=null,cLayers={},cPt=null;
+function loadLeaflet(){return new Promise((ok,no)=>{if(window.L)return ok();const l=document.createElement("link");l.rel="stylesheet";l.href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css";document.head.appendChild(l);const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js";sc.onload=ok;sc.onerror=()=>no(new Error("تعذر تحميل الخارطة"));document.head.appendChild(sc)})}
+async function initCMap(){
+ if(cMap){setTimeout(()=>cMap.invalidateSize(),50);return}
+ await loadLeaflet();
+ cMap=L.map("custMap").setView([33.75,44.63],12);
+ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(cMap);
+ cMap.on("click",e=>{cPt=e.latlng;if(cPick)cPick.setLatLng(cPt);else cPick=L.marker(cPt).addTo(cMap)});
+ drawCZones();
+}
+function drawCZones(){
+ if(!cMap)return;
+ Object.values(cLayers).forEach(l=>cMap.removeLayer(l));cLayers={};
+ Object.entries(custZones).forEach(([id,z])=>{
+  const c=z.isOpen===false?"#d9002b":"#0f9d58";
+  cLayers[id]=L.circle([z.lat,z.lng],{radius:(Number(z.radiusKm)||1)*1000,color:c,fillColor:c,fillOpacity:.2}).bindTooltip(z.name||"").addTo(cMap);
+ });
+}
+function renderCust(){
+ const ae=document.activeElement;
+ const sts=Object.entries(users).filter(([,u])=>u&&u.role==="store");
+ if(!(ae&&ae.tagName==="INPUT"&&$("custRest").contains(ae))){
+  $("custRest").innerHTML=table(["المطعم","يظهر للزبون","رابط المنيو","حفظ"],sts.map(([id,u])=>
+   `<tr><td><b>${esc(u.name)}</b></td>
+   <td><input type="checkbox" id="cv-${esc(id)}" ${u.custVisible?"checked":""} style="width:22px;height:22px"></td>
+   <td><input id="cm-${esc(id)}" dir="ltr" value="${esc(u.menuUrl||"")}" placeholder="https://..."></td>
+   <td><button type="button" data-cs="${esc(id)}" class="grn">حفظ</button></td></tr>`),"لا توجد متاجر.");
+ }
+ if(!(ae&&ae.id==="custFees")){const f=Array.isArray(settings.custFees)?settings.custFees:[];$("custFees").value=f.map(x=>x.km+":"+x.fee).join(",")}
+ $("custZones").innerHTML=table(["الزون","نصف القطر","الحالة","إجراءات"],Object.entries(custZones).map(([id,z])=>
+  `<tr><td><b>${esc(z.name)}</b></td><td>${esc(z.radiusKm)} كم</td>
+  <td><span class="tag ${z.isOpen===false?"r":"g"}">${z.isOpen===false?"مغلق":"مفتوح"}</span></td>
+  <td><button type="button" data-zt="${esc(id)}" class="${z.isOpen===false?"grn":"org"}">${z.isOpen===false?"فتح":"إغلاق"}</button>
+  <button type="button" data-zd="${esc(id)}" class="red">حذف</button></td></tr>`),"لا توجد زونات (الزبائن لن يستطيعوا الطلب).");
+ if(!(ae&&ae.tagName==="INPUT"))$("custUsers").innerHTML=table(["الاسم","الهاتف","الجهاز","إجراء"],Object.entries(custers).map(([id,c])=>{
+  const d=c.deviceId||"",bn=d&&banned[d];
+  return `<tr><td><b>${esc(c.name)}</b> ${bn?'<span class="tag r">محظور</span>':''}</td><td dir="ltr">${esc(c.phone)}</td><td dir="ltr">${esc(d.slice(0,10))||"—"}</td>
+  <td>${d?`<button type="button" data-${bn?"ub":"bn"}="${esc(id)}" class="${bn?"grn":"red"}">${bn?"فك الحظر":"حظر الجهاز"}</button>`:"—"}</td></tr>`}),"لا يوجد زبائن.");
+ drawCZones();
+}
+{const _d=draw;draw=function(){_d();try{renderCust()}catch(e){console.error(e)}}}
+document.querySelector('#nav [data-t="t10"]').addEventListener("click",()=>run(initCMap));
+$("t10").addEventListener("click",e=>{
+ const b=e.target.closest("button");if(!b)return;
+ const d=b.dataset;
+ if(d.cs)run(async()=>{
+  const u=users[d.cs],vis=$("cv-"+d.cs).checked,mu=$("cm-"+d.cs).value.trim();
+  if(mu&&!/^https?:\/\//i.test(mu))throw new Error("رابط المنيو يجب أن يبدأ بـ https://");
+  await update(ref(db),{["users/"+d.cs+"/custVisible"]:vis,["users/"+d.cs+"/menuUrl"]:mu,
+   ["restaurants/"+d.cs]:vis?{name:u.name,menuUrl:mu,mapUrl:u.mapUrl||"",isOpen:u.isActive!==false}:null});
+  say("تم الحفظ.");
+ });
+ if(b.id==="btnCustFees")run(async()=>{
+  const f=$("custFees").value.split(",").map(x=>x.trim()).filter(Boolean).map(x=>{const[k,v]=x.split(":");return{km:Number(k),fee:Number(v)}});
+  if(!f.length||f.some(x=>!(x.km>0)||!(x.fee>=0)))throw new Error("الصيغة غير صحيحة، مثال: 2:3000,4:4500");
+  f.sort((a,b)=>a.km-b.km);await update(ref(db),{"settings/custFees":f});say("تم حفظ الأسعار.");
+ });
+ if(b.id==="btnZone")run(async()=>{
+  const n=$("zName").value.trim(),r=Number($("zRad").value);
+  if(!cPt)throw new Error("اضغط على الخارطة لتحديد المركز أولاً.");
+  if(!n||!(r>0))throw new Error("اكتب الاسم ونصف القطر.");
+  await set(push(ref(db,"customerZones")),{name:n,lat:cPt.lat,lng:cPt.lng,radiusKm:r,isOpen:true,createdAt:Date.now()});
+  $("zName").value="";say("تمت إضافة الزون.");
+ });
+ if(d.bn&&confirm("حظر جهاز هذا الزبون؟"))run(async()=>{const c=custers[d.bn];await set(ref(db,"bannedDevices/"+c.deviceId),{name:c.name,phone:c.phone,at:Date.now()});say("تم حظر الجهاز.")});
+ if(d.ub)run(async()=>{await set(ref(db,"bannedDevices/"+custers[d.ub].deviceId),null);say("تم فك الحظر.")});
+ if(d.zt)run(async()=>{await update(ref(db,"customerZones/"+d.zt),{isOpen:custZones[d.zt].isOpen===false});say("تم التحديث.")});
+ if(d.zd&&confirm("حذف هذا الزون؟"))run(async()=>{await update(ref(db),{["customerZones/"+d.zd]:null});say("تم الحذف.")});
+});
 
 // ===== عمر الطلب + موقع المتجر =====
 const FORCE_MS=7*60*1000;

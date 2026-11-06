@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#d9002f"><title>Baqubah Delivery</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+:root{--bg:#f1f4f8;--s:#fff;--ink:#0f1b2a;--mu:#5b6e83;--br:#d9002f;--go:#0f9a63;--ln:#e1e7ef}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);color:var(--ink);padding-bottom:40px}
+[hidden]{display:none!important}
+header{background:#0d131a;color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5}
+header h2{margin:0;font-size:17px}
+button{border:0;border-radius:12px;padding:12px 16px;background:var(--br);color:#fff;font:700 15px inherit;font-family:inherit}
+button.g{background:var(--go)}button.l{background:#e8edf3;color:var(--ink)}button:disabled{opacity:.5}
+input{width:100%;padding:13px;border:1px solid var(--ln);border-radius:12px;font:inherit;margin-bottom:10px;background:#fff}
+.box{background:var(--s);border-radius:18px;padding:16px;margin:12px;box-shadow:0 1px 3px #0001}
+.rest{display:flex;gap:12px;align-items:center}
+.av{width:52px;height:52px;border-radius:50%;background:var(--br);color:#fff;display:grid;place-items:center;font-size:22px;font-weight:700;flex:none}
+.rest b{font-size:16px;flex:1}.acts{display:flex;gap:8px;margin-top:12px}.acts button{flex:1}
+.row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--ln)}
+.tag{padding:3px 10px;border-radius:99px;background:#e8f7f0;color:var(--go);font-weight:700;font-size:13px}
+#map{height:230px;border-radius:14px;margin:8px 0}
+#menuM{position:fixed;inset:0;background:#fff;z-index:20;display:flex;flex-direction:column}
+#menuM iframe{flex:1;border:0;width:100%}
+#menuM .bar{display:flex;gap:8px;padding:10px;background:#0d131a}#menuM .bar>*{flex:1}
+.err{color:var(--br);font-weight:700;margin:6px 0}
+</style></head><body>
+<header><h2>🛵 Baqubah Delivery</h2><button class="l" id="out" hidden>خروج</button></header>
+
+<section id="auth" class="box" hidden>
+ <h3 id="aT">تسجيل الدخول</h3>
+ <input id="aN" placeholder="الاسم" hidden>
+ <input id="aP" type="tel" inputmode="numeric" placeholder="رقم الهاتف" dir="ltr">
+ <input id="aW" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)">
+ <div class="err" id="aE"></div>
+ <button id="aB" style="width:100%">دخول</button>
+ <p style="text-align:center"><a href="#" id="aS" style="color:var(--br)">ليس لديك حساب؟ إنشاء حساب</a></p>
+</section>
+
+<main id="app" hidden>
+ <div id="cur" class="box" hidden></div>
+ <div class="box"><b>موقع التوصيل</b>
+  <div id="map"></div>
+  <button class="l" id="gps" style="width:100%">📍 تحديد موقعي</button>
+  <div id="locS" style="color:var(--mu);margin-top:6px;font-size:14px">اضغط على الخارطة أو زر تحديد موقعي</div>
+ </div>
+ <div id="list"></div>
+</main>
+
+<div id="menuM" hidden><div class="bar"><button class="l" id="mx">رجوع</button><button id="mo">فتح في المتصفح</button></div><iframe id="mf" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
+import {getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import {getDatabase,ref,set,update,push,onValue,onChildAdded,get} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+const cfg={apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",authDomain:"baqubah-delivery-e729e.firebaseapp.com",databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",projectId:"baqubah-delivery-e729e",storageBucket:"baqubah-delivery-e729e.firebasestorage.app",messagingSenderId:"450084520701",appId:"1:450084520701:web:719e2040338540ce36f494"};
+const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
+const $=id=>document.getElementById(id),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>Number(n||0).toLocaleString("en-US");
+const ST={calling:"جارٍ الاتصال بالمطعم",preparing:"قيد التحضير",ready:"جاهز - بانتظار السائق",pending:"بانتظار سائق",waiting_store:"بانتظار سائق",accepted:"السائق بالطريق للمطعم",arrived_store:"السائق وصل للمطعم",picked_up:"بالطريق إليك",delivering:"بالطريق إليك",delivered:"تم التسليم",cancelled:"ملغي"};
+async function devId(){
+ let id="";
+ try{const D=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Device;if(D){const r=await D.getId();id=r.identifier||r.uuid||""}}catch(e){}
+ if(!id){try{id=localStorage.getItem("did")||"";if(!id){id="w"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("did",id)}}catch(e){id="w"+Date.now()}}
+ return String(id).replace(/[^A-Za-z0-9_-]/g,"_");
+}
+async function isBanned(){return (await get(ref(db,"bannedDevices/"+await devId()))).exists()}
+let me=null,prof=null,rests={},zones={},fees=[],orders={},loc=null,map,pin,unsubs=[];
+
+
+// ===== مكالمة صوتية داخل التطبيق (WebRTC + Firebase للإشارات) =====
+// بيانات TURN من Metered (حساب baqubah-delivery)
+async function iceServers(){
+ const u="0f46505186311035bcd6abe4",c="jOQQDrOES5mQfiH7";
+ return [{urls:"stun:stun.relay.metered.ca:80"},{urls:"stun:stun.l.google.com:19302"},
+  {urls:"turn:global.relay.metered.ca:80",username:u,credential:c},
+  {urls:"turn:global.relay.metered.ca:80?transport=tcp",username:u,credential:c},
+  {urls:"turn:global.relay.metered.ca:443",username:u,credential:c},
+  {urls:"turns:global.relay.metered.ca:443?transport=tcp",username:u,credential:c}];
+}
+let call=null,onCallEnd=()=>{};
+function ui(t,btns){
+ let d=document.getElementById("callUI");
+ if(!t){d&&d.remove();return}
+ if(!d){d=document.createElement("div");d.id="callUI";d.style.cssText="position:fixed;inset:0;background:#0d131aee;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff;font:700 20px system-ui;text-align:center;padding:20px";document.body.appendChild(d)}
+ d.innerHTML=`<div style="font-size:54px">📞</div><div>${t}</div><div style="display:flex;gap:12px">${(btns||[]).map((b,i)=>`<button data-i="${i}" style="border:0;border-radius:14px;padding:14px 26px;font:700 17px inherit;color:#fff;background:${b[2]||"#d9002f"}">${b[0]}</button>`).join("")}</div>`;
+ d.onclick=e=>{const b=e.target.closest("button");if(b)btns[b.dataset.i][1]()};
+}
+let ringT=null;
+function ring(on){
+ clearInterval(ringT);if(!on)return;
+ const beep=()=>{try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=.4;o.connect(g);g.connect(a.destination);o.start();setTimeout(()=>{o.stop();a.close()},400)}catch(e){}if(navigator.vibrate)navigator.vibrate(300)};
+ beep();ringT=setInterval(beep,1200);
+}
+function addC(c,x){if(c.pc.remoteDescription)c.pc.addIceCandidate(x).catch(()=>{});else c.q.push(x)}
+function flush(c){c.q.splice(0).forEach(x=>c.pc.addIceCandidate(x).catch(()=>{}))}
+async function openCall(oid,role){
+ const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+ const pc=new RTCPeerConnection({iceServers:await iceServers()});
+ const c=call={oid,role,pc,stream,un:[],q:[]};
+ stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+ const au=new Audio();au.autoplay=true;
+ pc.ontrack=e=>{au.srcObject=e.streams[0];au.play().catch(()=>{})};
+ const mine=role==="c"?"cC":"rC",theirs=role==="c"?"rC":"cC";
+ pc.onicecandidate=e=>{if(e.candidate)push(ref(db,`calls/${oid}/${mine}`),e.candidate.toJSON())};
+ pc.onconnectionstatechange=()=>{if(pc.connectionState==="connected")ui("متصل 🔊",[["إنهاء",hangup]]);if(pc.connectionState==="failed"){ui("تعذر الاتصال بسبب الشبكة",[["إغلاق",hangup]])}};
+ c.un.push(onChildAdded(ref(db,`calls/${oid}/${theirs}`),s=>addC(c,s.val())));
+ c.un.push(onValue(ref(db,`calls/${oid}/ended`),s=>{if(s.val())closeCall()}));
+ return c;
+}
+async function dial(oid){
+ if(call)return;
+ try{
+  await set(ref(db,"calls/"+oid),null);
+  const c=await openCall(oid,"c");
+  ui("جارٍ الاتصال بالمطعم...",[["إنهاء",hangup]]);
+  const o=await c.pc.createOffer();await c.pc.setLocalDescription(o);
+  await set(ref(db,`calls/${oid}/offer`),{type:o.type,sdp:o.sdp});
+  c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(a&&!c.pc.remoteDescription){await c.pc.setRemoteDescription(a);flush(c)}}));
+  await update(ref(db,"customerOrders/"+oid),{ring:Date.now()});
+  setTimeout(()=>{if(call&&call.oid===oid&&call.pc.connectionState!=="connected")hangup()},45000);
+ }catch(e){closeCall(true);alert("تعذر بدء المكالمة: "+(e.name==="NotAllowedError"?"اسمح باستخدام المايكروفون":e.message))}
+}
+async function answerCall(oid){
+ if(call)return;ring(false);
+ try{
+  const off=(await get(ref(db,`calls/${oid}/offer`))).val();
+  if(!off){ui("");return}
+  const c=await openCall(oid,"r");ui("جارٍ الربط...");
+  await c.pc.setRemoteDescription(off);flush(c);
+  const a=await c.pc.createAnswer();await c.pc.setLocalDescription(a);
+  await set(ref(db,`calls/${oid}/answer`),{type:a.type,sdp:a.sdp});
+ }catch(e){closeCall(true);alert("تعذر الرد: "+e.message)}
+}
+function hangup(){if(call)set(ref(db,`calls/${call.oid}/ended`),Date.now()).catch(()=>{});closeCall()}
+function closeCall(quiet){
+ ring(false);ui("");
+ if(!call)return;const c=call;call=null;
+ c.un.forEach(f=>{try{f()}catch(e){}});c.stream.getTracks().forEach(t=>t.stop());try{c.pc.close()}catch(e){}
+ if(!quiet)onCallEnd(c);
+}
+
+// ---- تسجيل ----
+let reg=false;
+$("aS").onclick=e=>{e.preventDefault();reg=!reg;$("aN").hidden=!reg;$("aT").textContent=reg?"إنشاء حساب":"تسجيل الدخول";$("aB").textContent=reg?"إنشاء الحساب":"دخول";$("aS").textContent=reg?"لدي حساب":"ليس لديك حساب؟ إنشاء حساب"};
+$("aB").onclick=async()=>{
+ $("aE").textContent="";const ph=$("aP").value.replace(/\D/g,""),pw=$("aW").value,nm=$("aN").value.trim();
+ try{
+  if(ph.length<10)throw Error("اكتب رقم هاتف صحيح");
+  if(reg&&!nm)throw Error("اكتب اسمك");
+  const em="c"+ph+"@baqubah.app";
+  if(reg){const c=await createUserWithEmailAndPassword(auth,em,pw);await set(ref(db,"customers/"+c.user.uid),{name:nm,phone:ph,createdAt:Date.now()})}
+  else await signInWithEmailAndPassword(auth,em,pw);
+ }catch(e){$("aE").textContent=/invalid|credential|not-found|wrong/.test(e.code||"")?"الرقم أو كلمة المرور غير صحيحة":/in-use/.test(e.code||"")?"الرقم مسجل مسبقاً":e.message}
+};
+$("out").onclick=()=>signOut(auth);
+onAuthStateChanged(auth,async u=>{
+ unsubs.forEach(f=>f());unsubs=[];me=u;
+ $("auth").hidden=!!u;$("app").hidden=!u;$("out").hidden=!u;
+ if(!u)return;
+ const s=await get(ref(db,"customers/"+u.uid));prof=s.val();
+ if(!prof){await signOut(auth);$("aE").textContent="هذا الحساب ليس حساب زبون";return}
+ const did=await devId();
+ if(await isBanned()){await signOut(auth);$("aE").textContent="تم حظر هذا الجهاز من استخدام الخدمة";return}
+ update(ref(db,"customers/"+u.uid),{deviceId:did}).catch(()=>{});
+ initMap();
+ unsubs.push(onValue(ref(db,"restaurants"),s=>{rests=s.val()||{};drawList()}));
+ unsubs.push(onValue(ref(db,"customerZones"),s=>{zones=s.val()||{};drawList()}));
+ unsubs.push(onValue(ref(db,"settings/custFees"),s=>{fees=s.val()||[];drawList()}));
+ unsubs.push(onValue(ref(db,"customerOrders"),s=>{const all=s.val()||{};orders={};for(const k in all)if(all[k].customerId===u.uid)orders[k]=all[k];drawCur()}));
+});
+
+// ---- الخارطة والموقع ----
+function initMap(){
+ if(map)return;
+ map=L.map("map").setView([33.75,44.63],12);
+ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map);
+ map.on("click",e=>setLoc(e.latlng.lat,e.latlng.lng));
+}
+function setLoc(la,ln){loc={lat:la,lng:ln};if(pin)pin.setLatLng([la,ln]);else pin=L.marker([la,ln]).addTo(map);$("locS").textContent="تم تحديد الموقع ✓";drawList()}
+$("gps").onclick=()=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>{setLoc(p.coords.latitude,p.coords.longitude);map.setView([p.coords.latitude,p.coords.longitude],15)},()=>alert("تعذر تحديد الموقع، اضغط على الخارطة"),{enableHighAccuracy:true,timeout:15000}):alert("المتصفح لا يدعم تحديد الموقع");
+const km=(a,b,c,d)=>{const r=x=>x*Math.PI/180,h=Math.sin(r(c-a)/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(r(d-b)/2)**2;return 12742*Math.asin(Math.sqrt(h))};
+function ll(u){const s=decodeURIComponent(String(u||""));for(const re of [/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/]){const m=s.match(re);if(m)return{lat:+m[1],lng:+m[2]}}return null}
+// يرجع {ok,fee,km} أو {ok:false,why}
+function quote(r){
+ if(!loc)return{ok:false,why:"حدد موقعك أولاً"};
+ const zs=Object.values(zones);
+ if(!zs.some(z=>z.isOpen!==false&&km(z.lat,z.lng,loc.lat,loc.lng)<=z.radiusKm))return{ok:false,why:"موقعك خارج مناطق الخدمة حالياً"};
+ const p=ll(r.mapUrl);if(!p)return{ok:false,why:"موقع المطعم غير محدد"};
+ const d=km(p.lat,p.lng,loc.lat,loc.lng),ring=[...fees].sort((a,b)=>a.km-b.km).find(f=>d<=f.km);
+ return ring?{ok:true,fee:ring.fee,km:d}:{ok:false,why:"المسافة أبعد من نطاق التوصيل"};
+}
+
+// ---- قائمة المطاعم ----
+function drawList(){
+ $("list").innerHTML=Object.entries(rests).filter(([,r])=>r.isOpen!==false).map(([id,r])=>{
+  const q=quote(r);
+  return `<div class="box"><div class="rest"><div class="av">${esc((r.name||"؟").trim().charAt(0))}</div><b>${esc(r.name)}</b>${q.ok?`<span class="tag">توصيل ${fmt(q.fee)} د.ع</span>`:""}</div>
+  ${q.ok?"":`<div style="color:var(--mu);font-size:13px;margin-top:8px">${q.why}</div>`}
+  <div class="acts">${r.menuUrl?`<button class="l" data-m="${esc(id)}">📋 المنيو</button>`:""}<button class="g" data-c="${esc(id)}" ${q.ok?"":"disabled"}>📞 اتصال داخل التطبيق</button></div></div>`}).join("")||'<p style="text-align:center;color:var(--mu)">لا توجد مطاعم حالياً</p>';
+}
+$("list").onclick=async e=>{
+ const b=e.target.closest("button");if(!b)return;
+ if(b.dataset.m){const u=rests[b.dataset.m].menuUrl;$("mf").src=u;$("mo").onclick=()=>window.open(u,"_blank");$("menuM").hidden=false}
+ if(b.dataset.c){
+  if(Object.values(orders).some(o=>!["delivered","cancelled"].includes(o.status)))return alert("لديك طلب جارٍ بالفعل");
+  const r=rests[b.dataset.c],q=quote(r);if(!q.ok)return;
+  b.disabled=true;
+  if(await isBanned()){await signOut(auth);return}
+  const o=push(ref(db,"customerOrders"));
+  await set(o,{customerId:me.uid,restaurantId:b.dataset.c,restaurantName:r.name,lat:loc.lat,lng:loc.lng,distanceKm:+q.km.toFixed(2),deliveryFee:q.fee,status:"calling",createdAt:Date.now()});
+  await set(ref(db,"customerOrderPrivate/"+o.key),{customerId:me.uid,name:prof.name,phone:prof.phone,deviceId:await devId()});
+  dial(o.key);
+ }
+};
+$("cur").onclick=e=>{const b=e.target.closest("[data-redial]");if(b)dial(b.dataset.redial)};
+$("mx").onclick=()=>{$("menuM").hidden=true;$("mf").src="about:blank"};
+
+// ---- الطلب الحالي ----
+function drawCur(){
+ const act=Object.entries(orders).sort((a,b)=>b[1].createdAt-a[1].createdAt)[0];
+ $("cur").hidden=!act;if(!act)return;
+ const [id,o]=act,price=Number(o.price)||0;
+ $("cur").innerHTML=`<div class="row"><b>${esc(o.restaurantName)}</b><span class="tag">${ST[o.status]||esc(o.status)}</span></div>
+ ${o.status==="calling"&&!price?`<p style="color:var(--mu)">بعد المكالمة سيسجل المطعم سعر طلبك.</p><button class="g" data-redial="${id}" style="width:100%">📞 إعادة الاتصال</button>`:""}
+ <div class="row"><span>سعر الطلب</span><b>${price?fmt(price)+" د.ع"+(o.priceFixed?" (مُصحَّح، كان "+fmt(o.priceOld)+")":""):"بانتظار المطعم"}</b></div>
+ <div class="row"><span>أجرة التوصيل</span><b>${fmt(o.deliveryFee)} د.ع</b></div>
+ <div class="row"><span>المجموع</span><b>${price?fmt(price+Number(o.deliveryFee)||0)+" د.ع":"—"}</b></div>
+ <p style="color:var(--mu);font-size:13px;margin:8px 0 0">لإلغاء الطلب تواصل مع الإدارة.</p>`;
+}
+</script></body></html>

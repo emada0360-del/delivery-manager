@@ -256,7 +256,7 @@ input,select,textarea{height:40px;padding:0 12px;border-radius:11px;margin:3px 0
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,goOnline,goOffline,ref,set,update,push,onValue,get,query,orderByChild,equalTo,runTransaction} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {getDatabase,goOnline,goOffline,ref,set,update,push,onValue,onChildAdded,get,query,orderByChild,equalTo,runTransaction} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -387,6 +387,99 @@ function tick(){
 }
 setInterval(tick,1000);
 
+
+// ===== مكالمة صوتية داخل التطبيق (WebRTC + Firebase للإشارات) =====
+// بيانات TURN من Metered (حساب baqubah-delivery)
+async function iceServers(){
+ const u="0f46505186311035bcd6abe4",c="jOQQDrOES5mQfiH7";
+ return [{urls:"stun:stun.relay.metered.ca:80"},{urls:"stun:stun.l.google.com:19302"},
+  {urls:"turn:global.relay.metered.ca:80",username:u,credential:c},
+  {urls:"turn:global.relay.metered.ca:80?transport=tcp",username:u,credential:c},
+  {urls:"turn:global.relay.metered.ca:443",username:u,credential:c},
+  {urls:"turns:global.relay.metered.ca:443?transport=tcp",username:u,credential:c}];
+}
+let call=null,onCallEnd=()=>{};
+function ui(t,btns){
+ let d=document.getElementById("callUI");
+ if(!t){d&&d.remove();return}
+ if(!d){d=document.createElement("div");d.id="callUI";d.style.cssText="position:fixed;inset:0;background:#0d131aee;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff;font:700 20px system-ui;text-align:center;padding:20px";document.body.appendChild(d)}
+ d.innerHTML=`<div style="font-size:54px">📞</div><div>${t}</div><div style="display:flex;gap:12px">${(btns||[]).map((b,i)=>`<button data-i="${i}" style="border:0;border-radius:14px;padding:14px 26px;font:700 17px inherit;color:#fff;background:${b[2]||"#d9002f"}">${b[0]}</button>`).join("")}</div>`;
+ d.onclick=e=>{const b=e.target.closest("button");if(b)btns[b.dataset.i][1]()};
+}
+let ringT=null;
+function ring(on){
+ clearInterval(ringT);if(!on)return;
+ const beep=()=>{try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=.4;o.connect(g);g.connect(a.destination);o.start();setTimeout(()=>{o.stop();a.close()},400)}catch(e){}if(navigator.vibrate)navigator.vibrate(300)};
+ beep();ringT=setInterval(beep,1200);
+}
+function addC(c,x){if(c.pc.remoteDescription)c.pc.addIceCandidate(x).catch(()=>{});else c.q.push(x)}
+function flush(c){c.q.splice(0).forEach(x=>c.pc.addIceCandidate(x).catch(()=>{}))}
+async function openCall(oid,role){
+ const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+ const pc=new RTCPeerConnection({iceServers:await iceServers()});
+ const c=call={oid,role,pc,stream,un:[],q:[]};
+ stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+ const au=new Audio();au.autoplay=true;
+ pc.ontrack=e=>{au.srcObject=e.streams[0];au.play().catch(()=>{})};
+ const mine=role==="c"?"cC":"rC",theirs=role==="c"?"rC":"cC";
+ pc.onicecandidate=e=>{if(e.candidate)push(ref(db,`calls/${oid}/${mine}`),e.candidate.toJSON())};
+ pc.onconnectionstatechange=()=>{if(pc.connectionState==="connected")ui("متصل 🔊",[["إنهاء",hangup]]);if(pc.connectionState==="failed"){ui("تعذر الاتصال بسبب الشبكة",[["إغلاق",hangup]])}};
+ c.un.push(onChildAdded(ref(db,`calls/${oid}/${theirs}`),s=>addC(c,s.val())));
+ c.un.push(onValue(ref(db,`calls/${oid}/ended`),s=>{if(s.val())closeCall()}));
+ return c;
+}
+async function dial(oid){
+ if(call)return;
+ try{
+  await set(ref(db,"calls/"+oid),null);
+  const c=await openCall(oid,"c");
+  ui("جارٍ الاتصال بالمطعم...",[["إنهاء",hangup]]);
+  const o=await c.pc.createOffer();await c.pc.setLocalDescription(o);
+  await set(ref(db,`calls/${oid}/offer`),{type:o.type,sdp:o.sdp});
+  c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(a&&!c.pc.remoteDescription){await c.pc.setRemoteDescription(a);flush(c)}}));
+  await update(ref(db,"customerOrders/"+oid),{ring:Date.now()});
+  setTimeout(()=>{if(call&&call.oid===oid&&call.pc.connectionState!=="connected")hangup()},45000);
+ }catch(e){closeCall(true);alert("تعذر بدء المكالمة: "+(e.name==="NotAllowedError"?"اسمح باستخدام المايكروفون":e.message))}
+}
+async function answerCall(oid){
+ if(call)return;ring(false);
+ try{
+  const off=(await get(ref(db,`calls/${oid}/offer`))).val();
+  if(!off){ui("");return}
+  const c=await openCall(oid,"r");ui("جارٍ الربط...");
+  await c.pc.setRemoteDescription(off);flush(c);
+  const a=await c.pc.createAnswer();await c.pc.setLocalDescription(a);
+  await set(ref(db,`calls/${oid}/answer`),{type:a.type,sdp:a.sdp});
+ }catch(e){closeCall(true);alert("تعذر الرد: "+e.message)}
+}
+function hangup(){if(call)set(ref(db,`calls/${call.oid}/ended`),Date.now()).catch(()=>{});closeCall()}
+function closeCall(quiet){
+ ring(false);ui("");
+ if(!call)return;const c=call;call=null;
+ c.un.forEach(f=>{try{f()}catch(e){}});c.stream.getTracks().forEach(t=>t.stop());try{c.pc.close()}catch(e){}
+ if(!quiet)onCallEnd(c);
+}
+
+// ---- استقبال طلبات الزبائن ----
+let cOrders={},ringing=null,priceFor=null;
+function cq(){
+ const need=Object.entries(cOrders).filter(([,o])=>o.status==="calling"&&o.ring&&!o.price);
+ let b=document.getElementById("cqBar");
+ if(!b){b=document.createElement("div");b.id="cqBar";b.style.cssText="margin:6px 0";document.getElementById("tabs").after(b);b.onclick=e=>{const x=e.target.closest("[data-pr]");if(x)priceUI(x.dataset.pr)}}
+ b.innerHTML=need.map(([id])=>`<button data-pr="${id}" style="width:100%;margin-bottom:6px;background:#0f9a63">💰 اكتب سعر طلب الزبون #${id.slice(-5)}</button>`).join("");
+ const r=need.find(([id,o])=>!call&&ringing!==id+o.ring&&Date.now()-o.ring<45000);
+ if(r){const [id,o]=r;ringing=id+o.ring;ring(true);try{window.notifyApp&&window.notifyApp("📞 زبون يتصل","اضغط للرد")}catch(e){}
+  ui("زبون يتصل بالمطعم",[["رد",()=>answerCall(id),"#0f9a63"],["رفض",()=>{ring(false);ui("")}]]);
+  setTimeout(()=>{if(!call){ring(false);if(document.getElementById("callUI"))ui("")}},45000);}
+}
+function priceUI(id){
+ const d=document.createElement("div");d.style.cssText="position:fixed;inset:0;background:#0d131aee;z-index:98;display:grid;place-items:center;padding:20px";
+ d.innerHTML=`<div style="background:#fff;border-radius:18px;padding:18px;width:100%;max-width:340px;color:#0f1b2a"><b>سعر الطلب (بدون التوصيل)</b><input id="prIn" type="number" inputmode="numeric" placeholder="مثال: 10000" style="width:100%;padding:12px;margin:10px 0;border:1px solid #ccd;border-radius:12px;font-size:18px"><div style="display:flex;gap:8px"><button id="prOk" style="flex:1">حفظ السعر</button><button id="prNo" style="flex:1;background:#e8edf3;color:#0f1b2a">لاحقاً</button></div></div>`;
+ document.body.appendChild(d);
+ d.querySelector("#prNo").onclick=()=>d.remove();
+ d.querySelector("#prOk").onclick=async()=>{const p=Number(d.querySelector("#prIn").value);if(!(p>0))return;await update(ref(db,"customerOrders/"+id),{price:p,priceAt:Date.now(),status:"preparing"});d.remove()};
+}
+onCallEnd=c=>{if(c.role==="r")setTimeout(()=>priceUI(c.oid),300)};
 const stops=[];
 let sayT;function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fde8ec":"#dff5ea";m.style.color=bad?"#b0002a":"#0b7a4e";clearTimeout(sayT);sayT=setTimeout(()=>m.style.display="none",4500)}
 
@@ -430,6 +523,7 @@ function start(){
  }));
  stops.push(onValue(ref(db,"areas"),s=>{ areas=s.val()||{}; drawAreas(); }));
  stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{ orders=s.val()||{}; checkTimeoutOrders(); checkForced(); fetchDriversNames(); drawOrders(); }));
+ stops.push(onValue(query(ref(db,"customerOrders"),orderByChild("restaurantId"),equalTo(uid)),s=>{cOrders=s.val()||{};cq()}));
  stops.push(onValue(query(ref(db,"orderPrivate"),orderByChild("storeId"),equalTo(uid)),s=>{ priv=s.val()||{}; drawOrders(); }));
 }
 
