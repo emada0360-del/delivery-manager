@@ -75,7 +75,7 @@ jobs:
             printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
           fi
 
-      - name: Generate Custom Motorcycle App Icon & Firebase Service
+      - name: Generate Modern App Icon & Firebase Service
         env:
           APP_ROLE: ${{ matrix.role }}
         run: |
@@ -83,48 +83,100 @@ jobs:
 
           python3 - <<'PY'
           import os
-          import shutil
           from pathlib import Path
           from PIL import Image, ImageDraw
 
           role = os.environ.get("APP_ROLE", "store")
           os.chdir("app/android")
 
-          def create_icon(size, filename):
-              img = Image.new('RGBA', (size, size), (18, 18, 24, 255))
-              draw = ImageDraw.Draw(img)
+          W = (255, 255, 255, 255)
+          T = (0, 0, 0, 0)
+          C = 1080
 
-              margin = size // 10
-              draw.ellipse([margin, margin, size - margin, size - margin], fill=(225, 29, 72, 255))
+          def gradient(c1, c2, size=432):
+              img = Image.new("RGBA", (size, size))
+              d = ImageDraw.Draw(img)
+              n = size * 2
+              for i in range(n):
+                  t = i / n
+                  col = tuple(int(c1[k] + (c2[k] - c1[k]) * t) for k in range(3)) + (255,)
+                  d.line([(i, 0), (0, i)], fill=col, width=2)
+              hl = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+              ImageDraw.Draw(hl).ellipse([-size * .3, -size * .5, size * .9, size * .5], fill=(255, 255, 255, 38))
+              return Image.alpha_composite(img, hl)
 
-              box_w = size // 2.5
-              box_h = size // 3
-              x0 = (size - box_w) // 2
-              y0 = (size - box_h) // 2 + size // 20
-              draw.rounded_rectangle([x0, y0, x0 + box_w, y0 + box_h], radius=size//16, fill=(255, 255, 255, 255))
+          def glyph_driver():
+              im = Image.new("RGBA", (C, C), T)
+              d = ImageDraw.Draw(im)
+              d.rounded_rectangle([250, 330, 500, 540], radius=34, fill=W)
+              d.rounded_rectangle([290, 380, 460, 410], radius=10, fill=T)
+              d.rounded_rectangle([300, 560, 560, 620], radius=30, fill=W)
+              d.polygon([(540, 620), (700, 620), (740, 700), (540, 700)], fill=W)
+              d.line([(690, 640), (640, 430)], fill=W, width=44)
+              d.rounded_rectangle([590, 400, 720, 450], radius=24, fill=W)
+              for cx in (340, 740):
+                  d.ellipse([cx - 92, 608, cx + 92, 792], fill=W)
+                  d.ellipse([cx - 52, 648, cx + 52, 752], fill=T)
+              return im
 
-              wheel_r = size // 8
-              draw.ellipse([x0 - wheel_r//2, y0 + box_h - wheel_r//2, x0 + wheel_r*1.5, y0 + box_h + wheel_r*1.5], fill=(18, 18, 24, 255))
-              draw.ellipse([x0 + box_w - wheel_r*1.5, y0 + box_h - wheel_r//2, x0 + box_w + wheel_r//2, y0 + box_h + wheel_r*1.5], fill=(18, 18, 24, 255))
+          def glyph_store():
+              im = Image.new("RGBA", (C, C), T)
+              d = ImageDraw.Draw(im)
+              d.rounded_rectangle([280, 330, 800, 470], radius=30, fill=W)
+              for i in range(5):
+                  x = 280 + i * 104 + 52
+                  d.ellipse([x - 52, 420, x + 52, 524], fill=W)
+              for x in (384, 488, 592, 696):
+                  d.line([(x, 340), (x, 440)], fill=T, width=12)
+              d.rounded_rectangle([320, 500, 760, 770], radius=30, fill=W)
+              d.rounded_rectangle([350, 590, 470, 690], radius=16, fill=T)
+              d.rounded_rectangle([510, 590, 610, 770], radius=16, fill=T)
+              d.rounded_rectangle([650, 590, 730, 690], radius=16, fill=T)
+              return im
 
-              os.makedirs(os.path.dirname(filename), exist_ok=True)
-              img.save(filename, 'PNG')
+          def mask(size, circle):
+              m = Image.new("L", (size * 4, size * 4), 0)
+              d = ImageDraw.Draw(m)
+              if circle:
+                  d.ellipse([0, 0, size * 4 - 1, size * 4 - 1], fill=255)
+              else:
+                  d.rounded_rectangle([0, 0, size * 4 - 1, size * 4 - 1], radius=int(size * 4 / 4.6), fill=255)
+              return m.resize((size, size), Image.LANCZOS)
 
-          densities = {
-              'mipmap-mdpi': 48,
-              'mipmap-hdpi': 72,
-              'mipmap-xhdpi': 96,
-              'mipmap-xxhdpi': 144,
-              'mipmap-xxxhdpi': 192
+          cfg = {
+              "driver": ((255, 94, 98), (190, 0, 70), glyph_driver),
+              "store": ((52, 211, 153), (37, 99, 235), glyph_store),
           }
+          c1, c2, gfn = cfg.get(role, cfg["store"])
+          bg = gradient(c1, c2)
+          fg = gfn()
+          base = Path("app/src/main/res")
+          dens = {"mdpi": (48, 108), "hdpi": (72, 162), "xhdpi": (96, 216), "xxhdpi": (144, 324), "xxxhdpi": (192, 432)}
 
-          for folder, size in densities.items():
-              path_base = f"app/src/main/res/{folder}"
-              create_icon(size, f"{path_base}/ic_launcher.png")
-              create_icon(size, f"{path_base}/ic_launcher_round.png")
+          for name, (legacy, adaptive) in dens.items():
+              out = base / ("mipmap-" + name)
+              out.mkdir(parents=True, exist_ok=True)
+              bgS = bg.resize((adaptive, adaptive), Image.LANCZOS)
+              fgS = fg.resize((adaptive, adaptive), Image.LANCZOS)
+              bgS.save(out / "ic_bg.png")
+              fgS.save(out / "ic_fg.png")
+              comp = Image.alpha_composite(bgS, fgS).resize((legacy, legacy), Image.LANCZOS)
+              for fname, circ in (("ic_launcher.png", False), ("ic_launcher_round.png", True)):
+                  o = Image.new("RGBA", (legacy, legacy), T)
+                  o.paste(comp, (0, 0), mask(legacy, circ))
+                  o.save(out / fname)
 
-          # Remove the default adaptive icons so the custom PNG icons are used on Android 8+
-          shutil.rmtree("app/src/main/res/mipmap-anydpi-v26", ignore_errors=True)
+          any26 = base / "mipmap-anydpi-v26"
+          any26.mkdir(parents=True, exist_ok=True)
+          xml = """<?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@mipmap/ic_bg"/>
+              <foreground android:drawable="@mipmap/ic_fg"/>
+              <monochrome android:drawable="@mipmap/ic_fg"/>
+          </adaptive-icon>"""
+          xml = xml.replace("\n          ", "\n")
+          for n in ("ic_launcher.xml", "ic_launcher_round.xml"):
+              (any26 / n).write_text(xml)
 
           if role == "driver":
               p = Path("app/build.gradle")
