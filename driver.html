@@ -244,6 +244,38 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
 #wmdl .wt{font-size:46px;font-weight:700;color:var(--amber);direction:ltr;margin:8px 0 4px}
 #wmdl small{color:var(--muted);display:block;margin-bottom:18px}
 #wmdl button{width:100%;border:0;border-radius:14px;padding:14px;font:700 16px var(--font);background:var(--raised);color:var(--ink)}
+
+/* ===== v3: مناسب لشاشة الهاتف + سحب جانبي ===== */
+main{padding:6px 10px 0}
+#pager{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -10px;padding:0 10px}
+#pager::-webkit-scrollbar{display:none}
+#availContainer,#activeContainer,#availList,#activeList{display:contents}
+#availContainer[hidden],#activeContainer[hidden]{display:none}
+#pager .card{flex:0 0 94%!important;scroll-snap-align:center;height:100%;margin:0!important;padding:10px 12px;display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:none;align-self:stretch!important}
+#pager .card::-webkit-scrollbar{display:none}
+#chips{padding:6px 2px 6px;margin:0 0 4px;gap:7px}
+.chip{padding:7px 14px;font-size:13px}
+.chip.at{background:#0e9f9a}
+.card>.row{margin-bottom:6px}
+.age{font-size:22px}.age-wrap small{font-size:11.5px}
+.card>.row>b{font-size:11.5px;padding:4px 9px}
+.hero{margin:2px 0}
+.hero-ic{width:38px;height:38px;border-radius:12px}.hero-ic::before{width:20px;height:20px}
+.hero-t{font-size:16px}.hero-s{font-size:12px}
+.tabs{margin:8px 0 6px;padding:3px;border-radius:12px}.tab{padding:7px 6px;font-size:13px}
+.tl{margin:5px 0;gap:9px}.tl+.tl::before{display:none}
+.tl-ic{width:32px;height:32px;border-radius:10px}.tl-ic::before{width:16px;height:16px}
+.tl-b{padding:6px 10px;border-radius:11px}.tl-b small{font-size:11px;margin-bottom:1px}.tl-b strong,.store-name{font-size:15px}
+.fin-box,.customer-box,.debt-box{padding:8px 10px;margin:6px 0;font-size:12.5px;border-radius:12px}
+.customer-box b{margin-bottom:6px;font-size:13px;line-height:1.5}
+.fin-row{margin-bottom:6px}
+.btn-group a{padding:9px 6px;font-size:12.5px;border-radius:11px}
+.map-link{padding:8px;margin:6px 0;font-size:13px;border-radius:11px}
+.note{margin-bottom:4px;font-size:12px}
+.wait-msg{padding:10px;margin-top:6px;font-size:14px}
+.card>.grn{margin-top:auto!important;min-height:46px;padding:10px;font-size:15px;flex:none;position:sticky;bottom:0}
+.card>.actions,.card .actions{margin-top:auto;padding-top:8px;position:sticky;bottom:0;background:var(--surface)}
+.actions button{min-height:46px;font-size:15px}
 </style>
 </head>
 <body>
@@ -329,8 +361,10 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
    <div id="emptyText">فعّل حالتك إلى «متصل» من القائمة لاستقبال الطلبات.</div>
   </div>
 
+  <div id="pager">
   <div id="availContainer" hidden><h3>الطلبات المتاحة</h3><div id="availList"></div></div>
   <div id="activeContainer" hidden><h3>طلباتي الحالية</h3><div id="activeList"></div></div>
+  </div>
  </main>
 </div>
 
@@ -728,6 +762,8 @@ function __main(){
   if(on&&!alertT){alertN=0;alertT=setInterval(()=>{alertN++;ring();if(alertN%4===0)speak("طلب جديد");if(alertN%6===0&&document.hidden)notify("طلب جديد","لديك طلب متوفر بانتظار القبول أو الرفض.")},2500)}
   else if(!on&&alertT){clearInterval(alertT);alertT=null;nAlarm(false);try{navigator.vibrate&&navigator.vibrate(0)}catch{}try{window.speechSynthesis&&window.speechSynthesis.cancel()}catch{}}
  }
+ function fitPager(){const p=$("pager");if(!p)return;const t=p.getBoundingClientRect().top+window.scrollY;p.style.height=Math.max(280,window.innerHeight-t-8)+"px"}
+ function markChip(scroll){document.querySelectorAll("#chips .chip").forEach(x=>x.classList.toggle("on",x.dataset.sel===selId));if(scroll!==false){const on=document.querySelector("#chips .chip.on");if(on)on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"})}}
  let autoBusy=false,lastAuto=0;
  function parseLL(u){
   if(!u)return null;let s;try{s=decodeURIComponent(String(u))}catch{s=String(u)}
@@ -785,14 +821,15 @@ function __main(){
    seenAv=new Set(av.map(([id])=>id));
   }else{seenAv=null}
   const ids=[...av.map(([id])=>id),...Object.keys(act)];
-  if(selId&&!ids.includes(selId))selId=null;
-  const chipCls=id=>{const o=act[id];if(!o)return"new";return o.status==="waiting_store"?"wait":(o.status==="picked_up"||o.status==="delivering")?"cust":"go"};
+  if(!selId||!ids.includes(selId))selId=ids[0]||null;
+  const chipCls=id=>{const o=act[id];if(!o)return"new";const s=o.status;return s==="waiting_store"?"wait":s==="accepted"?"go":s==="arrived_store"?"at":"cust"};
   $("chips").hidden=!ids.length;
-  setHtml("chips",ids.length?`<button type="button" class="chip all ${selId?"":"on"}" data-sel="">الكل <b>${ids.length}</b></button>`+ids.map(id=>`<button type="button" class="chip ${chipCls(id)} ${selId===id?"on":""}" data-sel="${esc(id)}">${esc(id.slice(-6))}</button>`).join(""):"");
-  const avF=av.filter(([id])=>!selId||selId===id);
+  setHtml("chips",ids.length?ids.map(id=>`<button type="button" class="chip ${chipCls(id)} ${selId===id?"on":""}" data-sel="${esc(id)}">${esc(id.slice(-6))}</button>`).join(""):"");
+  $("pager").style.display=ids.length?"flex":"none";fitPager();
+  
   document.body.classList.toggle("order-focus",av.length>0);alertLoop(av.length>0);
-  $("availContainer").hidden=!avF.length;
-  setHtml("availList",avF.map(([id,o])=>`<div class="card new" id="order-${esc(id)}">
+  $("availContainer").hidden=!av.length;
+  setHtml("availList",av.map(([id,o])=>`<div class="card new" id="order-${esc(id)}">
    <div class="row"><b>طلب #${esc(id.slice(-6))}</b><div class="age-wrap"><small>منذ</small><span class="age" data-ts="${Number(o.createdAt)||0}"></span></div></div>
    ${heroOf(o)}${tabOpen(id)}
    <div class="tl"><i class="tl-ic s"></i><div class="tl-b"><small>المتجر</small><strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></div></div>
@@ -804,8 +841,8 @@ function __main(){
     <button class="red" data-a="reject" data-id="${esc(id)}">رفض</button>
    </div>
   </div>`).join(""));
-  $("activeContainer").hidden=!Object.keys(act).some(id=>!selId||selId===id);
-  setHtml("activeList",Object.entries(act).filter(([id])=>!selId||selId===id).map(([id,o])=>{
+  $("activeContainer").hidden=!nAct;
+  setHtml("activeList",Object.entries(act).map(([id,o])=>{
    let btn="",warn="",badge="";const q=privData[id]||{},st=typeof o.stepAt==="number"?o.stepAt:0;
    if(o.status==="waiting_store"){
     badge='<span class="badge wait">بانتظار موافقة المتجر</span>';
@@ -931,7 +968,10 @@ function __main(){
   }catch(er){say("فشلت العملية: "+(er&&(er.code||er.message)||er))}
   finally{busy=false}
  }
- $("chips").onclick=e=>{const b=e.target.closest("[data-sel]");if(!b)return;selId=b.dataset.sel||null;draw()};
+ $("chips").onclick=e=>{const b=e.target.closest("[data-sel]");if(!b)return;selId=b.dataset.sel;markChip(true);const c=document.getElementById("order-"+selId);if(c)c.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"})};
+ let scT=null;
+ $("pager").addEventListener("scroll",()=>{cancelAnimationFrame(scT);scT=requestAnimationFrame(()=>{const p=$("pager"),r=p.getBoundingClientRect(),c=r.left+r.width/2;let best=null,bd=1e9;p.querySelectorAll(".card").forEach(x=>{const q=x.getBoundingClientRect(),dd=Math.abs(q.left+q.width/2-c);if(dd<bd){bd=dd;best=x}});if(best){const id=best.id.replace("order-","");if(id!==selId){selId=id;markChip(false)}}})},{passive:true});
+ window.addEventListener("resize",()=>fitPager());
  $("availList").onclick=act;$("activeList").onclick=act;
  $("btnStatus").onclick=()=>{
   if(debt>=debtLimit)return say("لا يمكنك الاتصال، تجاوزت سقف الدين");
