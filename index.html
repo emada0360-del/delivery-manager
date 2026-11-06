@@ -123,6 +123,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 .drow b{display:block}
 .drow button{flex:none}
 .chips{margin-top:4px;display:flex;gap:6px;flex-wrap:wrap}
+.acts{display:flex;gap:6px;flex-wrap:wrap}.acts button{margin:0}td .tm{margin-top:2px}
 </style>
 </head>
 <body>
@@ -498,6 +499,12 @@ document.addEventListener("click",e=>{
  if(d.pick){run(async()=>{const nm=(users[d.pick]||{}).name||"";if(!(await showToastConfirm(`تعيين الطلب للسائق "${nm}"؟`)))return;$("asModal").hidden=true;await assignOrder(d.oid,d.pick,false);say("تم تعيين الطلب.")});return}
  if(d.un){run(async()=>{if(!(await showToastConfirm("رفع الطلب من السائق وإرجاعه للانتظار؟")))return;await unassignOrder(d.un);say("تم رفع الطلب من السائق.")})}
 });
+document.addEventListener("change",e=>{
+ const s=e.target.closest("select[data-lv]");if(!s||!s.value)return;const id=s.dataset.lv,v=s.value;s.value="";
+ if(v==="as")openAssign(id);
+ else if(v==="un")run(async()=>{if(!(await showToastConfirm("إلغاء التعيين ورفع الطلب لجميع السائقين؟")))return;await unassignOrder(id);say("تم رفع الطلب للسائقين.")});
+ else if(v==="del")run(async()=>{if(!(await showToastConfirm("حذف الطلب #"+id.slice(-6)+" نهائياً؟")))return;await deleteOrdersArchived({[id]:orders[id]});say("تم حذف الطلب.")});
+});
 const list=r=>Object.entries(users).filter(([,u])=>u&&u.role===r);
 const online=id=>!!(pres[id]&&pres[id].online===true&&Date.now()-(Number(pres[id].lastSeen)||0)<180000);
 const deliveredOrders=id=>Object.values(orders).filter(o=>o&&o.driverId===id&&o.status==="delivered");
@@ -556,16 +563,15 @@ function draw(){
  checkForced();
 
  const limit=Number(settings.debtLimit??15000);
- $("drivers").innerHTML=table(["الاسم","الحالة","رقم الدخول","مسلّمة","المستحق","تاريخ التسجيل","إجراءات"],drs.map(([id,u])=>{
+ $("drivers").innerHTML=table(["السائق","الحالة","مسلّمة","المستحق","إجراءات"],drs.map(([id,u])=>{
   const d=getDebt(id);const pr=pres[id]||{};
   const stt=u.isActive===false?'<span class="tag r">معطّل</span>':(online(id)?(pr.busy?'<span class="tag y">مشغول</span>':'<span class="tag g">متصل</span>'):'<span class="tag">غير متصل</span>');
-  return `<tr><td><b>${esc(u.name)}</b></td><td>${stt}</td><td dir="ltr">${esc(u.username)}</td>
-  <td>${deliveredOrders(id).length+archCount(id)}</td><td class="${d>=limit?"warn":""}">${fmt(d)}</td>
-  <td>${tm(u.createdAt)}</td>
-  <td><button type="button" data-ed="${esc(id)}" data-ek="driver" class="blue">تعديل</button>
+  return `<tr><td><b>${esc(u.name)}</b><div class="tm" dir="ltr">${esc(u.username)}</div></td><td>${stt}</td>
+  <td>${deliveredOrders(id).length+archCount(id)}</td><td>${debtTag(id)}</td>
+  <td><div class="acts"><button type="button" data-ed="${esc(id)}" data-ek="driver" class="blue">تعديل</button>
   <button type="button" data-tg="${esc(id)}" class="${u.isActive===false?"grn":"org"}">${u.isActive===false?"تفعيل":"تعطيل"}</button>
   <button type="button" data-zp="${esc(id)}" class="grn" ${d<=0?"disabled":""}>تصفير</button>
-  <button type="button" data-del="${esc(id)}" class="red">حذف</button></td></tr>`}),"لا يوجد سائقون.");
+  <button type="button" data-del="${esc(id)}" class="red">حذف</button></div></td></tr>`}),"لا يوجد سائقون.");
 
  // لا نعيد رسم جدول المتاجر وانت تكتب المبلغ
  const ae=document.activeElement;
@@ -635,7 +641,7 @@ function drawLiveOrders(){
      const driverName=name?`<b>${esc(name)}</b>${o.driverId?chipOf(o.driverId):""}`:'<span style="color:#94a3b8">بانتظار سائق</span>';
      const driverPhone=phone?`<a href="tel:${esc(phone)}" dir="ltr">${esc(phone)}</a>`:'—';
      return `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(o.storeName)}</td><td>${driverName}</td>
-       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span>${o.forcedAssign?' <span class="tag b">تعيين تلقائي</span>':''}</td><td>${tm(o.createdAt)}</td><td>${o.acceptedAt&&o.createdAt?fmtAge(o.acceptedAt-o.createdAt):"—"}</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td><td>${o.acceptedAt?`<span class="ageC" data-ts="${Number(o.acceptedAt)}"></span>`:"—"}</td><td><button type="button" data-as="${esc(id)}" class="blue">تعيين لسائق</button>${o.driverId?`<button type="button" data-un="${esc(id)}" class="org">رفع من السائق</button>`:""}</td></tr>`;
+       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span>${o.forcedAssign?' <span class="tag b">تعيين تلقائي</span>':''}</td><td>${tm(o.createdAt)}</td><td>${o.acceptedAt&&o.createdAt?fmtAge(o.acceptedAt-o.createdAt):"—"}</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td><td>${o.acceptedAt?`<span class="ageC" data-ts="${Number(o.acceptedAt)}"></span>`:"—"}</td><td><select data-lv="${esc(id)}"><option value="">اختر إجراء</option><option value="as">${o.driverId?"تعيين لسائق آخر":"تعيين لسائق"}</option>${o.driverId?'<option value="un">إلغاء التعيين (رفعه للسائقين)</option>':""}<option value="del">حذف الطلب</option></select></td></tr>`;
    }),"لا توجد طلبات حية الآن."
  );
  tickAges();
