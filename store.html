@@ -205,7 +205,7 @@ body[data-tab=new] #activeContainer,body[data-tab=new] #historyContainer,body[da
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,push,onValue,get,query,orderByChild,equalTo,runTransaction} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {getDatabase,goOnline,goOffline,ref,set,update,push,onValue,get,query,orderByChild,equalTo,runTransaction} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -567,6 +567,17 @@ window.cancelOrder = async(id) => {
  catch(e){ say("فشل الإلغاء: "+e.message,1); }
 };
 
+// ---- إعادة الاتصال عند رجوع التطبيق من الخلفية (نفس منطق تطبيق السائق)
+let lastResume=0;
+function resumeStore(){
+ if(!uid||document.visibilityState==="hidden")return;
+ const n=Date.now();if(n-lastResume<5000)return;lastResume=n;
+ try{goOffline(db);goOnline(db)}catch(e){}
+ try{start()}catch(e){}
+}
+document.addEventListener("visibilitychange",resumeStore);
+window.addEventListener("focus",resumeStore);
+window.addEventListener("online",resumeStore);
 function goTab(t){document.body.dataset.tab=t;$("tabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.t===t));window.scrollTo(0,0)}
 document.body.dataset.tab="active";$("historyOrders").hidden=false;
 $("tabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(b)goTab(b.dataset.t)};

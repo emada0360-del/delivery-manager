@@ -728,6 +728,38 @@ function __main(){
   if(on&&!alertT){alertN=0;alertT=setInterval(()=>{alertN++;ring();if(alertN%4===0)speak("طلب جديد");if(alertN%6===0&&document.hidden)notify("طلب جديد","لديك طلب متوفر بانتظار القبول أو الرفض.")},2500)}
   else if(!on&&alertT){clearInterval(alertT);alertT=null;nAlarm(false);try{navigator.vibrate&&navigator.vibrate(0)}catch{}try{window.speechSynthesis&&window.speechSynthesis.cancel()}catch{}}
  }
+ let autoBusy=false,lastAuto=0;
+ function parseLL(u){
+  if(!u)return null;let s;try{s=decodeURIComponent(String(u))}catch{s=String(u)}
+  const pats=[/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/];
+  for(const p of pats){const m=s.match(p);if(m){const a=+m[1],b=+m[2];if(Math.abs(a)<=90&&Math.abs(b)<=180)return{lat:a,lng:b}}}
+  return null;
+ }
+ // تعيين إجباري بعد 7 دقائق: السائق الأقرب (المتاح) هو اللي يستلم الطلب حتى لو تطبيق المتجر مسكّر
+ async function autoAssign(){
+  if(autoBusy||!uid||!isOnline||!pendLoaded||debt>=debtLimit||hasActive())return;
+  const now=Date.now();if(now-lastAuto<15000)return;
+  const old=Object.entries(pend).filter(([id,o])=>o&&!o.driverId&&o.status==="pending"&&now-(Number(o.createdAt)||now)>=FORCE_MS);
+  if(!old.length)return;
+  lastAuto=now;autoBusy=true;
+  try{
+   const P=(await get(ref(db,"presence"))).val()||{};
+   for(const [id,o] of old){
+    const here=(o.storeLat!=null&&o.storeLng!=null)?{lat:+o.storeLat,lng:+o.storeLng}:parseLL(o.storeMapUrl);
+    const list=Object.entries(P).filter(([,p])=>p&&p.online===true&&!p.busy&&!p.blocked&&now-(Number(p.lastSeen)||0)<120000)
+     .map(([k,p])=>({id:k,d:(here&&p.lat!=null&&p.lng!=null)?getDist(here.lat,here.lng,+p.lat,+p.lng):null}))
+     .sort((a,b)=>((a.d==null)-(b.d==null))||((a.d||0)-(b.d||0)));
+    if(!list.length||list[0].id!==uid)continue;
+    const res=await ref(db,"orders/"+id).transaction(cur=>{
+     if(cur===null)return cur;
+     if(cur.status!=="pending"||cur.driverId)return;
+     return{...cur,driverId:uid,driverName:driver.name||"",driverPhone:driver.phone||"",status:"accepted",forcedAssign:true,acceptedAt:Date.now(),stepAt:Date.now()};
+    });
+    if(res&&res.committed)break;
+   }
+  }catch(e){console.warn("autoAssign:",e&&(e.code||e.message))}
+  finally{autoBusy=false}
+ }
  function draw(){
   if(!uid)return;
   stats();ui();syncNativeDriverStatus();
@@ -815,7 +847,7 @@ function __main(){
     ${storeBox}${cust}${warn}${tabMid(id)}${finBox(o)}</div>${btn}
    </div>`;
   }).join(""));
-  updateAges();
+  updateAges();autoAssign();
   const empty= nAct===0&&av.length===0;
   if(nAct>0)document.body.classList.remove("order-focus");
   $("emptyState").style.display=empty?"flex":"none";
