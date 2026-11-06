@@ -206,6 +206,77 @@ public class StoreKeepService extends Service {
 }
 ''', encoding="utf-8")
 
+
+# ---------------------------------------------------------------- Alarm plugin (صوت متواصل حتى يرد المتجر)
+(PKG / "StoreAlarmPlugin.java").write_text(r"""package com.baqubah.store;
+
+import android.content.Context;
+import android.media.AudioAttributes;
+import android.media.MediaPlayer;
+import android.media.RingtoneManager;
+import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Vibrator;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.PluginMethod;
+
+@CapacitorPlugin(name = "StoreAlarm")
+public class StoreAlarmPlugin extends Plugin {
+    private static MediaPlayer mp;
+    private static final Handler h = new Handler(Looper.getMainLooper());
+    private static final Runnable cap = new Runnable() { @Override public void run() { stopNow(getCtx()); } };
+    private static Context appCtx;
+
+    private static Context getCtx() { return appCtx; }
+
+    @PluginMethod
+    public void start(PluginCall call) {
+        appCtx = getContext().getApplicationContext();
+        try {
+            if (mp == null) {
+                Uri u = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+                if (u == null) u = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+                if (u == null) u = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+                MediaPlayer p = new MediaPlayer();
+                p.setAudioAttributes(new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
+                p.setDataSource(appCtx, u);
+                p.setLooping(true);
+                p.prepare();
+                p.start();
+                mp = p;
+                try {
+                    Vibrator v = (Vibrator) appCtx.getSystemService(Context.VIBRATOR_SERVICE);
+                    if (v != null) v.vibrate(new long[]{0, 600, 500}, 0);
+                } catch (Exception e) {}
+                h.removeCallbacks(cap);
+                h.postDelayed(cap, 10 * 60 * 1000L);
+            }
+        } catch (Exception e) {}
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void stop(PluginCall call) {
+        stopNow(getContext().getApplicationContext());
+        call.resolve();
+    }
+
+    private static void stopNow(Context c) {
+        try { if (mp != null) { mp.stop(); mp.release(); } } catch (Exception e) {}
+        mp = null;
+        h.removeCallbacks(cap);
+        try {
+            if (c != null) { Vibrator v = (Vibrator) c.getSystemService(Context.VIBRATOR_SERVICE); if (v != null) v.cancel(); }
+        } catch (Exception e) {}
+    }
+}
+""", encoding="utf-8")
+
 # ---------------------------------------------------------------- MainActivity
 (PKG / "MainActivity.java").write_text(r'''package com.baqubah.store;
 
@@ -227,6 +298,7 @@ import java.util.Map;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(StoreAlarmPlugin.class);
         super.onCreate(savedInstanceState);
         askPerms();
     }

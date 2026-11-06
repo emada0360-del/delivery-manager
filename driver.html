@@ -219,6 +219,13 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
 .tabs{display:flex;gap:4px;padding:4px;background:var(--raised);border-radius:15px;margin:14px 0 12px}
 .tab{flex:1;padding:10px 6px;background:none;color:var(--muted);font-size:14px;border-radius:11px;font-weight:600}
 .tab.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 6px #0003}
+
+/* الطلبات بشكل عرضي (تمرير جانبي) */
+#availList,#activeList{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px;padding:2px 16px 14px;scrollbar-width:none}
+#availList::-webkit-scrollbar,#activeList::-webkit-scrollbar{display:none}
+#availList>.card,#activeList>.card{flex:0 0 88%;scroll-snap-align:center;margin:0;align-self:flex-start}
+#availList>.card:only-child,#activeList>.card:only-child{flex-basis:100%}
+#drvName{font-size:17px;font-weight:700}
 </style>
 </head>
 <body>
@@ -238,7 +245,7 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
 </svg>
 
 <section id="login" class="box">
- <svg class="av"><use href="#panda"/></svg>
+ 
  <h2>دخول السائق</h2>
  <form id="lf">
   <label for="un">رقم الهاتف</label>
@@ -255,7 +262,7 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
  <header id="appHeader">
   <div id="appHeaderTitle">
    <button id="menuBtn" class="hbtn" aria-label="القائمة الجانبية"><svg class="ic"><use href="#i-menu"/></svg></button>
-   <svg class="av"><use href="#panda"/></svg>
+   
    <h2 id="drvName">السائق</h2>
   </div>
   <div>
@@ -267,8 +274,8 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
  <div id="sidebarShade"></div>
  <aside id="sidebar" aria-label="قائمة السائق">
   <div class="side-head">
-   <svg class="av"><use href="#panda"/></svg>
-   <div><strong>طلباتي - توصيل</strong><div id="sideDriverName">السائق</div></div>
+   
+   <div><strong id="sideDriverName">السائق</strong></div>
    <button id="sideClose" class="hbtn side-close" aria-label="إغلاق"><svg class="ic"><use href="#i-x"/></svg></button>
   </div>
   <button id="sideStatus" class="status-btn off"><span class="dot"></span><span id="sideStatusTxt">غير متصل</span></button>
@@ -740,8 +747,8 @@ function __main(){
     }
     btn=`<button class="grn" style="width:100%;margin-top:10px" data-a="arrive" data-id="${esc(id)}">وصلت للمتجر</button>`;
    }else if(o.status==="arrived_store"){
-    badge='<span class="badge">وصلت للمتجر</span>';const ok=(now-st)>60000;
-    btn=`<button class="grn" style="width:100%;margin-top:10px" ${ok?"":"disabled"} data-a="pick" data-id="${esc(id)}">${ok?"تم استلام الطلب":"انتظر دقيقة..."}</button>`;
+    badge='<span class="badge">وصلت للمتجر</span>';const ok=(now-st)>180000;
+    btn=`<button class="grn" style="width:100%;margin-top:10px" ${ok?"":"disabled"} data-a="pick" data-id="${esc(id)}">${ok?"تم استلام الطلب":"انتظر 3 دقائق..."}</button>`;
    }else if(["picked_up","delivering"].includes(o.status)){
     badge='<span class="badge">بالطريق للزبون</span>';const ok=(now-st)>300000;
     btn=`<button class="grn" style="width:100%;margin-top:10px" ${ok?"":"disabled"} data-a="done" data-id="${esc(id)}">${ok?"تم التوصيل للزبون":"انتظر 5 دقائق..."}</button>`;
@@ -839,6 +846,7 @@ function __main(){
      const d=getDist(pos.lat,pos.lng,Number(o.storeLat),Number(o.storeLng));
      if(d>300){say("يجب أن تكون قريباً من المتجر (المسافة الحالية "+Math.round(d)+"م)");return}
     }
+    if(a==="arrive"){const t0=typeof o.stepAt==="number"?o.stepAt:0,w=60000-(Date.now()-t0);if(t0&&w>0){say("انتظر "+Math.ceil(w/1000)+" ثانية ثم اضغط وصلت للمتجر");return}}
     if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟")))return;
     const patch={status:ns,stepAt:serverTimestamp()};
     if(ns==="delivered"){

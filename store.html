@@ -244,6 +244,7 @@ function checkWaitingAlarm(activeOrders) {
     if (hasWaiting) {
         if (!alarmTimer) {
             playBeep();
+            try{window.Capacitor.Plugins.StoreAlarm.start()}catch(e){}
             if (window.notifyApp) window.notifyApp('سائق ينتظر موافقتك','افتح التطبيق واضغط قبول السائق');
             alarmTimer = setInterval(playBeep, 4000);
         }
@@ -251,6 +252,7 @@ function checkWaitingAlarm(activeOrders) {
         if (alarmTimer) {
             clearInterval(alarmTimer);
             alarmTimer = null;
+            try{window.Capacitor.Plugins.StoreAlarm.stop()}catch(e){}
         }
     }
 }

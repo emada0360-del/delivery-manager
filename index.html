@@ -114,6 +114,15 @@ td input.pc{margin:0;width:90px;min-height:40px;padding:6px 10px;display:inline-
 
 td a{color:var(--info);font-weight:600;text-decoration:none}
 bdi{direction:ltr;unicode-bidi:isolate}
+
+#asModal{position:fixed;inset:0;background:#0d131a99;display:flex;align-items:flex-end;justify-content:center;z-index:1500}
+#asBox{background:var(--surface);border-radius:24px 24px 0 0;padding:18px;width:min(100%,520px);max-height:85vh;overflow:auto}
+#asBox h3{margin:0 0 4px}
+.drow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px dashed var(--line)}
+.drow:last-child{border-bottom:0}
+.drow b{display:block}
+.drow button{flex:none}
+.chips{margin-top:4px;display:flex;gap:6px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -290,6 +299,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 </div>
 
 <!-- نافذة تعديل (منطقة / متجر / سائق) -->
+<div id="asModal" hidden><div id="asBox"><h3 id="asTitle">اختيار سائق</h3><p class="sub" id="asSub"></p><div id="asList"></div><button type="button" id="asClose" class="gray" style="width:100%;margin-top:12px">إغلاق</button></div></div>
 <div id="editModal" hidden>
   <form id="editForm">
     <h3 id="editTitle">تعديل</h3>
@@ -305,7 +315,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <script type="module">
 import {initializeApp,deleteApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,push,onValue,get} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {getDatabase,ref,set,update,push,onValue,get,runTransaction} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
 const cfg = {
   apiKey: "AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",
@@ -427,6 +437,67 @@ function tickAges(){
 setInterval(tickAges,1000);
 setInterval(()=>{if(started)scheduleDraw()},30000);
 
+
+const carrying=id=>Object.values(orders).filter(o=>o&&o.driverId===id&&!["delivered","cancelled"].includes(o.status)).length;
+const debtTag=id=>{const d=getDebt(id);return `<span class="tag ${d>0?"r":(d<0?"g":"")}">${d>0?"عليه "+fmt(d):(d<0?"رصيد +"+fmt(-d):"لا دين")}</span>`};
+const chipOf=id=>`<div class="chips">${debtTag(id)}<span class="tag b">${carrying(id)} طلب معه</span></div>`;
+// ===== تعيين تلقائي بعد 7 دقائق لأقرب سائق =====
+const FRESH_MS=120000,forcing=new Set();
+function parseLatLng(u){if(!u)return null;const s=decodeURIComponent(String(u));for(const p of [/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/]){const m=s.match(p);if(m){const a=+m[1],b=+m[2];if(Math.abs(a)<=90&&Math.abs(b)<=180)return{lat:a,lng:b}}}return null}
+const hav=(a,b)=>{const R=6371,r=x=>x*Math.PI/180,dl=r(b.lat-a.lat),dg=r(b.lng-a.lng),x=Math.sin(dl/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
+function pickDriver(o){
+ const here=parseLatLng(o.storeMapUrl||(users[o.storeId]&&users[o.storeId].mapUrl)),now=Date.now(),limit=Number(settings.debtLimit??15000);
+ const l=list("driver").filter(([id,u])=>u.isActive!==false&&online(id)&&!carrying(id)&&getDebt(id)<limit).map(([id])=>{const p=pres[id]||{},seen=Number(p.lastSeen)||0;return{id,seen,fresh:now-seen<FRESH_MS,d:(here&&p.lat!=null&&p.lng!=null)?hav(here,{lat:+p.lat,lng:+p.lng}):null}});
+ l.sort((a,b)=>(b.fresh-a.fresh)||((a.d!=null)===(b.d!=null)?(a.d!=null?a.d-b.d:b.seen-a.seen):(a.d!=null?-1:1)));
+ return l[0]||null;
+}
+async function assignOrder(oid,did,auto){
+ const u=users[did]||{};
+ const r=await runTransaction(ref(db,"orders/"+oid),cur=>{
+  if(!cur||["delivered","cancelled"].includes(cur.status))return;
+  if(auto&&(cur.status!=="pending"||cur.driverId))return;
+  const n={...cur,driverId:did,driverName:u.name||"",driverPhone:u.phone||u.username||"",forcedAssign:true,reassignedAt:Date.now()};
+  if(cur.status==="pending"||cur.status==="waiting_store"){n.status="accepted";n.acceptedAt=cur.acceptedAt||Date.now();n.stepAt=Date.now()}
+  if(cur.driverId&&cur.driverId!==did)n.rejectedBy={...(cur.rejectedBy||{}),[cur.driverId]:true};
+  return n;
+ });
+ return r.committed;
+}
+async function unassignOrder(oid){
+ await runTransaction(ref(db,"orders/"+oid),cur=>{
+  if(!cur||["delivered","cancelled"].includes(cur.status))return;
+  const n={...cur,status:"pending"};
+  if(cur.driverId)n.rejectedBy={...(cur.rejectedBy||{}),[cur.driverId]:true};
+  ["driverId","driverName","driverPhone","forcedAssign","acceptedAt","stepAt"].forEach(k=>delete n[k]);
+  return n;
+ });
+}
+function checkForced(){
+ const now=Date.now();
+ for(const [id,o] of Object.entries(orders)){
+  if(!o||o.status!=="pending"||o.driverId||forcing.has(id)||now-(Number(o.createdAt)||now)<7*60000)continue;
+  const d=pickDriver(o);if(!d)continue;
+  forcing.add(id);
+  assignOrder(id,d.id,true).catch(e=>console.warn("force",e)).finally(()=>setTimeout(()=>forcing.delete(id),20000));
+ }
+}
+setInterval(()=>{if(started)checkForced()},15000);
+function openAssign(oid){
+ const o=orders[oid];if(!o)return;
+ $("asTitle").textContent="تعيين الطلب #"+oid.slice(-6)+" لسائق";
+ $("asSub").textContent="يبقى وقت الطلب كما هو. الأحمر = دين على السائق، الأخضر = رصيد زائد.";
+ const rows=list("driver").filter(([,u])=>u.isActive!==false).sort((a,b)=>(online(b[0])-online(a[0]))||(carrying(a[0])-carrying(b[0])));
+ $("asList").innerHTML=rows.length?rows.map(([id,u])=>`<div class="drow"><div><b>${esc(u.name)}${id===o.driverId?" (الحالي)":""}</b><span class="tag ${online(id)?"g":""}">${online(id)?"متصل":"غير متصل"}</span>${chipOf(id)}</div><button type="button" data-pick="${esc(id)}" data-oid="${esc(oid)}" ${id===o.driverId?"disabled":""}>تعيين</button></div>`).join(""):'<p class="empty">لا يوجد سائقون.</p>';
+ $("asModal").hidden=false;
+}
+$("asClose").onclick=()=>{$("asModal").hidden=true};
+$("asModal").onclick=e=>{if(e.target===$("asModal"))$("asModal").hidden=true};
+document.addEventListener("click",e=>{
+ const b=e.target.closest("button");if(!b||b.disabled)return;const d=b.dataset;
+ if(d.as){openAssign(d.as);return}
+ if(d.pick){run(async()=>{const nm=(users[d.pick]||{}).name||"";if(!(await showToastConfirm(`تعيين الطلب للسائق "${nm}"؟`)))return;$("asModal").hidden=true;await assignOrder(d.oid,d.pick,false);say("تم تعيين الطلب.")});return}
+ if(d.un){run(async()=>{if(!(await showToastConfirm("رفع الطلب من السائق وإرجاعه للانتظار؟")))return;await unassignOrder(d.un);say("تم رفع الطلب من السائق.")})}
+});
 const list=r=>Object.entries(users).filter(([,u])=>u&&u.role===r);
 const online=id=>!!(pres[id]&&pres[id].online===true&&Date.now()-(Number(pres[id].lastSeen)||0)<180000);
 const deliveredOrders=id=>Object.values(orders).filter(o=>o&&o.driverId===id&&o.status==="delivered");
@@ -482,6 +553,7 @@ function draw(){
 
  drawOrders();
  drawLiveOrders();
+ checkForced();
 
  const limit=Number(settings.debtLimit??15000);
  $("drivers").innerHTML=table(["الاسم","الحالة","رقم الدخول","مسلّمة","المستحق","تاريخ التسجيل","إجراءات"],drs.map(([id,u])=>{
@@ -553,17 +625,17 @@ function drawLiveOrders(){
  const live=Object.entries(orders).filter(([id,o])=>o&&!["delivered","cancelled"].includes(o.status))
    .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
  $("liveOrders").innerHTML=table(
-   ["الطلب","المتجر","السائق","رقم السائق","الحالة","وقت الإرسال","مدة القبول","منذ الإرسال","منذ القبول"],
+   ["الطلب","المتجر","السائق","رقم السائق","الحالة","وقت الإرسال","مدة القبول","منذ الإرسال","منذ القبول","إجراءات"],
    live.map(([id,o])=>{
      let tagClass="y";
      if(["accepted","arrived_store","picked_up","delivering"].includes(o.status))tagClass="g";
      const dr=o.driverId?users[o.driverId]:null;
      const name=o.driverName||(dr&&dr.name)||"";
      const phone=o.driverPhone||(dr&&(dr.phone||dr.username))||"";
-     const driverName=name?`<b>${esc(name)}</b>`:'<span style="color:#94a3b8">بانتظار سائق</span>';
+     const driverName=name?`<b>${esc(name)}</b>${o.driverId?chipOf(o.driverId):""}`:'<span style="color:#94a3b8">بانتظار سائق</span>';
      const driverPhone=phone?`<a href="tel:${esc(phone)}" dir="ltr">${esc(phone)}</a>`:'—';
      return `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(o.storeName)}</td><td>${driverName}</td>
-       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span>${o.forcedAssign?' <span class="tag b">تعيين تلقائي</span>':''}</td><td>${tm(o.createdAt)}</td><td>${o.acceptedAt&&o.createdAt?fmtAge(o.acceptedAt-o.createdAt):"—"}</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td><td>${o.acceptedAt?`<span class="ageC" data-ts="${Number(o.acceptedAt)}"></span>`:"—"}</td></tr>`;
+       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span>${o.forcedAssign?' <span class="tag b">تعيين تلقائي</span>':''}</td><td>${tm(o.createdAt)}</td><td>${o.acceptedAt&&o.createdAt?fmtAge(o.acceptedAt-o.createdAt):"—"}</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td><td>${o.acceptedAt?`<span class="ageC" data-ts="${Number(o.acceptedAt)}"></span>`:"—"}</td><td><button type="button" data-as="${esc(id)}" class="blue">تعيين لسائق</button>${o.driverId?`<button type="button" data-un="${esc(id)}" class="org">رفع من السائق</button>`:""}</td></tr>`;
    }),"لا توجد طلبات حية الآن."
  );
  tickAges();
