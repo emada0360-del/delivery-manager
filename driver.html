@@ -226,6 +226,24 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
 #availList>.card,#activeList>.card{flex:0 0 88%;scroll-snap-align:center;margin:0;align-self:flex-start}
 #availList>.card:only-child,#activeList>.card:only-child{flex-basis:100%}
 #drvName{font-size:17px;font-weight:700}
+
+/* ===== v2: شريط أرقام الطلبات + نافذة الانتظار ===== */
+#chips{position:sticky;top:0;z-index:20;display:flex;gap:8px;overflow-x:auto;padding:10px 2px 8px;margin:0 0 6px;background:linear-gradient(var(--bg) 78%,transparent);scrollbar-width:none}
+#chips::-webkit-scrollbar{display:none}
+#chips[hidden]{display:none}
+.chip{flex:0 0 auto;border:0;border-radius:999px;padding:9px 16px;font:700 14px var(--font);color:#fff;background:var(--raised);display:flex;align-items:center;gap:7px;direction:ltr;letter-spacing:.4px;opacity:.7;transition:.15s}
+.chip.on{opacity:1;box-shadow:0 0 0 2px var(--ink) inset;transform:translateY(-1px)}
+.chip.new{background:#1f9d6b}.chip.wait{background:#d98a00}.chip.go{background:#2f7df6}.chip.cust{background:#8a4dff}.chip.all{background:var(--brand);direction:rtl}
+.chip b{background:#0005;border-radius:999px;padding:1px 8px;font-size:12px}
+.lock{opacity:.55;filter:saturate(.5)}
+#wmdl{position:fixed;inset:0;z-index:100;background:#000b;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px)}
+#wmdl[hidden]{display:none}
+#wmdl>div{background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:28px 22px 22px;width:100%;max-width:340px;text-align:center;box-shadow:var(--shadow)}
+#wmdl .wi{width:58px;height:58px;margin:0 auto 12px;border-radius:50%;background:var(--amber-soft);color:var(--amber);display:flex;align-items:center;justify-content:center;font-size:30px}
+#wmdl p{margin:0 0 4px;font-size:17px;line-height:1.8;font-weight:600}
+#wmdl .wt{font-size:46px;font-weight:700;color:var(--amber);direction:ltr;margin:8px 0 4px}
+#wmdl small{color:var(--muted);display:block;margin-bottom:18px}
+#wmdl button{width:100%;border:0;border-radius:14px;padding:14px;font:700 16px var(--font);background:var(--raised);color:var(--ink)}
 </style>
 </head>
 <body>
@@ -293,6 +311,7 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
 
  <main>
   <div id="msg"></div>
+  <div id="chips" hidden></div>
   <div id="off" class="warn" hidden>لا يوجد اتصال بالإنترنت. قد لا تصلك الطلبات الجديدة.</div>
   <div id="mainStats">
    <b id="statDone">0</b><b id="statDebt">0</b><b id="statProfit">0</b>
@@ -315,6 +334,7 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
  </main>
 </div>
 
+<div id="wmdl" hidden><div><div class="wi">⏱</div><p id="wmp"></p><div class="wt" id="wmt"></div><small id="wms"></small><button id="wmo" type="button">حسناً</button></div></div>
 <div id="mdl" hidden><div><p id="mdt"></p><div class="mr"><button id="mdy">تأكيد</button><button id="mdn" class="gry">إلغاء</button></div></div></div>
 
 <script>
@@ -535,6 +555,19 @@ function __main(){
   });
  }
  setInterval(updateAges,1000);
+ let selId=null,wmTimer=null;
+ function waitPop(msg,until,sub){
+  const m=$("wmdl"),t=$("wmt");$("wmp").textContent=msg;
+  clearInterval(wmTimer);wmTimer=null;m.hidden=false;
+  const close=()=>{clearInterval(wmTimer);wmTimer=null;m.hidden=true};
+  if(until){
+   t.hidden=false;$("wms").textContent=sub||"يتفعّل الزر تلقائياً بعد انتهاء الوقت";
+   const upd=()=>{const r=until-Date.now();if(r<=0){close();return}t.textContent=fmtAge(r)};
+   upd();wmTimer=setInterval(upd,500);
+  }else{t.hidden=true;$("wms").textContent=""}
+  $("wmo").onclick=close;
+  try{navigator.vibrate&&navigator.vibrate(150)}catch{}
+ }
  function forcedAlert(o){
   const t="تم تعيين طلب لك تلقائياً من متجر "+(o.storeName||"");
   notify("تعيين تلقائي",t,t);speak("تم تعيين طلب جديد لك");say(t);
@@ -704,7 +737,7 @@ function __main(){
    av=Object.entries(pend).filter(([id,o])=>{
     if(!o||o.driverId)return false;
     if(o.rejectedBy&&o.rejectedBy[uid])return false;
-    if(nAct>0)return (now-(o.createdAt||0))>120000;
+    if(nAct>0)return (now-(o.createdAt||0))>60000;
     return true;
    });
    if(seenAv){
@@ -719,9 +752,15 @@ function __main(){
    }
    seenAv=new Set(av.map(([id])=>id));
   }else{seenAv=null}
+  const ids=[...av.map(([id])=>id),...Object.keys(act)];
+  if(selId&&!ids.includes(selId))selId=null;
+  const chipCls=id=>{const o=act[id];if(!o)return"new";return o.status==="waiting_store"?"wait":(o.status==="picked_up"||o.status==="delivering")?"cust":"go"};
+  $("chips").hidden=!ids.length;
+  setHtml("chips",ids.length?`<button type="button" class="chip all ${selId?"":"on"}" data-sel="">الكل <b>${ids.length}</b></button>`+ids.map(id=>`<button type="button" class="chip ${chipCls(id)} ${selId===id?"on":""}" data-sel="${esc(id)}">${esc(id.slice(-6))}</button>`).join(""):"");
+  const avF=av.filter(([id])=>!selId||selId===id);
   document.body.classList.toggle("order-focus",av.length>0);alertLoop(av.length>0);
-  $("availContainer").hidden=!av.length;
-  setHtml("availList",av.map(([id,o])=>`<div class="card new" id="order-${esc(id)}">
+  $("availContainer").hidden=!avF.length;
+  setHtml("availList",avF.map(([id,o])=>`<div class="card new" id="order-${esc(id)}">
    <div class="row"><b>طلب #${esc(id.slice(-6))}</b><div class="age-wrap"><small>منذ</small><span class="age" data-ts="${Number(o.createdAt)||0}"></span></div></div>
    ${heroOf(o)}${tabOpen(id)}
    <div class="tl"><i class="tl-ic s"></i><div class="tl-b"><small>المتجر</small><strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></div></div>
@@ -733,8 +772,8 @@ function __main(){
     <button class="red" data-a="reject" data-id="${esc(id)}">رفض</button>
    </div>
   </div>`).join(""));
-  $("activeContainer").hidden=!nAct;
-  setHtml("activeList",Object.entries(act).map(([id,o])=>{
+  $("activeContainer").hidden=!Object.keys(act).some(id=>!selId||selId===id);
+  setHtml("activeList",Object.entries(act).filter(([id])=>!selId||selId===id).map(([id,o])=>{
    let btn="",warn="",badge="";const q=privData[id]||{},st=typeof o.stepAt==="number"?o.stepAt:0;
    if(o.status==="waiting_store"){
     badge='<span class="badge wait">بانتظار موافقة المتجر</span>';
@@ -747,11 +786,11 @@ function __main(){
     }
     btn=`<button class="grn" style="width:100%;margin-top:10px" data-a="arrive" data-id="${esc(id)}">وصلت للمتجر</button>`;
    }else if(o.status==="arrived_store"){
-    badge='<span class="badge">وصلت للمتجر</span>';const ok=(now-st)>180000;
-    btn=`<button class="grn" style="width:100%;margin-top:10px" ${ok?"":"disabled"} data-a="pick" data-id="${esc(id)}">${ok?"تم استلام الطلب":"انتظر 3 دقائق..."}</button>`;
+    badge='<span class="badge">وصلت للمتجر</span>';const ok=(now-st)>120000;
+    btn=`<button class="grn ${ok?"":"lock"}" style="width:100%;margin-top:10px" data-a="pick" data-id="${esc(id)}">تم استلام الطلب</button>`;
    }else if(["picked_up","delivering"].includes(o.status)){
     badge='<span class="badge">بالطريق للزبون</span>';const ok=(now-st)>300000;
-    btn=`<button class="grn" style="width:100%;margin-top:10px" ${ok?"":"disabled"} data-a="done" data-id="${esc(id)}">${ok?"تم التوصيل للزبون":"انتظر 5 دقائق..."}</button>`;
+    btn=`<button class="grn ${ok?"":"lock"}" style="width:100%;margin-top:10px" data-a="done" data-id="${esc(id)}">تم التوصيل للزبون</button>`;
    }
    const storePhone=String(o.storePhone||"");
    const storeBox=`<div class="customer-box"><b>هاتف المتجر: <span dir="ltr">${esc(storePhone||"غير متوفر")}</span></b>${storePhone?`<div class="btn-group"><a href="tel:${esc(storePhone)}" class="btn-call">اتصال بالمتجر</a></div>`:""}</div>`;
@@ -844,9 +883,10 @@ function __main(){
     const map={arrive:"arrived_store",pick:"picked_up",done:"delivered"},ns=map[a];if(!ns)return;
     if(a==="arrive"&&o.storeLat!=null&&o.storeLng!=null&&pos.lat!=null){
      const d=getDist(pos.lat,pos.lng,Number(o.storeLat),Number(o.storeLng));
-     if(d>300){say("يجب أن تكون قريباً من المتجر (المسافة الحالية "+Math.round(d)+"م)");return}
+     if(d>300){waitPop("أنت بعيد عن المتجر ("+Math.round(d)+" م). اقترب أكثر ثم اضغط «وصلت للمتجر».",0);return}
     }
-    if(a==="arrive"){const t0=typeof o.stepAt==="number"?o.stepAt:0,w=60000-(Date.now()-t0);if(t0&&w>0){say("انتظر "+Math.ceil(w/1000)+" ثانية ثم اضغط وصلت للمتجر");return}}
+    if(a==="arrive"){const t0=typeof o.stepAt==="number"?o.stepAt:0,w=60000-(Date.now()-t0);if(t0&&w>0){waitPop("انتظر دقيقة قبل ما تضغط «وصلت للمتجر»",Date.now()+w);return}}
+    if(a==="pick"||a==="done"){const t0=typeof o.stepAt==="number"?o.stepAt:0,need=a==="pick"?120000:300000,w=need-(Date.now()-t0);if(t0&&w>0){waitPop(a==="pick"?"انتظر دقيقتين قبل ما تضغط «تم استلام الطلب»":"انتظر 5 دقائق قبل ما تضغط «تم التوصيل للزبون»",Date.now()+w);return}}
     if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟")))return;
     const patch={status:ns,stepAt:serverTimestamp()};
     if(ns==="delivered"){
@@ -859,6 +899,7 @@ function __main(){
   }catch(er){say("فشلت العملية: "+(er&&(er.code||er.message)||er))}
   finally{busy=false}
  }
+ $("chips").onclick=e=>{const b=e.target.closest("[data-sel]");if(!b)return;selId=b.dataset.sel||null;draw()};
  $("availList").onclick=act;$("activeList").onclick=act;
  $("btnStatus").onclick=()=>{
   if(debt>=debtLimit)return say("لا يمكنك الاتصال، تجاوزت سقف الدين");

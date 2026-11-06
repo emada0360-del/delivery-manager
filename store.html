@@ -130,6 +130,17 @@ main{max-width:560px;margin:auto;padding:16px}
 .actions button{min-height:50px}
 #btnHistory{width:100%;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);margin-bottom:16px;font-weight:600}
 #activeContainer>h3,#historyContainer h3{font-size:16px;margin:4px 4px 12px}
+
+/* ===== v2: تبويبات عرضية ===== */
+#tabs{position:sticky;top:0;z-index:15;display:flex;gap:6px;background:var(--surface);padding:6px;border-radius:18px;margin:0 0 16px;box-shadow:var(--shadow)}
+#tabs button{flex:1;border:0;background:none;color:var(--muted);padding:12px 6px;border-radius:13px;font:700 14px inherit;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
+#tabs button.on{background:var(--brand);color:#fff}
+#tabs b{background:#0003;border-radius:999px;padding:0 8px;font-size:12px;min-width:20px}
+body[data-tab=active] #createBox,body[data-tab=active] #historyContainer,
+body[data-tab=hist] #createBox,body[data-tab=hist] #activeContainer,body[data-tab=hist] #activeEmpty,
+body[data-tab=new] #activeContainer,body[data-tab=new] #historyContainer,body[data-tab=new] #activeEmpty{display:none!important}
+#btnHistory{display:none}
+#activeEmpty{text-align:center;color:var(--muted);padding:34px 10px}
 </style>
 </head>
 <body>
@@ -153,6 +164,8 @@ main{max-width:560px;margin:auto;padding:16px}
 <div id="msg"></div>
 <div id="announcement" class="box" hidden></div>
 
+<nav id="tabs"><button type="button" data-t="active" class="on">النشطة <b id="actN">0</b></button><button type="button" data-t="hist">سجل الطلبات</button><button type="button" data-t="new">+ طلب جديد</button></nav>
+<div id="activeEmpty" class="box">لا توجد طلبات نشطة حالياً</div>
 <div id="activeContainer" hidden>
   <h3>الطلبات النشطة</h3>
   <div id="activeOrders"></div>
@@ -301,7 +314,7 @@ async function forceAssign(id,o){
  setTimeout(()=>forcing.delete(id),20000);
 }
 function checkForced(){
- return; // التعيين التلقائي معطّل
+ // التعيين التلقائي بعد 7 دقائق لأقرب سائق متاح
  const now=Date.now();
  for(const [id,o] of Object.entries(orders)){
   if(o.status==="pending"&&!o.driverId&&now-(Number(o.createdAt)||now)>=FORCE_MS)forceAssign(id,o);
@@ -482,7 +495,7 @@ $("btnCreate").onclick=async()=>{
   });
   $("price").value="";$("phone").value="";$("cname").value="";$("note").value="";
   $("area").value=""; $("areaSearch").value=""; 
-  calcTotal(); say("تم إرسال الطلب بنجاح");
+  calcTotal(); say("تم إرسال الطلب بنجاح"); goTab("active");
  }catch(e){say("فشل الإرسال: "+e.message,1);}
  $("btnCreate").disabled=false;$("btnCreate").textContent="إرسال الطلب";
 };
@@ -495,7 +508,7 @@ function drawOrders(){
 
  const history=os.filter(([,o])=>["delivered","cancelled"].includes(o.status));
 
- $("activeContainer").hidden = !active.length;
+ $("activeContainer").hidden = !active.length;$("actN").textContent=active.length;$("activeEmpty").hidden=active.length>0;
  $("activeOrders").innerHTML = active.map(([id,o])=>card(id,o,false)).join("");
  $("historyOrders").innerHTML = history.length ? history.map(([id,o])=>card(id,o,true)).join("") : "<p style='color:var(--muted);text-align:center'>لا يوجد سجل.</p>";
  tick();
@@ -554,6 +567,9 @@ window.cancelOrder = async(id) => {
  catch(e){ say("فشل الإلغاء: "+e.message,1); }
 };
 
+function goTab(t){document.body.dataset.tab=t;$("tabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.t===t));window.scrollTo(0,0)}
+document.body.dataset.tab="active";$("historyOrders").hidden=false;
+$("tabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(b)goTab(b.dataset.t)};
 $("btnHistory").onclick = () => { $("historyOrders").hidden = !$("historyOrders").hidden; };
 </script>
 </body>
