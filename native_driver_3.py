@@ -232,3 +232,83 @@ patch(PKG / "MainActivity.java", [
 ])
 
 print("[native_driver_3] تم: location + heartbeat + watchdog + wifi lock + permissions")
+
+# ---------------------------------------------------------------- إشعارات: تعيين تلقائي + إعلان الإدارة
+NOTE_FIELDS = r"""private boolean mineInit = false;
+    private final java.util.HashSet<String> seenForced = new java.util.HashSet<>();
+    private com.google.firebase.database.DatabaseReference annRef;
+    private ValueEventListener annL;"""
+
+NOTE_METHODS = r"""private void pushNote(int id, String title, String text) {
+        try {
+            Intent open = new Intent(this, MainActivity.class);
+            open.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            PendingIntent pi = PendingIntent.getActivity(this, id, open,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            Notification n = new NotificationCompat.Builder(this, ALERT_CHANNEL)
+                .setSmallIcon(getApplicationInfo().icon)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .build();
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm != null) nm.notify(id, n);
+        } catch (Exception e) {}
+    }
+
+    private void checkForced(DataSnapshot s) {
+        try {
+            for (DataSnapshot c : s.getChildren()) {
+                Object st = c.child("status").getValue();
+                Object f = c.child("forcedAssign").getValue();
+                if (st == null || !"accepted".equals(String.valueOf(st)) || !Boolean.TRUE.equals(f)) continue;
+                String k = c.getKey();
+                if (k == null || !seenForced.add(k)) continue;
+                if (mineInit) {
+                    Object sn = c.child("storeName").getValue();
+                    pushNote(7501, "\u062a\u0645 \u062a\u0639\u064a\u064a\u0646 \u0637\u0644\u0628 \u0644\u0643 \u062a\u0644\u0642\u0627\u0626\u064a\u0627\u064b", sn == null ? "" : String.valueOf(sn));
+                }
+            }
+        } catch (Exception e) {}
+        mineInit = true;
+    }
+
+    private void startAnn(FirebaseDatabase db) {
+        try {
+            annRef = db.getReference("settings/announcement");
+            annL = new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot s) {
+                    Object v = s.getValue();
+                    String t = v == null ? "" : String.valueOf(v).trim();
+                    android.content.SharedPreferences sp = getSharedPreferences("drv_ann", MODE_PRIVATE);
+                    String last = sp.getString("ann", null);
+                    sp.edit().putString("ann", t).apply();
+                    if (last != null && !t.isEmpty() && !t.equals(last)) pushNote(7502, "\u0625\u0639\u0644\u0627\u0646 \u0645\u0646 \u0627\u0644\u0625\u062f\u0627\u0631\u0629", t);
+                }
+                @Override
+                public void onCancelled(DatabaseError e) {}
+            };
+            annRef.addValueEventListener(annL);
+        } catch (Exception e) {}
+    }
+
+    private void stopAnn() {
+        try { if (annRef != null && annL != null) annRef.removeEventListener(annL); } catch (Exception e) {}
+        annRef = null; annL = null;
+    }
+
+    private void showAlert(String text) {"""
+
+patch(PKG / "DriverStatusService.java", [
+    ("private boolean conn = false;", "private boolean conn = false;\n    " + NOTE_FIELDS),
+    ("hasActive = act;", "hasActive = act;\n                    checkForced(s);"),
+    ("connRef.addValueEventListener(connL);", "connRef.addValueEventListener(connL);\n            startAnn(db);"),
+    ("connRef = null; connL = null; conn = false;", "stopAnn(); mineInit = false; seenForced.clear();\n        connRef = null; connL = null; conn = false;"),
+    ("private void showAlert(String text) {", NOTE_METHODS.replace("\u062a\u0645 \u062a\u0639\u064a\u064a\u0646 \u0637\u0644\u0628 \u0644\u0643 \u062a\u0644\u0642\u0627\u0626\u064a\u0627\u064b", "\u062a\u0645 \u062a\u0639\u064a\u064a\u0646 \u0637\u0644\u0628 \u0644\u0643 \u062a\u0644\u0642\u0627\u0626\u064a\u0627\u064b").replace("\u0625\u0639\u0644\u0627\u0646 \u0645\u0646 \u0627\u0644\u0625\u062f\u0627\u0631\u0629", "\u0625\u0639\u0644\u0627\u0646 \u0645\u0646 \u0627\u0644\u0625\u062f\u0627\u0631\u0629")),
+])
+print("[native_driver_3] تم: إشعار التعيين التلقائي + إعلان الإدارة")
