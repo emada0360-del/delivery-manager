@@ -303,8 +303,10 @@ function checkForced(){
   if(o.status==="pending"&&!o.driverId&&now-(Number(o.createdAt)||now)>=FORCE_MS)forceAssign(id,o);
  }
 }
+const countOnline=()=>Object.values(presenceData).filter(x=>x&&x.online===true&&Date.now()-(Number(x.lastSeen)||0)<180000).length;
 function tick(){
  const now=Date.now();
+ {const c=countOnline();if(c!==driversOnline){driversOnline=c;$("onCount").textContent=c;$("pulse").className="dot "+(c>0?"":"off")}}
  document.querySelectorAll(".cd[data-ts]").forEach(e=>{
   const d=now-Number(e.dataset.ts),rem=FORCE_MS-d;
   e.style.setProperty("--p",Math.min(100,Math.max(0,d/FORCE_MS*100)));
@@ -354,7 +356,7 @@ function start(){
  }));
  stops.push(onValue(ref(db,"presence"),s=>{
   const p=s.val()||{};
-  presenceData=p;driversOnline=Object.values(p).filter(x=>x&&x.online===true).length;
+  presenceData=p;driversOnline=countOnline();
   $("onCount").textContent=driversOnline;
   $("pulse").className="dot "+(driversOnline>0?"":"off");checkForced();
  }));

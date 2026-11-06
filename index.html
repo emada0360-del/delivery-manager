@@ -397,7 +397,7 @@ function start(){
  for(const p in src)onValue(ref(db,p),s=>{
    const v=s.val()||{};
    const key=p==="presence"
-     ? Object.entries(v).map(([k,x])=>k+":"+(x&&x.online===true)).join(",")
+     ? Object.entries(v).map(([k,x])=>k+":"+(x&&x.online===true)+":"+Math.floor((Number(x&&x.lastSeen)||0)/30000)).join(",")
      : JSON.stringify(v);
    if(prev[p]===key)return;
    prev[p]=key;
@@ -425,9 +425,10 @@ function tickAges(){
  });
 }
 setInterval(tickAges,1000);
+setInterval(()=>{if(started)scheduleDraw()},30000);
 
 const list=r=>Object.entries(users).filter(([,u])=>u&&u.role===r);
-const online=id=>pres[id]&&pres[id].online===true;
+const online=id=>!!(pres[id]&&pres[id].online===true&&Date.now()-(Number(pres[id].lastSeen)||0)<180000);
 const deliveredOrders=id=>Object.values(orders).filter(o=>o&&o.driverId===id&&o.status==="delivered");
 const orderComm=o=>(Number(o.platformDeliveryCommission)||0)+(Number(o.storeCommission)||0);
 
