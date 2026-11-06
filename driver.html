@@ -716,8 +716,6 @@ function __main(){
   $("availContainer").hidden=!av.length;
   setHtml("availList",av.map(([id,o])=>`<div class="card new" id="order-${esc(id)}">
    <div class="row"><b>طلب #${esc(id.slice(-6))}</b><div class="age-wrap"><small>منذ</small><span class="age" data-ts="${Number(o.createdAt)||0}"></span></div></div>
-   <div class="wbar"><i data-ts="${Number(o.createdAt)||0}"></i></div>
-   <div class="wnote">إذا لم يقبله أحد خلال 7 دقائق يُعيَّن لأقرب سائق.</div>
    ${heroOf(o)}${tabOpen(id)}
    <div class="tl"><i class="tl-ic s"></i><div class="tl-b"><small>المتجر</small><strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></div></div>
    <div class="tl"><i class="tl-ic c"></i><div class="tl-b"><small>المنطقة</small><strong class="area-name">${esc(o.area||"غير محددة")}</strong></div></div>
@@ -763,7 +761,7 @@ function __main(){
     </div>`;
    }
    return `<div class="card ${o.status==="waiting_store"?"waiting":""}" id="order-${esc(id)}">
-    <div class="row"><b>طلب #${esc(id.slice(-6))}</b>${o.forcedAssign?'<span class="badge forced">تعيين تلقائي</span>':''}<div class="age-wrap"><small>منذ</small><span class="age" data-ts="${Number(o.createdAt)||0}"></span></div></div>
+    <div class="row"><b>طلب #${esc(id.slice(-6))}</b>${o.forcedAssign?'<span class="badge forced">تعيين تلقائي</span>':''}<div class="age-wrap"><small>منذ القبول</small><span class="age" data-ts="${Number(o.acceptedAt)||Number(o.createdAt)||0}"></span></div></div>
     ${heroOf(o)}${tabOpen(id)}
     <div class="tl"><i class="tl-ic s"></i><div class="tl-b"><small>المتجر</small><strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></div></div>
     <div class="tl"><i class="tl-ic c"></i><div class="tl-b"><small>المنطقة</small><strong class="area-name">${esc(o.area||"غير محددة")}</strong></div></div>

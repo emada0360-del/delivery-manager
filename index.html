@@ -169,7 +169,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <section id="t9" class="tab" hidden>
 <div class="box">
   <h3>الطلبات الحية</h3>
-  <p class="sub">الطلبات الجارية الآن، مع وقت انتظارها واسم السائق ورقمه. أي طلب ينتظر أكثر من 7 دقائق يُعيَّن تلقائياً لأقرب سائق.</p>
+  <p class="sub">الطلبات الجارية الآن، مع وقت انتظارها واسم السائق ورقمه.</p>
   <div id="liveOrders" class="wrap"></div>
 </div>
 </section>
@@ -553,7 +553,7 @@ function drawLiveOrders(){
  const live=Object.entries(orders).filter(([id,o])=>o&&!["delivered","cancelled"].includes(o.status))
    .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
  $("liveOrders").innerHTML=table(
-   ["الطلب","المتجر","السائق","رقم السائق","الحالة","منذ"],
+   ["الطلب","المتجر","السائق","رقم السائق","الحالة","وقت الإرسال","مدة القبول","منذ الإرسال","منذ القبول"],
    live.map(([id,o])=>{
      let tagClass="y";
      if(["accepted","arrived_store","picked_up","delivering"].includes(o.status))tagClass="g";
@@ -563,7 +563,7 @@ function drawLiveOrders(){
      const driverName=name?`<b>${esc(name)}</b>`:'<span style="color:#94a3b8">بانتظار سائق</span>';
      const driverPhone=phone?`<a href="tel:${esc(phone)}" dir="ltr">${esc(phone)}</a>`:'—';
      return `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(o.storeName)}</td><td>${driverName}</td>
-       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span>${o.forcedAssign?' <span class="tag b">تعيين تلقائي</span>':''}</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td></tr>`;
+       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span>${o.forcedAssign?' <span class="tag b">تعيين تلقائي</span>':''}</td><td>${tm(o.createdAt)}</td><td>${o.acceptedAt&&o.createdAt?fmtAge(o.acceptedAt-o.createdAt):"—"}</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td><td>${o.acceptedAt?`<span class="ageC" data-ts="${Number(o.acceptedAt)}"></span>`:"—"}</td></tr>`;
    }),"لا توجد طلبات حية الآن."
  );
  tickAges();
