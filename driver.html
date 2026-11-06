@@ -743,7 +743,7 @@ function __main(){
    Promise.resolve(plugin.updateStatus({online})).catch(()=>{lastNativeDriverStatus=null;});
   }catch(_){lastNativeDriverStatus=null;}
  }
- function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة المتجر"],accepted:["h-store","بالطريق للمتجر"],arrived_store:["h-at","وصلت للمتجر"],picked_up:["h-cust","في الطريق الى الزبون"],delivering:["h-cust","في الطريق الى الزبون"]}[o.status]||["h-new","طلب جديد"];return `<div class="hero ${m[0]}"><i class="hero-ic"></i><div class="hero-t">${m[1]}</div><div class="hero-s">قيمة التوصيل ${fmt(Number(o.deliveryFee)||0)} د.ع</div></div>`}
+ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة المتجر"],accepted:["h-store","بالطريق للمتجر"],arrived_store:["h-at","وصلت للمتجر"],picked_up:["h-cust","بالطريق للزبون"],delivering:["h-cust","بالطريق للزبون"]}[o.status]||["h-new","طلب جديد"];return `<div class="hero ${m[0]}"><i class="hero-ic"></i><div class="hero-t">${m[1]}</div><div class="hero-s">قيمة التوصيل ${fmt(Number(o.deliveryFee)||0)} د.ع</div></div>`}
  const tabSt={};
  function tabOpen(id){const t=tabSt[id]||"d",i=esc(id);return `<div class="tabs"><button type="button" class="tab ${t==="d"?"on":""}" data-tab="d" data-id="${i}">التفاصيل</button><button type="button" class="tab ${t==="f"?"on":""}" data-tab="f" data-id="${i}">الحساب المالي</button></div><div class="pane" data-pane="d" ${t==="d"?"":"hidden"}>`}
  function tabMid(id){return `</div><div class="pane" data-pane="f" ${(tabSt[id]||"d")==="f"?"":"hidden"}>`}
@@ -913,7 +913,7 @@ function __main(){
   const today=orders.filter(([id,o])=>Number(o.createdAt||o.acceptedAt||o.deliveredAt||0)>=t0);
   const cash=Object.values(finance).filter(f=>f&&f.type==="cash_received").reduce((a,f)=>a+Number(f.amount||0),0);
   const money=n=>fmt(n)+" د.ع";
-  const statusName=o=>({pending:"بانتظار سائق",waiting_store:"بانتظار المتجر",accepted:"بالطريق للمتجر",arrived_store:"وصل للمتجر",picked_up:"استلم الطلب",delivering:"بالطريق للزبون",delivered:"مكتمل",cancelled:"ملغي"}[o.status]||o.status||"غير معروف");
+  const statusName=o=>({pending:"بانتظار سائق",waiting_store:"بانتظار موافقة المتجر",accepted:"بالطريق للمتجر",arrived_store:"وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"}[o.status]||o.status||"غير معروف");
   const orderRows=list=>list.length?list.map(([id,o])=>`<div class="side-order"><b>طلب #${esc(id.slice(-6))}</b><br>المتجر: ${esc(o.storeName||"غير محدد")}<br>الحالة: ${esc(statusName(o))}<br>المنطقة: ${esc(o.area||"غير محددة")}<br>${o.status==="delivered"?"ربح السائق: "+money(o.driverProfit||0):""}</div>`).join(""):'<div class="side-empty">لا توجد بيانات لعرضها حالياً.</div>';
   let html="";
   if(sideTab==="overview")html=`<div class="side-panel"><h3>ملخص الحساب</h3><div class="side-stat"><span>إجمالي الطلبات</span><b>${totalCount}</b></div><div class="side-stat"><span>الطلبات المكتملة</span><b>${completedCount}</b></div><div class="side-stat"><span>طلبات اليوم</span><b>${dailyCount}</b></div><div class="side-stat"><span>أرباح اليوم</span><b>${money(todayProfit)}</b></div><div class="side-stat"><span>الدين الحالي</span><b>${money(debt)}</b></div><div class="side-stat"><span>المبالغ المسددة للإدارة</span><b>${money(cash)}</b></div><div class="side-stat"><span>سقف الدين</span><b>${money(debtLimit)}</b></div><div class="side-stat"><span>حالة السائق</span><b>${isOnline?"متصل":"غير متصل"}</b></div></div>`;
