@@ -60,6 +60,9 @@ import android.content.pm.PackageManager;
 import android.content.pm.ServiceInfo;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Bundle;
 import android.os.Looper;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -69,6 +72,13 @@ SERVICE_FIELDS = r'''private boolean conn = false;
     private WifiManager.WifiLock wifiLock;
     private final Handler beat = new Handler(Looper.getMainLooper());
     private boolean beating = false;
+    private LocationManager lm;
+    private final LocationListener gpsL = new LocationListener() {
+        @Override public void onLocationChanged(android.location.Location l) {}
+        @Override public void onProviderEnabled(String p) {}
+        @Override public void onProviderDisabled(String p) {}
+        @Override public void onStatusChanged(String p, int s, Bundle b) {}
+    };
     private int missed = 0;
     private final Runnable beatTask = new Runnable() {
         @Override
@@ -87,7 +97,7 @@ SERVICE_FIELDS = r'''private boolean conn = false;
                 missed = 0;
             }
             refreshStatus();
-            if (beating) beat.postDelayed(this, 20000L);
+            if (beating) beat.postDelayed(this, 10000L);
         }
     };'''
 
@@ -135,12 +145,31 @@ SERVICE_METHODS = r'''private void goForeground(Notification n) {
     private void startBeat() {
         if (beating) return;
         beating = true;
-        beat.postDelayed(beatTask, 20000L);
+        beat.postDelayed(beatTask, 10000L);
+        startGps();
+    }
+
+    // طلب تحديثات GPS حقيقية: نظام أندرويد لا يجمّد خدمة الموقع النشطة (مثل تطبيق طلباتي)
+    private void startGps() {
+        try {
+            if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return;
+            if (lm == null) lm = (LocationManager) getSystemService(LOCATION_SERVICE);
+            if (lm == null) return;
+            lm.removeUpdates(gpsL);
+            try { lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000L, 0f, gpsL, Looper.getMainLooper()); } catch (Exception e) {}
+            try { lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000L, 0f, gpsL, Looper.getMainLooper()); } catch (Exception e) {}
+        } catch (Exception e) {}
+    }
+
+    private void stopGps() {
+        try { if (lm != null) lm.removeUpdates(gpsL); } catch (Exception e) {}
     }
 
     private void stopBeat() {
         beating = false;
         beat.removeCallbacks(beatTask);
+        stopGps();
     }
 
     private void acquireWake() {'''
