@@ -53,7 +53,7 @@ input{width:100%;padding:13px;border:1px solid var(--ln);border-radius:12px;font
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,push,onValue,onChildAdded,get} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {getDatabase,ref,set,update,push,onValue,onChildAdded,get,query,orderByChild,equalTo} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 const cfg={apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",authDomain:"baqubah-delivery-e729e.firebaseapp.com",databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",projectId:"baqubah-delivery-e729e",storageBucket:"baqubah-delivery-e729e.firebasestorage.app",messagingSenderId:"450084520701",appId:"1:450084520701:web:719e2040338540ce36f494"};
 const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
 const $=id=>document.getElementById(id),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -168,7 +168,7 @@ onAuthStateChanged(auth,async u=>{
  unsubs.push(onValue(ref(db,"restaurants"),s=>{rests=s.val()||{};drawList()}));
  unsubs.push(onValue(ref(db,"customerZones"),s=>{zones=s.val()||{};drawList()}));
  unsubs.push(onValue(ref(db,"settings/custFees"),s=>{fees=s.val()||[];drawList()}));
- unsubs.push(onValue(ref(db,"customerOrders"),s=>{const all=s.val()||{};orders={};for(const k in all)if(all[k].customerId===u.uid)orders[k]=all[k];drawCur()}));
+ unsubs.push(onValue(query(ref(db,"customerOrders"),orderByChild("customerId"),equalTo(u.uid)),s=>{orders=s.val()||{};drawCur()}));
 });
 
 // ---- الخارطة والموقع ----
