@@ -99,6 +99,7 @@ h4{margin:16px 4px 10px;font-size:15px;color:var(--mu);font-weight:600}
 <div id="locGate" hidden style="position:fixed;inset:0;z-index:99999;background:#0d131a;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px">
  <div style="font-size:56px">📍</div><b style="font-size:20px">تحديد الموقع مطلوب</b>
  <div id="locMsg" style="color:#c9d4e0;line-height:1.7">اسمح للتطبيق بالوصول إلى موقعك لتحديد أجرة التوصيل ومعرفة المطاعم المتاحة.</div>
+ <small id="locDbg" style="opacity:.55;direction:ltr;word-break:break-all;font-size:11px"></small>
  <button id="locBtn" class="g" style="width:100%;max-width:320px">السماح بتحديد الموقع</button>
 </div>
 <div id="menuM" hidden><div class="bar"><button class="l" id="mx">رجوع</button><button id="mo">فتح في المتصفح</button></div><iframe id="mf" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe></div>
@@ -250,7 +251,7 @@ function initMap(){
  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map);
 }
 function setLoc(la,ln){loc={lat:la,lng:ln};$("locGate").hidden=true;if(pin)pin.setLatLng([la,ln]);else pin=L.marker([la,ln]).addTo(map);$("locS").textContent="تم تحديد موقعك ✓";drawList()}
-$("locEdit").onclick=$("gps").onclick=()=>{locTry++;if(wid!=null){try{const G=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Geolocation;G?G.clearWatch({id:wid}):navigator.geolocation.clearWatch(wid)}catch(e){}wid=null}needLoc()};
+$("locEdit").onclick=$("gps").onclick=()=>{locTry++;stopWatches();needLoc()};
 const km=(a,b,c,d)=>{const r=x=>x*Math.PI/180,h=Math.sin(r(c-a)/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(r(d-b)/2)**2;return 12742*Math.asin(Math.sqrt(h))};
 function ll(u){const s=decodeURIComponent(String(u||""));for(const re of [/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/]){const m=s.match(re);if(m)return{lat:+m[1],lng:+m[2]}}return null}
 function quote(r){
@@ -262,43 +263,65 @@ function quote(r){
  return ringF?{ok:true,fee:ringF.fee,km:d}:{ok:false,why:"المسافة أبعد من نطاق التوصيل"};
 }
 
-let locTry=0,wid=null,retryT=null;
+let locTry=0,wN=null,wW=null,retryT=null,dbg=[];
+function D(t){dbg.push(t);if(dbg.length>7)dbg.shift();const e=$("locDbg");if(e)e.textContent=dbg.join(" | ")}
 function gateMsg(h){$("locGate").hidden=false;$("locMsg").innerHTML=h}
+function NGp(){return window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Geolocation}
+function stopWatches(){
+ try{if(wN!=null&&NGp())NGp().clearWatch({id:wN})}catch(e){}wN=null;
+ try{if(wW!=null)navigator.geolocation.clearWatch(wW)}catch(e){}wW=null;
+}
 function onFix(p){
- const la=p.coords.latitude,ln=p.coords.longitude,ac=Math.round(p.coords.accuracy||0);
- if(loc&&loc.acc&&ac>loc.acc*1.5&&ac>50)return; // تجاهل قراءة أسوأ بكثير
- setLoc(la,ln);loc.acc=ac;
- if(map){map.setView([la,ln],Math.max(map.getZoom(),16));setTimeout(()=>map.invalidateSize(),60)}
- const a=$("accS");if(a)a.textContent="دقة الموقع: ~"+ac+" متر";
- $("locGate").hidden=true;clearTimeout(retryT);
+ try{
+  const la=p.coords.latitude,ln=p.coords.longitude,ac=Math.round(p.coords.accuracy||0);
+  $("locGate").hidden=true;clearTimeout(retryT);
+  if(loc&&loc.acc&&ac>loc.acc*1.5&&ac>50)return;
+  setLoc(la,ln);loc.acc=ac;
+  if(map){map.setView([la,ln],Math.max(map.getZoom(),16));setTimeout(()=>map.invalidateSize(),60)}
+  const a=$("accS");if(a)a.textContent="دقة الموقع: ~"+ac+" متر";
+ }catch(e){D("fixerr:"+(e&&e.message))}
 }
 function onErr(er){
- $("locMsg").dataset.err=er&&er.code;window.__locErr=er&&er.code;
  if(er&&er.code===1){gateMsg("الموقع إجباري لاستخدام التطبيق.<br>افتح إعدادات الهاتف ← التطبيقات ← الأذونات ← الموقع ← <b>السماح</b> (مع تفعيل <b>الموقع الدقيق</b>)، ثم ارجع واضغط الزر.");return}
- gateMsg("تعذر تحديد موقعك بدقة. فعّل <b>GPS</b> (وضع الدقة العالية) وتأكد من الإنترنت، وسنعيد المحاولة تلقائياً.<br><small style=\"opacity:.6\">رمز الخطأ: "+((er&&er.code)||"؟")+"</small>");
+ gateMsg("تعذر تحديد موقعك بدقة. فعّل <b>GPS</b> (وضع الدقة العالية) وتأكد من الإنترنت، وسنعيد المحاولة تلقائياً.");
  clearTimeout(retryT);retryT=setTimeout(()=>{if(!loc)needLoc()},5000);
 }
-async function needLocNative(NG){
- try{
-  let pr=await NG.checkPermissions();
-  if(pr.location!=="granted"){pr=await NG.requestPermissions({permissions:["location"]})}
-  if(pr.location!=="granted"&&pr.coarseLocation!=="granted"){onErr({code:1});return}
-  const p=await NG.getCurrentPosition({enableHighAccuracy:true,timeout:20000,maximumAge:0});
-  onFix(p);
-  if(wid==null)wid=await NG.watchPosition({enableHighAccuracy:true,timeout:30000,maximumAge:5000},(pos,err)=>{if(pos)onFix(pos);else if(!loc)onErr({code:2})});
- }catch(e){const m=String(e&&e.message||e).toLowerCase();onErr({code:/denied|permission/.test(m)?1:2})}
-}
+const TO=(p,ms,t)=>Promise.race([p,new Promise((_,j)=>setTimeout(()=>j(new Error(t+" timeout")),ms))]);
 function needLoc(){
- const NG=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Geolocation;
- if(NG){if(!loc)gateMsg("جارٍ تحديد موقعك بدقة عالية...");return needLocNative(NG)}
- if(!navigator.geolocation||window.isSecureContext===false){gateMsg("هذا الجهاز/المتصفح لا يدعم تحديد الموقع بشكل آمن. افتح التطبيق من رابط https أو حدّث التطبيق.");return}
- if(!loc)gateMsg("جارٍ تحديد موقعك بدقة عالية...");
- const my=++locTry;let got=false;
- // بعض الـ WebView لا ترجع أي استجابة
- setTimeout(()=>{if(!got&&my===locTry&&!loc)onErr({code:3})},15000);
- const opt={enableHighAccuracy:true,timeout:20000,maximumAge:0};
- navigator.geolocation.getCurrentPosition(p=>{got=true;onFix(p)},er=>{got=true;onErr(er)},opt);
- if(wid==null)wid=navigator.geolocation.watchPosition(onFix,er=>{if(!loc)onErr(er)},{enableHighAccuracy:true,maximumAge:5000,timeout:30000});
+ if(loc){$("locGate").hidden=true;return}
+ stopWatches();dbg=[];
+ const my=++locTry;let fails=0,total=0,denied=false;
+ gateMsg("جارٍ تحديد موقعك بدقة عالية...");
+ const fail=(tag,e)=>{
+  if(my!==locTry||loc)return;
+  const m=String((e&&(e.message||e.code))||e);D(tag+":"+m);
+  if((e&&e.code===1)||/denied|permission/i.test(m))denied=true;
+  if(++fails>=total)onErr({code:denied?1:2});
+ };
+ const NG=NGp();
+ D(NG?"native:yes":"native:no");
+ if(NG){total++;(async()=>{
+  try{
+   let pr=await TO(NG.checkPermissions(),6000,"check");
+   D("perm:"+pr.location+"/"+pr.coarseLocation);
+   if(pr.location!=="granted"&&pr.coarseLocation!=="granted"){
+    pr=await TO(NG.requestPermissions({permissions:["location"]}),30000,"request");
+    D("perm2:"+pr.location+"/"+pr.coarseLocation);
+   }
+   if(pr.location!=="granted"&&pr.coarseLocation!=="granted"){fail("native",{code:1,message:"denied"});return}
+   const p=await TO(NG.getCurrentPosition({enableHighAccuracy:true,timeout:15000,maximumAge:0}),20000,"get");
+   D("native fix");onFix(p);
+   if(wN==null)wN=await NG.watchPosition({enableHighAccuracy:true,timeout:30000,maximumAge:5000},(pos,err)=>{if(pos)onFix(pos)});
+  }catch(e){fail("native",e)}
+ })()}
+ if(navigator.geolocation&&window.isSecureContext!==false){total++;
+  navigator.geolocation.getCurrentPosition(p=>{if(my!==locTry)return;D("web fix");onFix(p);
+   if(wW==null)try{wW=navigator.geolocation.watchPosition(onFix,()=>{},{enableHighAccuracy:true,maximumAge:5000,timeout:30000})}catch(e){}
+  },e=>fail("web",e),{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+ }
+ if(!total)onErr({code:2});
+ // شبكة أمان: إذا ما رجع أي شيء خلال 25 ثانية
+ setTimeout(()=>{if(my===locTry&&!loc){D("watchdog");onErr({code:denied?1:2})}},25000);
 }
 $("locBtn").onclick=needLoc;
 try{navigator.permissions&&navigator.permissions.query({name:"geolocation"}).then(r=>{r.onchange=()=>{if(me&&!loc)needLoc()}})}catch(e){}
