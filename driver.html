@@ -682,7 +682,7 @@ function __main(){
  function fetchPrivate(){
   Object.keys(activeOf()).forEach(id=>{
    if(privData[id])return;
-   get(ref(db,"orderPrivate/"+id)).then(s=>{if(s.exists()){privData[id]=s.val();draw()}}).catch(()=>{});
+   get(ref(db,"orderPrivate/"+id)).then(async s=>{let v=s.exists()?s.val():null;if(v&&!v.customerPhone&&mine[id]&&mine[id].customerOrderId){try{const c=(await get(ref(db,"customerOrderPrivate/"+mine[id].customerOrderId))).val();if(c)v={...v,customerPhone:c.phone||"",customerName:c.name||v.customerName||""}}catch(e){}}if(v){privData[id]=v;draw()}}).catch(()=>{});
   });
  }
  function stats(){
@@ -864,15 +864,16 @@ function __main(){
    const storePhone=String(o.storePhone||"");
    const storeBox=`<div class="customer-box"><b>هاتف المتجر: <span dir="ltr">${esc(storePhone||"غير متوفر")}</span></b>${storePhone?`<div class="btn-group"><a href="tel:${esc(storePhone)}" class="btn-call">اتصال بالمتجر</a></div>`:""}</div>`;
    let cust="";
-   if(q.customerPhone&&o.status!=="waiting_store"){
-    const cp=String(q.customerPhone);
+   if((q.customerPhone||q.note||q.customerName)&&o.status!=="waiting_store"){
+    const cp=String(q.customerPhone||"");
     const digits=cp.replace(/\D/g,"");
     const international=digits.startsWith("964")?digits:(digits.startsWith("0")?"964"+digits.slice(1):"964"+digits);
     const wa="https://wa.me/"+international+"?text="+encodeURIComponent("مرحباً، أنا سائق التوصيل، يرجى إرسال موقعك لتوصيل الطلب.");
-    cust=`<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(cp)}</span></b>
+    cust=`<div class="customer-box"><b>هاتف الزبون: <span dir="ltr">${esc(cp||"غير متوفر")}</span></b>
      ${q.customerName?`<div class="note">الاسم: ${esc(q.customerName)}</div>`:""}
-     ${q.note?`<div class="note n2">ملاحظة: ${esc(q.note)}</div>`:""}
-     <div class="btn-group"><a href="tel:${esc(cp)}" class="btn-call">اتصال</a><a href="${esc(wa)}" target="_blank" rel="noopener" class="btn-wa">واتساب — طلب الموقع</a></div>
+     ${q.note?`<div class="note n2">ملاحظة: ${esc(String(q.note).replace(/https?:\/\/\S+/,"").trim())}</div>`:""}
+     ${(String(q.note||"").match(/https?:\/\/\S+/)||[""])[0]?`<a class="map-link" href="${esc((String(q.note).match(/https?:\/\/\S+/)||[""])[0])}" target="_blank" rel="noopener">فتح موقع الزبون على الخريطة</a>`:""}
+     ${cp?`<div class="btn-group"><a href="tel:${esc(cp)}" class="btn-call">اتصال</a><a href="${esc(wa)}" target="_blank" rel="noopener" class="btn-wa">واتساب — طلب الموقع</a></div>`:""}
     </div>`;
    }
    return `<div class="card ${o.status==="waiting_store"?"waiting":""}" id="order-${esc(id)}">
@@ -944,6 +945,7 @@ function __main(){
     const snap=await get(r),current=snap.val();
     if(!current||current.status!=="pending"||current.driverId){say("تم قبول الطلب المتوفر من سائق آخر قبلك");speak("تم قبول الطلب المتوفر من سائق آخر قبلك");return}
     await update(r,{driverId:uid,driverName:driver.name||"",driverPhone:driver.phone||"",status:"waiting_store",stepAt:serverTimestamp(),acceptedAt:Date.now()});
+    if(current.customerOrderId)update(ref(db,"customerOrders/"+current.customerOrderId),{status:"waiting_store"}).catch(()=>{});
     say("تم قبول الطلب، بانتظار موافقة المتجر");speak("تم قبول الطلب، بانتظار موافقة المتجر");
    }else if(a==="reject"){
     await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]:true});say("تم رفض الطلب.");
@@ -963,6 +965,7 @@ function __main(){
      patch.deliveredAt=Date.now();patch.driverProfit=p;patch.platformDeliveryCommission=Math.round(fee-p);
     }
     await update(r,patch);
+    if(o.customerOrderId)update(ref(db,"customerOrders/"+o.customerOrderId),{status:ns}).catch(()=>{});
     if(ns==="delivered")speak("تم التوصيل بنجاح");else speak("تم تحديث الحالة");
    }
   }catch(er){say("فشلت العملية: "+(er&&(er.code||er.message)||er))}

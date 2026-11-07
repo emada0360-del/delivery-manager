@@ -484,7 +484,7 @@ async function confirmCustomerOrder(id,p){
   ["orderPrivate/"+id]:{storeId:uid,customerPhone:String(pv.phone||""),...(pv.name?{customerName:String(pv.name)}:{}),note},
   ["customerOrders/"+id+"/price"]:p,["customerOrders/"+id+"/priceAt"]:now,["customerOrders/"+id+"/status"]:"pending"
  });
- if(!pv.phone)say("تم إرسال الطلب للسائقين لكن رقم الزبون لم يُقرأ (صلاحيات القاعدة)",1);else say("تم إرسال طلب الزبون للسائقين");
+ say("تم إرسال الطلب للسائقين");
  goTab("pend");
 }
 const synced={};
@@ -717,6 +717,8 @@ function card(id,o,isHistory){
  let actionHtml="";
  if(o.status==="waiting_store"){
   actionHtml=`<div class="actions"><button class="ok" onclick="acceptDriver('${esc(id)}')">قبول السائق</button><button class="bad" onclick="cancelOrder('${esc(id)}')">رفض</button></div>`;
+ }else if(o.status==="pending"||o.status==="accepted"){
+  actionHtml=`<div class="actions"><button class="bad" onclick="cancelOrder('${esc(id)}')">إلغاء الطلب</button></div>`;
  }
  const storeCom=Number(o.storeCommission!==undefined?o.storeCommission:getStoreCom());
  const receiveAmt=Math.max(0,(Number(o.itemPrice)||0)-storeCom);
@@ -729,7 +731,7 @@ function card(id,o,isHistory){
    <div class="summary-row"><span>المجموع من الزبون</span> <b>${fmt(o.customerTotal)} د.ع</b></div>
    <div class="summary-row"><span>صافي ربحك</span> <b>${fmt(receiveAmt)} د.ع</b></div>
   </div>
-  <p class="meta"><b>المنطقة:</b> ${esc(o.area)} &nbsp;|&nbsp; <b>الزبون:</b> <span class="ph">${esc(q.customerPhone||"—")}</span></p>
+  <p class="meta"><b>المنطقة:</b> ${esc(o.area)} &nbsp;|&nbsp; <b>الزبون:</b> <span class="ph">${o.customerOrder?"زبون التطبيق":esc(q.customerPhone||"—")}</span></p>
   ${actionHtml}
  </div>`;
 }
@@ -740,8 +742,8 @@ window.acceptDriver = async(id) => {
 };
 
 window.cancelOrder = async(id) => {
- if(!confirm("هل أنت متأكد من رفض السائق وإلغاء الطلب؟"))return;
- try{ await update(ref(db,"orders/"+id),{status:"cancelled", cancelReason:"تم الرفض من قبل المتجر"}); say("تم إلغاء الطلب."); }
+ if(!confirm("هل أنت متأكد من إلغاء الطلب؟"))return;
+ try{ await update(ref(db,"orders/"+id),{status:"cancelled", cancelReason:(orders[id]&&orders[id].customerOrder?"ألغاه المتجر (الزبون لم يكمل)":"تم الرفض من قبل المتجر")}); say("تم إلغاء الطلب."); }
  catch(e){ say("فشل الإلغاء: "+e.message,1); }
 };
 

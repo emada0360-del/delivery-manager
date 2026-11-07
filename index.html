@@ -745,7 +745,7 @@ function drawLiveOrders(){
      const phone=o.driverPhone||(dr&&(dr.phone||dr.username))||"";
      const driverName=name?`<b>${esc(name)}</b>${o.driverId?chipOf(o.driverId):""}`:'<span style="color:#94a3b8">بانتظار سائق</span>';
      const driverPhone=phone?`<a href="tel:${esc(phone)}" dir="ltr">${esc(phone)}</a>`:'—';
-     return `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${o.customerOrder?'<span class="tag b">طلب زبون</span>':'<span class="tag">طلب متجر</span>'}</td><td>${esc(o.storeName)}</td><td>${driverName}</td>
+     return `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${o.customerOrder?'<span class="tag b">طلب زبون</span>':'<span class="tag">طلب متجر</span>'}${o.customerOrder?cpTag(id):""}</td><td>${esc(o.storeName)}</td><td>${driverName}</td>
        <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span>${o.forcedAssign?' <span class="tag b">تعيين تلقائي</span>':''}</td><td>${tm(o.createdAt)}</td><td>${o.acceptedAt&&o.createdAt?fmtAge(o.acceptedAt-o.createdAt):"—"}</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td><td>${o.acceptedAt?`<span class="ageC" data-ts="${Number(o.acceptedAt)}"></span>`:"—"}</td><td><select data-lv="${esc(id)}"><option value="">اختر إجراء</option><option value="as">${o.driverId?"تعيين لسائق آخر":"تعيين لسائق"}</option>${o.driverId?'<option value="un">إلغاء التعيين (رفعه للسائقين)</option>':""}<option value="del">حذف الطلب</option></select></td></tr>`;
    })],"لا توجد طلبات حية الآن."
  );
@@ -952,6 +952,12 @@ function normMap(u){
  const p=parseLatLng(u);
  if(!p)throw Error("تعذر قراءة الإحداثيات من الرابط. استخدم الرابط الكامل من خرائط غوغل (ليس المختصر) أو اكتب الإحداثيات مثل 33.7500,44.6300");
  return{url:"https://www.google.com/maps?q="+p.lat+","+p.lng,p};
+}
+const cpv={};
+function cpTag(id){
+ if(cpv[id]===undefined){cpv[id]=null;get(ref(db,"customerOrderPrivate/"+id)).then(s=>{cpv[id]=s.val()||{};scheduleDraw()}).catch(()=>{cpv[id]={}})}
+ const c=cpv[id];
+ return c&&c.phone?`<div class="tm" dir="ltr">${esc(c.name||"")} ${esc(c.phone)}</div>`:"";
 }
 const syn={};
 function syncCust(){
