@@ -61,7 +61,7 @@ jobs:
           fi
 
           if [ "${{ matrix.role }}" = "customer" ]; then
-            npm i --legacy-peer-deps @capacitor/device@6
+            npm i --legacy-peer-deps @capacitor/device@6 @capacitor/geolocation@6
           fi
 
           cat > capacitor.config.json <<CFG
