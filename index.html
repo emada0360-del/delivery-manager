@@ -394,6 +394,10 @@ $("out").onclick=()=>signOut(auth);
 
 onAuthStateChanged(auth, async u=>{
   if(!u){ $("login").hidden=false; $("app").hidden=true; started=false; return; }
+  try{
+    const r=(await get(ref(db,"users/"+u.uid+"/role"))).val();
+    if(r!=="admin"){ started=false; await signOut(auth); $("login").hidden=false; $("app").hidden=true; $("le").textContent="هذا الحساب لا يملك صلاحية الإدارة"; return; }
+  }catch(e){ await signOut(auth); $("login").hidden=false; $("app").hidden=true; $("le").textContent="تعذر التحقق من الصلاحية"; return; }
   $("login").hidden=true; $("app").hidden=false; $("le").textContent="";
   document.documentElement.style.setProperty("--hh",$("hd").offsetHeight+"px");
   if(!started){ started=true; start(); }
