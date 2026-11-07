@@ -632,6 +632,10 @@ async function deleteOrdersArchived(map){
  for(const id of ids){
   const o=map[id];
   upd["orders/"+id]=null;
+  // طلب من تطبيق الزبون ولسه ما اكتمل: علّمه ملغي عند الزبون
+  if(o&&o.customerOrderId&&o.status!=="delivered"&&o.status!=="cancelled"){
+   upd["customerOrders/"+o.customerOrderId+"/status"]="cancelled";
+  }
   if(o&&o.status==="delivered"){
    const c=orderComm(o);
    const k=o.driverId||"_none";agg[k]=agg[k]||{amount:0,count:0};agg[k].amount+=c;agg[k].count++;
