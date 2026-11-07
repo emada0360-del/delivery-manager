@@ -100,6 +100,7 @@ h4{margin:16px 4px 10px;font-size:15px;color:var(--mu);font-weight:600}
  <div style="font-size:56px">📍</div><b style="font-size:20px">تحديد الموقع مطلوب</b>
  <div id="locMsg" style="color:#c9d4e0;line-height:1.7">اسمح للتطبيق بالوصول إلى موقعك لتحديد أجرة التوصيل ومعرفة المطاعم المتاحة.</div>
  <button id="locBtn" class="g" style="width:100%;max-width:320px">السماح بتحديد الموقع</button>
+ <button id="locManual" class="l" style="width:100%;max-width:320px">🗺️ تحديد الموقع يدوياً على الخارطة</button>
 </div>
 <div id="menuM" hidden><div class="bar"><button class="l" id="mx">رجوع</button><button id="mo">فتح في المتصفح</button></div><iframe id="mf" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe></div>
 
@@ -250,7 +251,7 @@ function initMap(){
  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19}).addTo(map);
  map.on("click",e=>setLoc(e.latlng.lat,e.latlng.lng));
 }
-function setLoc(la,ln){loc={lat:la,lng:ln};if(pin)pin.setLatLng([la,ln]);else pin=L.marker([la,ln]).addTo(map);$("locS").textContent="تم تحديد موقعك ✓";drawList()}
+function setLoc(la,ln){loc={lat:la,lng:ln};$("locGate").hidden=true;if(pin)pin.setLatLng([la,ln]);else pin=L.marker([la,ln]).addTo(map);$("locS").textContent="تم تحديد موقعك ✓";drawList()}
 $("locEdit").onclick=()=>{const h=$("mapBox").hidden;$("mapBox").hidden=!h;$("locEdit").textContent=h?"إخفاء":"تغيير";if(h&&map)setTimeout(()=>{map.invalidateSize();if(loc)map.setView([loc.lat,loc.lng],15)},60)};
 $("gps").onclick=()=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>{setLoc(p.coords.latitude,p.coords.longitude);map.setView([p.coords.latitude,p.coords.longitude],15)},()=>alert("تعذر تحديد الموقع، اضغط على الخارطة"),{enableHighAccuracy:true,timeout:15000}):alert("المتصفح لا يدعم تحديد الموقع");
 const km=(a,b,c,d)=>{const r=x=>x*Math.PI/180,h=Math.sin(r(c-a)/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(r(d-b)/2)**2;return 12742*Math.asin(Math.sqrt(h))};
@@ -264,13 +265,19 @@ function quote(r){
  return ringF?{ok:true,fee:ringF.fee,km:d}:{ok:false,why:"المسافة أبعد من نطاق التوصيل"};
 }
 
+let locTry=0;
+function showMap(){$("locGate").hidden=true;$("mapBox").hidden=false;$("locEdit").textContent="إخفاء";if(map)setTimeout(()=>{map.invalidateSize()},60)}
 function needLoc(){
- $("locGate").hidden=!!loc;if(loc)return;
- if(!navigator.geolocation){$("locMsg").textContent="جهازك لا يدعم تحديد الموقع.";return}
- navigator.geolocation.getCurrentPosition(p=>{setLoc(p.coords.latitude,p.coords.longitude);map.setView([p.coords.latitude,p.coords.longitude],15);$("locGate").hidden=true},
-  er=>{$("locGate").hidden=false;$("locMsg").innerHTML=er.code===1?"تم رفض إذن الموقع.<br>افتح إعدادات المتصفح أو التطبيق ← الأذونات ← الموقع ← <b>السماح</b>، ثم اضغط الزر أدناه.":"تعذر تحديد موقعك. فعّل GPS وتأكد من الإنترنت ثم أعد المحاولة."},
-  {enableHighAccuracy:true,timeout:20000,maximumAge:30000});
+ if(loc){$("locGate").hidden=true;return}
+ if(!navigator.geolocation||window.isSecureContext===false){$("locGate").hidden=false;$("locMsg").textContent="تعذر استخدام GPS على هذا الجهاز/المتصفح. حدد موقعك يدوياً على الخارطة.";return}
+ const my=++locTry;let done=false;
+ const fail=er=>{if(done||my!==locTry)return;done=true;$("locGate").hidden=false;$("locMsg").innerHTML=er&&er.code===1?"تم رفض إذن الموقع.<br>افتح إعدادات الهاتف ← التطبيقات ← الأذونات ← الموقع ← <b>السماح</b>، أو حدد موقعك يدوياً.":"تعذر تحديد موقعك. فعّل GPS وتأكد من الإنترنت ثم أعد المحاولة، أو حدد موقعك يدوياً."};
+ // بعض الـ WebView لا تستدعي أي callback إطلاقاً
+ setTimeout(()=>fail({code:3}),12000);
+ navigator.geolocation.getCurrentPosition(p=>{if(done)return;done=true;setLoc(p.coords.latitude,p.coords.longitude);map.setView([p.coords.latitude,p.coords.longitude],15);$("locGate").hidden=true},fail,
+  {enableHighAccuracy:false,timeout:10000,maximumAge:60000});
 }
+$("locManual").onclick=showMap;
 $("locBtn").onclick=needLoc;
 try{navigator.permissions&&navigator.permissions.query({name:"geolocation"}).then(r=>{r.onchange=()=>{if(r.state==="granted"&&me)needLoc()}})}catch(e){}
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&me&&!loc)needLoc()});
