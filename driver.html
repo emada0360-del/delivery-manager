@@ -522,6 +522,7 @@ function __main(){
  const say=t=>{const m=$("msg");m.textContent=t;m.style.display="block";setTimeout(()=>m.style.display="none",4000)};
  const setHtml=(id,h)=>{const e=$(id);if(e._h!==h){e._h=h;e.innerHTML=h}};
 
+ const PC=()=>{const v=Number(settings.driverCommissionPercent);return(settings.driverCommissionPercent!=null&&v>=0&&v<=100)?v/100:0.1};
  let uid=null,driver=null,settings={},isOnline=false,pos={lat:null,lng:null},debt=0,debtLimit=15000;
  let pend={},mine={},finance={},privData={},stops=[],gps=null,tick=null,presenceTick=null,pendLoaded=false;
  let seenAv=null,prevMine=null,busy=false,connectionRef=null,sideTab="overview",dailyCount=0,totalCount=0,completedCount=0,todayProfit=0;
@@ -714,7 +715,7 @@ function __main(){
  }
  function finBox(o){
   const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommission||500));
-  const fee=Number(o.deliveryFee)||0,pc=Math.round(fee*0.1),payStore=Math.round((Number(o.itemPrice)||0)-sc),collect=Math.round(Number(o.customerTotal)||0),profit=Math.round(fee*0.9);
+  const fee=Number(o.deliveryFee)||0,pc=Math.round(fee*PC()),payStore=Math.round((Number(o.itemPrice)||0)-sc),collect=Math.round(Number(o.customerTotal)||0),profit=Math.round(fee-pc);
   return `<div class="fin-box">
    <div class="fin-row f-pay"><span>تدفع للمتجر:</span><b>${fmt(payStore)} د.ع</b></div>
    <div class="fin-row f-get"><span>تستلم من الزبون:</span><b>${fmt(collect)} د.ع</b></div>
@@ -962,7 +963,7 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
     if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟")))return;
     const patch={status:ns,stepAt:serverTimestamp()};
     if(ns==="delivered"){
-     const fee=Number(o.deliveryFee)||0,p=Math.round(fee*0.9);
+     const fee=Number(o.deliveryFee)||0,p=Math.round(fee-Math.round(fee*PC()));
      patch.deliveredAt=Date.now();patch.driverProfit=p;patch.platformDeliveryCommission=Math.round(fee-p);
     }
     await update(r,patch);

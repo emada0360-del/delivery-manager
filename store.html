@@ -480,7 +480,7 @@ async function confirmCustomerOrder(id,p){
  const cl=(co.lat!=null&&co.lng!=null)?Number(co.lat).toFixed(5)+","+Number(co.lng).toFixed(5):"";
  const note="طلب من تطبيق الزبون"+(cl?" - موقع الزبون: https://www.google.com/maps?q="+cl:"");
  await update(ref(db),{
-  ["orders/"+id]:{storeId:uid,storeName:store.name,storePhone:store.phone||"",areaId:"customer-app",area:"زبون التطبيق",itemPrice:p,deliveryFee:fee,customerTotal:p+fee,storeCommission:com,amountToReceive:p-com,storeMapUrl:store.mapUrl||"",status:"pending",createdAt:now,customerOrder:true,orderType:"customer",customerOrderId:id},
+  ["orders/"+id]:{storeId:uid,storeName:store.name,storePhone:store.phone||"",areaId:"customer-app",area:"زبون التطبيق"+(co.distanceKm!=null?" · "+Number(co.distanceKm).toFixed(1)+" كم":""),...(co.distanceKm!=null?{distanceKm:Number(co.distanceKm)}:{}),itemPrice:p,deliveryFee:fee,customerTotal:p+fee,storeCommission:com,amountToReceive:p-com,storeMapUrl:store.mapUrl||"",status:"pending",createdAt:now,customerOrder:true,orderType:"customer",customerOrderId:id},
   ["orderPrivate/"+id]:{storeId:uid,customerPhone:String(pv.phone||""),...(pv.name?{customerName:String(pv.name)}:{}),note},
   ["customerOrders/"+id+"/price"]:p,["customerOrders/"+id+"/priceAt"]:now,["customerOrders/"+id+"/status"]:"pending"
  });

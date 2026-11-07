@@ -125,7 +125,7 @@ async function devId(){
  return String(id).replace(/[^A-Za-z0-9_-]/g,"_");
 }
 async function isBanned(){try{return (await get(ref(db,"bannedDevices/"+await devId()))).exists()}catch(e){console.warn(e);return false}}
-let zLayer=null,mLayer=null,me=null,prof=null,rests={},zones={},fees=[],orders={},loc=null,map,pin,unsubs=[];
+let mLayer=null,me=null,prof=null,rests={},fees=[],orders={},loc=null,map,pin,unsubs=[];
 
 // ===== مكالمة صوتية داخل التطبيق (WebRTC + Firebase للإشارات) =====
 async function iceServers(){
@@ -240,7 +240,6 @@ onAuthStateChanged(auth,async u=>{
  update(ref(db,"customers/"+u.uid),{deviceId:did}).catch(()=>{});
  initMap();needLoc();
  unsubs.push(onValue(ref(db,"restaurants"),s=>{rests=s.val()||{};drawList()}));
- unsubs.push(onValue(ref(db,"customerZones"),s=>{zones=s.val()||{};drawList()}));
  unsubs.push(onValue(ref(db,"settings/custFees"),s=>{fees=s.val()||[];drawList()}));
  unsubs.push(onValue(query(ref(db,"customerOrders"),orderByChild("customerId"),equalTo(u.uid)),s=>{orders=s.val()||{};drawCur();drawList()}));
 });
@@ -254,12 +253,11 @@ function initMap(){
 }
 function setLoc(la,ln){loc={lat:la,lng:ln};if(pin)pin.setLatLng([la,ln]);else{pin=L.marker([la,ln],{draggable:true}).addTo(map);pin.on("dragend",()=>{const c=pin.getLatLng();setLoc(c.lat,c.lng)})}$("locS").textContent="تم تحديد موقعك ✓";$("gOk").disabled=false;try{localStorage.setItem("custLoc",JSON.stringify(loc))}catch(e){}drawList()}
 const km=(a,b,c,d)=>{const r=x=>x*Math.PI/180,h=Math.sin(r(c-a)/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(r(d-b)/2)**2;return 12742*Math.asin(Math.sqrt(h))};
-function ll(u){const s=decodeURIComponent(String(u||""));for(const re of [/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/]){const m=s.match(re);if(m)return{lat:+m[1],lng:+m[2]}}return null}
+function ll(u){const s=decodeURIComponent(String(u||""));for(const re of [/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/]){const m=s.match(re);if(m)return{lat:+m[1],lng:+m[2]}}return null}
 function quote(r){
  if(!loc)return{ok:false,why:"حدد موقعك أولاً"};
- const zs=Object.values(zones);
- if(!zs.some(z=>z.isOpen!==false&&km(z.lat,z.lng,loc.lat,loc.lng)<=z.radiusKm))return{ok:false,why:"موقعك خارج مناطق الخدمة حالياً"};
  const p=typeof r.lat==="number"?{lat:r.lat,lng:r.lng}:ll(r.mapUrl);if(!p)return{ok:false,why:"المطعم لم يحدد موقعه بعد"};
+ if(!fees.length)return{ok:false,why:"أسعار التوصيل غير محددة حالياً"};
  const d=km(p.lat,p.lng,loc.lat,loc.lng),ringF=[...fees].sort((a,b)=>a.km-b.km).find(f=>d<=f.km);
  return ringF?{ok:true,fee:ringF.fee,km:d}:{ok:false,why:"المسافة أبعد من نطاق التوصيل"};
 }
@@ -328,8 +326,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&me)startT
 // ---- قائمة المطاعم ----
 function drawMapLayers(){
  if(!map)return;
- if(zLayer)map.removeLayer(zLayer);if(mLayer)map.removeLayer(mLayer);
- zLayer=L.layerGroup(Object.values(zones).filter(z=>z.isOpen!==false).map(z=>L.circle([z.lat,z.lng],{radius:(z.radiusKm||1)*1000,color:"#0f9a63",fillOpacity:.12,weight:2}))).addTo(map);
+ if(mLayer)map.removeLayer(mLayer);
  mLayer=L.layerGroup(Object.values(rests).map(r=>{const p=typeof r.lat==="number"?{lat:r.lat,lng:r.lng}:ll(r.mapUrl);return p?L.marker([p.lat,p.lng]).bindTooltip(r.name||""):null}).filter(Boolean)).addTo(map);
 }
 function drawList(){
@@ -338,7 +335,7 @@ function drawList(){
  const items=Object.entries(rests).filter(([,r])=>r.isOpen!==false).map(([id,r])=>({id,r,q:quote(r)}));
  items.sort((a,b)=>(b.q.ok-a.q.ok)||((a.q.km||99)-(b.q.km||99)));
  $("list").innerHTML=items.map(({id,r,q})=>`<div class="box"><div class="rest"><div class="av">${esc((r.name||"؟").trim().charAt(0))}</div>
-  <div class="n"><b>${esc(r.name)}</b><span>${q.ok?q.km.toFixed(1)+" كم عنك":""}</span></div>
+  <div class="n"><b>${esc(r.name)}</b><span>${q.ok?"يبعد "+q.km.toFixed(1)+" كم عنك · توصيلك من هذا المطعم "+fmt(q.fee)+" د.ع حسب بعدك":""}</span></div>
   ${q.ok?`<span class="tag">توصيل ${fmt(q.fee)} د.ع</span>`:`<span class="tag w">غير متاح</span>`}</div>
   ${q.ok?"":`<div class="why">${q.why}</div>`}
   <div class="acts"><button class="g main" data-c="${esc(id)}" ${q.ok&&!busy?"":"disabled"}>📞 اطلب بالاتصال</button>${r.menuUrl?`<button class="l sm" data-m="${esc(id)}">📋 المنيو</button>`:""}${r.mapUrl?`<button class="l sm" data-g="${esc(id)}">🗺️</button>`:""}</div>
