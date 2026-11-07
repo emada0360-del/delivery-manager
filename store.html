@@ -450,7 +450,7 @@ async function answerCall(oid){
   await c.pc.setRemoteDescription(off);flush(c);
   const a=await c.pc.createAnswer();await c.pc.setLocalDescription(a);
   await set(ref(db,`calls/${oid}/answer`),{type:a.type,sdp:a.sdp});
- }catch(e){closeCall(true);alert("تعذر الرد: "+e.message)}
+ }catch(e){closeCall(true);const den=e&&(e.name==="NotAllowedError"||/denied/i.test(e.message||""));alert(den?"المايكروفون غير مسموح للتطبيق. فعّله من: إعدادات الهاتف ← التطبيقات ← تطبيق المتجر ← الأذونات ← الميكروفون ← سماح. الحين اكتب السعر وأرسل الطلب.":"تعذر الرد: "+e.message);if(den)priceUI(oid)}
 }
 function hangup(){if(call)set(ref(db,`calls/${call.oid}/ended`),Date.now()).catch(()=>{});closeCall()}
 function closeCall(quiet){

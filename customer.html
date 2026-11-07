@@ -115,7 +115,7 @@ const fmt=n=>Number(n||0).toLocaleString("en-US");
 const ST={calling:"جارٍ الاتصال بالمطعم",preparing:"قيد التحضير",ready:"جاهز - بانتظار السائق",pending:"قيد التحضير - بانتظار سائق",waiting_store:"بانتظار موافقة المطعم للسائق",accepted:"السائق بالطريق للمطعم",arrived_store:"السائق وصل للمطعم",picked_up:"بالطريق إليك",delivering:"بالطريق إليك",delivered:"تم التسليم",cancelled:"ملغي"};
 const STAGE={calling:0,preparing:1,ready:1,pending:1,waiting_store:1,accepted:2,arrived_store:2,picked_up:3,delivering:3,delivered:4};
 const DONE=["delivered","cancelled"],CALL_EXPIRE=10*60*1000;
-const isLive=o=>o&&!DONE.includes(o.status)&&!(o.status==="calling"&&Date.now()-(Number(o.createdAt)||0)>CALL_EXPIRE);
+const isLive=o=>o&&!DONE.includes(o.status)&&Date.now()-(Number(o.createdAt)||0)<6*3600e3&&!(o.status==="calling"&&Date.now()-(Number(o.createdAt)||0)>CALL_EXPIRE);
 async function devId(){
  let id="";
  try{const D=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Device;if(D){const r=await D.getId();id=r.identifier||r.uuid||""}}catch(e){}

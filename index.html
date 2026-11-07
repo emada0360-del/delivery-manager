@@ -860,7 +860,7 @@ $("editForm").onsubmit=e=>{e.preventDefault();run(async()=>{
     upd["users/"+id+"/phone"]=phone;
     let mapUrl=g("mapUrl");
     if(kind==="store"){
-     const mm=normMap(mapUrl);mapUrl=mm.url;
+     const oldM=(users[id]&&users[id].mapUrl)||"";const mm=(mapUrl===oldM&&!parseLatLng(mapUrl))?{url:mapUrl,p:null}:normMap(mapUrl);mapUrl=mm.url;
      upd["users/"+id+"/mapUrl"]=mapUrl;
      if(mm.p){upd["users/"+id+"/custLat"]=mm.p.lat;upd["users/"+id+"/custLng"]=mm.p.lng;if(users[id]&&users[id].custVisible){upd["restaurants/"+id+"/lat"]=mm.p.lat;upd["restaurants/"+id+"/lng"]=mm.p.lng}}
      if(users[id]&&users[id].custVisible)upd["restaurants/"+id+"/mapUrl"]=mapUrl;
