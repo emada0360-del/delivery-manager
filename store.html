@@ -480,7 +480,7 @@ async function confirmCustomerOrder(id,p){
  const cl=(co.lat!=null&&co.lng!=null)?Number(co.lat).toFixed(5)+","+Number(co.lng).toFixed(5):"";
  const note="طلب من تطبيق الزبون"+(cl?" - موقع الزبون: https://www.google.com/maps?q="+cl:"");
  await update(ref(db),{
-  ["orders/"+id]:{storeId:uid,storeName:store.name,storePhone:store.phone||"",areaId:"customer-app",area:"زبون التطبيق",itemPrice:p,deliveryFee:fee,customerTotal:p+fee,storeCommission:com,amountToReceive:p-com,storeMapUrl:store.mapUrl||"",status:"pending",createdAt:now,customerOrder:true,customerOrderId:id},
+  ["orders/"+id]:{storeId:uid,storeName:store.name,storePhone:store.phone||"",areaId:"customer-app",area:"زبون التطبيق",itemPrice:p,deliveryFee:fee,customerTotal:p+fee,storeCommission:com,amountToReceive:p-com,storeMapUrl:store.mapUrl||"",status:"pending",createdAt:now,customerOrder:true,orderType:"customer",customerOrderId:id},
   ["orderPrivate/"+id]:{storeId:uid,customerPhone:String(pv.phone||""),...(pv.name?{customerName:String(pv.name)}:{}),note},
   ["customerOrders/"+id+"/price"]:p,["customerOrders/"+id+"/priceAt"]:now,["customerOrders/"+id+"/status"]:"pending"
  });
@@ -659,7 +659,7 @@ $("btnCreate").onclick=async()=>{
     storeId:uid, storeName:store.name, storePhone:store.phone||"",
     areaId:aId, area:a.name, itemPrice:p, deliveryFee:a.fee, customerTotal:p+a.fee,
     storeCommission:storeCom, amountToReceive:p-storeCom, storeMapUrl:store.mapUrl||"",
-    status:"pending", createdAt:Date.now()
+    status:"pending", createdAt:Date.now(), orderType:"store"
    },
    ["orderPrivate/"+key]:{ storeId:uid, customerPhone:ph, ...(cn?{customerName:cn}:{}), ...(nt?{note:nt}:{}) }
   });
@@ -743,8 +743,12 @@ window.acceptDriver = async(id) => {
 
 window.cancelOrder = async(id) => {
  if(!confirm("هل أنت متأكد من إلغاء الطلب؟"))return;
- try{ await update(ref(db,"orders/"+id),{status:"cancelled", cancelReason:(orders[id]&&orders[id].customerOrder?"ألغاه المتجر (الزبون لم يكمل)":"تم الرفض من قبل المتجر")}); say("تم إلغاء الطلب."); }
- catch(e){ say("فشل الإلغاء: "+e.message,1); }
+ try{
+  const isC=!!(orders[id]&&orders[id].customerOrder);
+  const u={["orders/"+id+"/status"]:"cancelled",["orders/"+id+"/cancelReason"]:isC?"ألغاه المتجر (الزبون لم يكمل)":"تم الرفض من قبل المتجر"};
+  if(isC)u["customerOrders/"+id+"/status"]="cancelled";
+  await update(ref(db),u); say("تم إلغاء الطلب.");
+ }catch(e){ say("فشل الإلغاء: "+e.message,1); }
 };
 
 // ---- إعادة الاتصال عند رجوع التطبيق من الخلفية (نفس منطق تطبيق السائق)
