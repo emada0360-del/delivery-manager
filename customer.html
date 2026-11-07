@@ -65,7 +65,7 @@ async function devId(){
  if(!id){try{id=localStorage.getItem("did")||"";if(!id){id="w"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("did",id)}}catch(e){id="w"+Date.now()}}
  return String(id).replace(/[^A-Za-z0-9_-]/g,"_");
 }
-async function isBanned(){return (await get(ref(db,"bannedDevices/"+await devId()))).exists()}
+async function isBanned(){try{return (await get(ref(db,"bannedDevices/"+await devId()))).exists()}catch(e){console.warn(e);return false}}
 let me=null,prof=null,rests={},zones={},fees=[],orders={},loc=null,map,pin,unsubs=[];
 
 
@@ -169,8 +169,15 @@ onAuthStateChanged(auth,async u=>{
  $("auth").hidden=!!u;$("app").hidden=!u;$("out").hidden=!u;
  if(!u)return;
  if(pendingReg)await pendingReg.catch(()=>{});
+ try{
  const s=await get(ref(db,"customers/"+u.uid));prof=s.val();
- if(!prof){await signOut(auth);$("aE").textContent="هذا الحساب ليس حساب زبون";return}
+ if(!prof){
+  const role=(await get(ref(db,"users/"+u.uid+"/role"))).val();
+  if(role){await signOut(auth);$("aE").textContent="هذا حساب موظف وليس زبون. افتح صفحة الزبون من متصفح آخر";return}
+  prof={name:"زبون",phone:(u.email||"").replace(/\D/g,""),createdAt:Date.now()};
+  await set(ref(db,"customers/"+u.uid),prof);
+ }
+ }catch(e){await signOut(auth);$("aE").textContent="خطأ: "+(e.message||e);return}
  const did=await devId();
  if(await isBanned()){await signOut(auth);$("aE").textContent="تم حظر هذا الجهاز من استخدام الخدمة";return}
  update(ref(db,"customers/"+u.uid),{deviceId:did}).catch(()=>{});
