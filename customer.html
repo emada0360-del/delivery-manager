@@ -175,8 +175,9 @@ const cfg={apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",authDomain:"baqubah-
 const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
 const $=id=>document.getElementById(id),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>Number(n||0).toLocaleString("en-US");
-const ST={calling:"جارٍ الاتصال بالمطعم",preparing:"قيد التحضير",ready:"جاهز - بانتظار السائق",pending:"قيد التحضير - بانتظار سائق",waiting_store:"بانتظار موافقة المطعم للسائق",accepted:"السائق بالطريق للمطعم",arrived_store:"السائق وصل للمطعم",picked_up:"بالطريق إليك",delivering:"بالطريق إليك",delivered:"تم التسليم",cancelled:"ملغي"};
-const STAGE={calling:0,preparing:1,ready:1,pending:1,waiting_store:1,accepted:2,arrived_store:2,picked_up:3,delivering:3,delivered:4};
+const safeUrl=u=>{const v=String(u||"").trim();return /^https?:\/\/[^\s"'<>]+$/i.test(v)?v:""};
+const ST={calling:"جارٍ الاتصال بالمطعم",preparing:"قيد التحضير",ready:"جاهز - بانتظار السائق",pending:"جاهز - بانتظار سائق",waiting_store:"السائق بالطريق للمطعم",accepted:"السائق بالطريق للمطعم",arrived_store:"السائق وصل للمطعم",picked_up:"بالطريق إليك",delivering:"بالطريق إليك",delivered:"تم التسليم",cancelled:"ملغي"};
+const STAGE={calling:0,preparing:1,ready:1,pending:1,waiting_store:2,accepted:2,arrived_store:2,picked_up:3,delivering:3,delivered:4};
 const DONE=["delivered","cancelled"],CALL_EXPIRE=10*60*1000;
 const isLive=o=>o&&!DONE.includes(o.status)&&Date.now()-(Number(o.createdAt)||0)<6*3600e3&&!(o.status==="calling"&&Date.now()-(Number(o.createdAt)||0)>CALL_EXPIRE);
 async function devId(){
@@ -269,6 +270,7 @@ $("aB").onclick=async()=>{
  try{
   if(!/^07\d{9}$/.test(ph))throw Error("رقم الهاتف لازم يكون 11 رقم ويبدأ بـ 07");
   if(reg&&!nm)throw Error("اكتب اسمك");
+  if(pw.length<6)throw Error("كلمة المرور 6 أحرف على الأقل");
   const em="c"+ph+"@baqubah.app";
   if(reg){
    pendingReg=(async()=>{
@@ -321,7 +323,7 @@ function initMap(){
 }
 function setLoc(la,ln){loc={lat:la,lng:ln};if(pin)pin.setLatLng([la,ln]);else{pin=L.marker([la,ln],{draggable:true}).addTo(map);pin.on("dragend",()=>{const c=pin.getLatLng();setLoc(c.lat,c.lng)})}$("locS").textContent="تم تحديد موقعك ✓";$("gOk").disabled=false;try{localStorage.setItem("custLoc",JSON.stringify(loc))}catch(e){}drawList()}
 const km=(a,b,c,d)=>{const r=x=>x*Math.PI/180,h=Math.sin(r(c-a)/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(r(d-b)/2)**2;return 12742*Math.asin(Math.sqrt(h))};
-function ll(u){const s=decodeURIComponent(String(u||""));for(const re of [/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/]){const m=s.match(re);if(m)return{lat:+m[1],lng:+m[2]}}return null}
+function ll(u){let s=String(u||"");try{s=decodeURIComponent(s)}catch(e){}for(const re of [/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/]){const m=s.match(re);if(m)return{lat:+m[1],lng:+m[2]}}return null}
 function quote(r){
  if(!loc)return{ok:false,why:"حدد موقعك أولاً"};
  const p=typeof r.lat==="number"?{lat:r.lat,lng:r.lng}:ll(r.mapUrl);if(!p)return{ok:false,why:"المطعم لم يحدد موقعه بعد"};
@@ -435,8 +437,8 @@ function drawList(){
 }
 $("list").onclick=async e=>{
  const b=e.target.closest("button");if(!b)return;
- if(b.dataset.g){window.open(rests[b.dataset.g].mapUrl,"_blank");return}
- if(b.dataset.m){const u=rests[b.dataset.m].menuUrl;$("mf").src=u;$("mo").onclick=()=>window.open(u,"_blank");$("menuM").hidden=false}
+ if(b.dataset.g){const g=safeUrl(rests[b.dataset.g]&&rests[b.dataset.g].mapUrl);if(g)window.open(g,"_blank","noopener");return}
+ if(b.dataset.m){const u=safeUrl(rests[b.dataset.m]&&rests[b.dataset.m].menuUrl);if(!u)return;$("mf").src=u;$("mo").onclick=()=>window.open(u,"_blank","noopener");$("menuM").hidden=false}
  if(b.dataset.c){
   if(reqApp&&!approved)return toast("حسابك بانتظار التفعيل من الإدارة",1);
   if(Object.values(orders).some(isLive))return toast("لديك طلب جارٍ بالفعل",1);
@@ -519,7 +521,7 @@ function drawCur(){
  const steps=["التحضير","السائق للمطعم","بالطريق إليك","التسليم"].map((n,k)=>`<div class="st ${stage>k+1?"d":stage===k+1?"n":""}"><i>${stage>k+1?"✓":k+1}</i>${n}</div>`).join("");
  $("cur").innerHTML=`<div class="box ${isLive(o)?"live":""}"><div class="top"><div><span class="mu">طلبك الحالي</span><b>${esc(o.restaurantName)}</b></div><span class="badge ${bc}">${ST[o.status]||esc(o.status)}</span></div>
  ${o.status==="cancelled"?"":`<div class="steps">${steps}</div>`}
- ${o.status==="calling"&&!price?`<p class="hint" style="margin:0 0 10px">بعد المكالمة سيسجّل المطعم سعر طلبك.</p><div class="acts"><button class="g main" data-redial="${id}">📞 إعادة الاتصال</button><button class="l sm" data-cancel="${id}">إلغاء</button></div>`:""}
+ ${o.status==="calling"&&!price?`<p class="hint" style="margin:0 0 10px">بعد المكالمة سيسجّل المطعم سعر طلبك.</p><div class="acts"><button class="g main" data-redial="${esc(id)}">📞 إعادة الاتصال</button><button class="l sm" data-cancel="${esc(id)}">إلغاء</button></div>`:""}
  <div class="row"><span>سعر الطلب</span><b>${price?fmt(price)+" د.ع"+(o.priceFixed?" (مُصحَّح، كان "+fmt(o.priceOld)+")":""):"بانتظار المطعم"}</b></div>
  <div class="row"><span>أجرة التوصيل</span><b>${fmt(fee)} د.ع</b></div>
  <div class="row tot"><span>المجموع</span><b>${price?fmt(price+fee)+" د.ع":"—"}</b></div>

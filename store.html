@@ -149,7 +149,8 @@ body[data-tab=rej] #activeContainer,body[data-tab=done] #activeContainer{display
 .prep{display:flex;align-items:center;justify-content:center;gap:10px;margin:6px 0}
 .prep button{width:44px;height:44px;padding:0;font-size:22px;background:var(--info)}
 .prep b{min-width:92px;text-align:center;font-size:15px;font-variant-numeric:tabular-nums;direction:ltr}
-.actions .ok2{flex:2;background:var(--go)}
+.actions .ok2{flex:2;background:var(--go);min-height:58px!important;font-size:17px!important}
+.late{color:var(--brand)!important}
 #activeEmpty{text-align:center;color:var(--muted);padding:34px 10px}
 
 /* ===== v3: بدون صعود ونزول + سحب جانبي مثل تطبيق السائق ===== */
@@ -203,10 +204,10 @@ input,select,textarea{height:40px;padding:0 12px;border-radius:11px;margin:3px 0
 
 <section id="login" class="box">
 <h2>دخول المتجر</h2>
-<form id="lf" onsubmit="return false;">
+<form id="lf">
 <label>رقم الهاتف</label><input id="un" type="tel" placeholder="07XXXXXXXXX" required>
 <label>كلمة المرور</label><input id="pw" type="password" required>
-<button type="button" id="btnLogin">دخول</button>
+<button type="submit" id="btnLogin">دخول</button>
 </form>
 <p id="err"></p>
 </section>
@@ -214,13 +215,13 @@ input,select,textarea{height:40px;padding:0 12px;border-radius:11px;margin:3px 0
 <div id="app" hidden>
 <header>
 <div class="brand"><h2 id="sname">المتجر</h2></div>
-<div class="pill"><i class="dot" id="pulse"></i><b id="onCount">0</b> <span>سائق متصل</span></div>
+<div style="display:flex;align-items:center;gap:8px"><div class="pill"><i class="dot" id="pulse"></i><b id="onCount">0</b> <span>سائق متصل</span></div><button type="button" id="btnOut" style="background:#ffffff14;padding:6px 12px;border-radius:999px;font-size:12px">خروج</button></div>
 </header>
 <main>
 <div id="msg"></div>
 <div id="announcement" class="box" hidden></div>
 
-<nav id="tabs"><button type="button" data-t="prep">تحضير <b class="c-acc" id="nPrep">0</b></button><button type="button" data-t="pend" class="on">معلقة <b class="c-pend" id="nPend">0</b></button><button type="button" data-t="acc">مقبولة <b class="c-acc" id="nAcc">0</b></button><button type="button" data-t="rej">مرفوضة <b class="c-rej" id="nRej">0</b></button><button type="button" data-t="done">مكتملة <b class="c-done" id="nDone">0</b></button><button type="button" data-t="new" aria-label="طلب جديد"><span class="plusIc">+</span></button></nav>
+<nav id="tabs"><button type="button" data-t="prep" class="on">تحضير <b class="c-pend" id="nPrep">0</b></button><button type="button" data-t="acc">جارية <b class="c-acc" id="nAcc">0</b></button><button type="button" data-t="done">السجل <b class="c-done" id="nDone">0</b></button><button type="button" data-t="new" aria-label="طلب جديد"><span class="plusIc">+</span></button>
 <div id="activeEmpty" class="box">لا توجد طلبات</div>
 <div id="activeContainer" hidden>
   <h3>الطلبات النشطة</h3>
@@ -247,7 +248,7 @@ input,select,textarea{height:40px;padding:0 12px;border-radius:11px;margin:3px 0
   <div class="summary-row"><span>المجموع على الزبون</span> <b id="totalTxt">0</b></div>
   <div class="summary-row"><span>صافي ربحك</span> <b id="receiveTxt">0</b></div>
 </div>
-<button id="btnCreate">إرسال الطلب</button>
+<button id="btnCreate">تسجيل الطلب</button>
 </div>
 
 <div id="historyContainer">
@@ -276,7 +277,7 @@ const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-const ST={preparing:"قيد التحضير",pending:"بانتظار سائق",waiting_store:"بانتظار موافقة المتجر",accepted:"السائق بالطريق للمتجر",arrived_store:"السائق وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
+const ST={preparing:"قيد التحضير",pending:"جاهز - بانتظار سائق",waiting_store:"السائق بالطريق للمتجر",accepted:"السائق بالطريق للمتجر",arrived_store:"السائق وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
 
 let uid=null,store=null,areas={},orders={},priv={},driversData={},settings={},driversOnline=0;
 let alarmTimer = null,presenceData={},annSeen=null;
@@ -315,105 +316,91 @@ function playBeep() {
     } catch(e) {}
 }
 
-function checkWaitingAlarm(activeOrders) {
-    const hasWaiting = activeOrders.some(([,o]) => o.status === "waiting_store");
-    if (hasWaiting) {
+function checkReadyAlarm(list) {
+    const now = Date.now();
+    const overdue = list.some(([,o]) => o && o.status === "preparing" && Number(o.prepReadyAt) && now >= Number(o.prepReadyAt));
+    if (overdue) {
         if (!alarmTimer) {
             playBeep();
             try{window.Capacitor.Plugins.StoreAlarm.start()}catch(e){}
-            if (window.notifyApp) window.notifyApp('سائق ينتظر موافقتك','افتح التطبيق واضغط قبول السائق');
+            if (window.notifyApp) window.notifyApp('انتهى وقت التحضير','اضغط «جاهز» ليصل الطلب للسائق');
             alarmTimer = setInterval(playBeep, 4000);
         }
-    } else {
-        if (alarmTimer) {
-            clearInterval(alarmTimer);
-            alarmTimer = null;
-            try{window.Capacitor.Plugins.StoreAlarm.stop()}catch(e){}
-        }
+    } else if (alarmTimer) {
+        clearInterval(alarmTimer);
+        alarmTimer = null;
+        try{window.Capacitor.Plugins.StoreAlarm.stop()}catch(e){}
     }
 }
 
 
-// ================= المهلة والتعيين التلقائي (7 دقائق) =================
-const FORCE_MS=7*60*1000, FRESH_MS=2*60*1000;
-const forcing=new Set(); let forceErrShown=false;
+// ================= الطلب يصل للسائقين فقط عندما يضغط المتجر «جاهز» =================
 const pad=n=>String(n).padStart(2,"0");
 const fmtMS=ms=>{const s=Math.floor(Math.max(0,ms)/1000);return pad(Math.floor(s/60))+":"+pad(s%60)};
 const fmtAge=ms=>{const s=Math.floor(Math.max(0,ms)/1000),h=Math.floor(s/3600);return (h?h+":"+pad(Math.floor(s%3600/60)):pad(Math.floor(s/60)))+":"+pad(s%60)};
 // موقع المتجر من الرابط: يدعم @lat,lng و q=lat,lng و ll= و !3d..!4d.. أو إحداثيات مباشرة
 function parseLatLng(u){
- if(!u)return null; const s=decodeURIComponent(String(u));
+ if(!u)return null; let s=String(u); try{s=decodeURIComponent(s)}catch(e){}
  const pats=[/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/];
  for(const p of pats){const m=s.match(p);if(m){const a=+m[1],b=+m[2];if(Math.abs(a)<=90&&Math.abs(b)<=180)return{lat:a,lng:b}}}
  return null;
 }
 const hav=(a,b)=>{const R=6371,r=x=>x*Math.PI/180,dl=r(b.lat-a.lat),dg=r(b.lng-a.lng);const x=Math.sin(dl/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
-// أقرب سائق متاح: متصل وغير مشغول وغير محظور؛ الأقرب أولاً، وإذا لا يوجد موقع نرتب حسب آخر ظهور
-function pickDriver(o){
- const here=parseLatLng(o.storeMapUrl||(store&&store.mapUrl));
- const now=Date.now();
- const list=Object.entries(presenceData).filter(([,p])=>p&&p.online===true&&!p.busy&&!p.blocked).map(([id,p])=>{
-  const seen=Number(p.lastSeen)||0;
-  const hasPos=here&&p.lat!=null&&p.lng!=null;
-  return{id,seen,fresh:now-seen<FRESH_MS,d:hasPos?hav(here,{lat:+p.lat,lng:+p.lng}):null};
- });
- list.sort((a,b)=>(b.fresh-a.fresh)||((a.d!=null)===(b.d!=null)?(a.d!=null?a.d-b.d:b.seen-a.seen):(a.d!=null?-1:1)));
- return list[0]||null;
-}
-async function forceAssign(id,o){
- if(forcing.has(id))return; forcing.add(id);
- try{
-  const d=pickDriver(o); if(!d){forcing.delete(id);return}
-  let u={}; try{const s=await get(ref(db,"users/"+d.id)); if(s.exists())u=s.val()}catch(e){}
-  const res=await runTransaction(ref(db,"orders/"+id),cur=>{
-   if(!cur||cur.status!=="pending"||cur.driverId)return;
-   return{...cur,driverId:d.id,driverName:u.name||"",driverPhone:u.phone||"",status:"accepted",forcedAssign:true,acceptedAt:Date.now(),stepAt:Date.now()};
-  });
-  if(res.committed)say("تم تعيين أقرب سائق للطلب تلقائياً");
- }catch(e){
-  if(!forceErrShown){forceErrShown=true;say("تعذر التعيين التلقائي: "+(e.code||e.message),1)}
-  setTimeout(()=>forcing.delete(id),30000); return;
+
+// رقم المتجر الذي يظهر للسائق: حقل phone، ثم username، ثم رقم الدخول (الإيميل) إن كان رقماً
+function storePhoneOf(){
+ const em=String((auth.currentUser&&auth.currentUser.email)||"").split("@")[0];
+ for(const v of [store&&store.phone,store&&store.username,em]){
+  const d=String(v||"").replace(/[^0-9+]/g,"");
+  if(/^\+?\d{7,15}$/.test(d))return d;
  }
- setTimeout(()=>forcing.delete(id),20000);
+ return "";
 }
+
+// أجرة توصيل طلبات الزبون: تُحسب من جديد عند المتجر (لا نثق بالرقم القادم من تطبيق الزبون)
+function custFeesList(){const f=settings.custFees;return(Array.isArray(f)?f:Object.values(f||{})).filter(x=>x&&Number(x.km)>0&&Number(x.fee)>=0).map(x=>({km:+x.km,fee:+x.fee})).sort((a,b)=>a.km-b.km)}
+function storePos(){
+ if(store&&store.custLat!=null&&store.custLng!=null&&isFinite(+store.custLat)&&isFinite(+store.custLng))return{lat:+store.custLat,lng:+store.custLng};
+ return parseLatLng(store&&store.mapUrl);
+}
+function trustedFee(co){
+ const rings=custFeesList(),sp=storePos(),la=Number(co.lat),ln=Number(co.lng);
+ if(rings.length&&sp&&isFinite(la)&&isFinite(ln)&&Math.abs(la)<=90&&Math.abs(ln)<=180){
+  const d=hav(sp,{lat:la,lng:ln}),r=rings.find(f=>d<=f.km);
+  if(!r)throw Error("موقع الزبون خارج نطاق التوصيل");
+  return{fee:r.fee,km:d};
+ }
+ const f=Number(co.deliveryFee);
+ if(!isFinite(f)||f<0)throw Error("أجرة التوصيل غير صالحة");
+ if(rings.length){const lo=Math.min(...rings.map(r=>r.fee)),hi=Math.max(...rings.map(r=>r.fee));if(f<lo||f>hi)throw Error("أجرة التوصيل خارج الحدود المسموحة")}
+ else if(f>50000)throw Error("أجرة التوصيل غير منطقية");
+ return{fee:f,km:co.distanceKm!=null?Number(co.distanceKm):null};
+}
+
 const releasing=new Set();
 async function releaseOrder(id){
  if(releasing.has(id))return;releasing.add(id);
- try{const now=Date.now();
-  const r=await runTransaction(ref(db,"orders/"+id),cur=>{if(!cur||cur.status!=="preparing")return;return{...cur,status:"pending",createdAt:now,releasedAt:now}});
-  if(r.committed)say("تم إرسال الطلب للسائقين");
+ try{
+  const now=Date.now();
+  const r=await runTransaction(ref(db,"orders/"+id),cur=>{
+   if(cur===null)return cur;
+   if(cur.status!=="preparing"||cur.storeId!==uid)return;
+   return{...cur,status:"pending",createdAt:now,releasedAt:now,readyAt:now};
+  });
+  const v=r.snapshot&&r.snapshot.val();
+  if(r.committed&&v&&v.status==="pending")say("تم إرسال الطلب للسائقين ✓");
+  else say("تعذر الإرسال: حالة الطلب تغيّرت",1);
  }catch(e){say("تعذر إرسال الطلب للسائقين: "+(e.code||e.message),1)}
- setTimeout(()=>releasing.delete(id),15000);
+ finally{setTimeout(()=>releasing.delete(id),3000)}
 }
-window.prepReady=id=>releaseOrder(id);
-window.prepAdj=async(id,d)=>{
- const o=orders[id];if(!o||o.status!=="preparing")return;
- const base=Math.max(Date.now(),Number(o.prepReadyAt)||Date.now());
- const nx=Math.max(Date.now()+60000,base+d*60000);
- try{await update(ref(db,"orders/"+id),{prepReadyAt:nx,prepMinutes:Math.max(1,Math.round((nx-Date.now())/60000))})}catch(e){say("تعذر تعديل الوقت",1)}
-};
-function checkForced(){
- for(const [id,o] of Object.entries(orders)){if(o.status==="preparing"&&Number(o.prepReadyAt)&&Date.now()>=Number(o.prepReadyAt))releaseOrder(id)}
- // التعيين التلقائي بعد 7 دقائق لأقرب سائق متاح
- const now=Date.now();
- for(const [id,o] of Object.entries(orders)){
-  if(o.status==="pending"&&!o.driverId&&now-(Number(o.createdAt)||now)>=FORCE_MS)forceAssign(id,o);
- }
-}
+function checkOverdue(){checkReadyAlarm(Object.entries(orders))}
 const countOnline=()=>Object.values(presenceData).filter(x=>x&&x.online===true&&Date.now()-(Number(x.lastSeen)||0)<180000).length;
 function tick(){
  const now=Date.now();
  {const c=countOnline();if(c!==driversOnline){driversOnline=c;$("onCount").textContent=c;$("pulse").className="dot "+(c>0?"":"off")}}
- document.querySelectorAll(".cd[data-ts]").forEach(e=>{
-  const d=now-Number(e.dataset.ts),rem=FORCE_MS-d;
-  e.style.setProperty("--p",Math.min(100,Math.max(0,d/FORCE_MS*100)));
-  e.querySelector(".cd-t").textContent=rem>0?fmtMS(rem):"00:00";
-  const n=e.parentNode.querySelector(".cd-n");
-  if(n)n.textContent=rem>0?"إذا لم يقبله سائق، يُعيَّن أقرب سائق تلقائياً.":(driversOnline?"جارٍ تعيين أقرب سائق...":"لا يوجد سائق متاح حالياً.");
- });
- document.querySelectorAll(".pr[data-ts]").forEach(e=>{const r=Number(e.dataset.ts)-now;e.textContent=r>0?fmtMS(r):"انتهى الوقت"});
+ document.querySelectorAll(".pr[data-ts]").forEach(e=>{const r=Number(e.dataset.ts)-now;e.textContent=r>0?fmtMS(r):"انتهى الوقت — اضغط جاهز";e.classList.toggle("late",r<=0)});
  document.querySelectorAll(".el[data-ts]").forEach(e=>{e.textContent=fmtAge(now-Number(e.dataset.ts))});
- checkForced();
+ checkOverdue();
 }
 setInterval(tick,1000);
 
@@ -503,19 +490,27 @@ function cq(){
   setTimeout(()=>{if(!call){ring(false);if(document.getElementById("callUI"))ui("")}},45000);}
 }
 async function confirmCustomerOrder(id,p,mins){
- const co=cOrders[id];if(!co)throw Error("الطلب غير موجود");
- if(orders[id])return;
- let pv={};try{const sn=await get(ref(db,"customerOrderPrivate/"+id));if(sn.exists())pv=sn.val()}catch(e){console.warn("cust private",e);say("تعذر قراءة رقم الزبون (قواعد Firebase)",1)}
+ if(!Number.isInteger(p)||p<500||p>5000000)throw Error("السعر غير صالح (من 500 إلى 5,000,000)");
+ if(orders[id])throw Error("الطلب مسجل مسبقاً");
+ // نقرأ الطلب من جديد: قد يكون الزبون ألغاه أو سُجّل من قبل
+ const co=(await get(ref(db,"customerOrders/"+id))).val();
+ if(!co||co.restaurantId!==uid)throw Error("الطلب غير موجود");
+ if(co.status!=="calling"||co.price)throw Error("الطلب أُلغي أو سُجّل مسبقاً");
+ if((await get(ref(db,"orders/"+id))).exists())throw Error("الطلب مسجل مسبقاً");
+ const tf=trustedFee(co),fee=tf.fee;
  const pm=Math.max(1,Math.min(120,Number(mins)||15));
- const cpct=getCustPct(),com=cpct!==null?Math.round(p*cpct/100):getStoreCom(),fee=Number(co.deliveryFee)||0,now=Date.now();
- const cl=(co.lat!=null&&co.lng!=null)?Number(co.lat).toFixed(5)+","+Number(co.lng).toFixed(5):"";
+ const cpct=getCustPct(),com=Math.min(p,cpct!==null?Math.round(p*cpct/100):getStoreCom()),now=Date.now();
+ const cl=(co.lat!=null&&co.lng!=null&&isFinite(+co.lat)&&isFinite(+co.lng))?Number(co.lat).toFixed(5)+","+Number(co.lng).toFixed(5):"";
  const note="طلب من تطبيق الزبون"+(cl?" - موقع الزبون: https://www.google.com/maps?q="+cl:"");
+ const km=tf.km!=null?tf.km:null;
  await update(ref(db),{
-  ["orders/"+id]:{storeId:uid,storeName:store.name,storePhone:store.phone||"",areaId:"customer-app",area:"زبون التطبيق"+(co.distanceKm!=null?" · "+Number(co.distanceKm).toFixed(1)+" كم":""),...(co.distanceKm!=null?{distanceKm:Number(co.distanceKm)}:{}),itemPrice:p,deliveryFee:fee,customerTotal:p+fee,storeCommission:com,amountToReceive:p-com,storeMapUrl:store.mapUrl||"",status:"preparing",prepMinutes:pm,prepReadyAt:now+pm*60000,createdAt:now,customerOrder:true,orderType:"customer",customerOrderId:id},
-  ["orderPrivate/"+id]:{storeId:uid,customerPhone:String(pv.phone||""),...(pv.name?{customerName:String(pv.name)}:{}),note},
+  ["orders/"+id]:{storeId:uid,storeName:store.name,storePhone:storePhoneOf(),areaId:"customer-app",area:"زبون التطبيق"+(km!=null?" · "+Number(km).toFixed(1)+" كم":""),...(km!=null?{distanceKm:Number(km)}:{}),itemPrice:p,deliveryFee:fee,customerTotal:p+fee,storeCommission:com,amountToReceive:p-com,storeMapUrl:store.mapUrl||"",status:"preparing",prepMinutes:pm,prepReadyAt:now+pm*60000,createdAt:now,customerOrder:true,orderType:"customer",customerOrderId:id},
+  ["orderPrivate/"+id]:{storeId:uid,note},
   ["customerOrders/"+id+"/price"]:p,["customerOrders/"+id+"/priceAt"]:now,["customerOrders/"+id+"/status"]:"preparing"
  });
- say("تم تسجيل الطلب، حدد وقت التحضير ثم اضغط تم التجهيز");
+ // إن اختلفت الأجرة المحسوبة عن التي رآها الزبون نحدّثها عنده أيضاً (محاولة إضافية، لا تعطّل الطلب)
+ if(Number(co.deliveryFee)!==fee)update(ref(db,"customerOrders/"+id),{deliveryFee:fee}).catch(()=>{});
+ say("تم تسجيل الطلب. اضغط «جاهز» عندما ينتهي التجهيز");
  goTab("prep");
 }
 const synced={};
@@ -530,25 +525,36 @@ function syncCust(){
 function priceUI(id){
  if(cOrders[id]&&cOrders[id].price&&orders[id])return;
  const d=document.createElement("div");d.style.cssText="position:fixed;inset:0;background:#0d131aee;z-index:98;display:grid;place-items:center;padding:20px";
- d.innerHTML=`<div style="background:#fff;border-radius:18px;padding:18px;width:100%;max-width:340px;color:#0f1b2a"><b>سعر الطلب (بدون التوصيل)</b><input id="prIn" type="number" inputmode="numeric" placeholder="مثال: 10000" style="width:100%;padding:12px;margin:10px 0;border:1px solid #ccd;border-radius:12px;font-size:18px"><b>وقت التحضير (دقيقة)</b><div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0 14px"><button type="button" id="mMin" style="width:46px;height:46px;padding:0;font-size:24px;background:#1a6fd4">−</button><b id="mVal" style="min-width:64px;text-align:center;font-size:22px">15</b><button type="button" id="mPlus" style="width:46px;height:46px;padding:0;font-size:24px;background:#1a6fd4">+</button></div><div style="display:flex;gap:8px"><button id="prOk" style="flex:1">موافق</button><button id="prNo" style="flex:1;background:#e8edf3;color:#0f1b2a">لاحقاً</button></div></div>`;
+ d.innerHTML=`<div style="background:#fff;border-radius:18px;padding:18px;width:100%;max-width:340px;color:#0f1b2a"><b>سعر الطلب (بدون التوصيل)</b><input id="prIn" type="number" inputmode="numeric" placeholder="مثال: 10000" style="width:100%;padding:12px;margin:10px 0;border:1px solid #ccd;border-radius:12px;font-size:18px"><b>وقت التحضير (دقيقة)</b><div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0 14px"><button type="button" id="mMin" style="width:46px;height:46px;padding:0;font-size:24px;background:#1a6fd4">−</button><b id="mVal" style="min-width:64px;text-align:center;font-size:22px">15</b><button type="button" id="mPlus" style="width:46px;height:46px;padding:0;font-size:24px;background:#1a6fd4">+</button></div><div id="prErr" style="color:#b0002a;font-size:13px;font-weight:700;min-height:18px;margin:-4px 0 8px"></div><div style="display:flex;gap:8px"><button id="prOk" style="flex:1">تأكيد</button><button id="prNo" style="flex:1;background:#e8edf3;color:#0f1b2a">لاحقاً</button></div></div>`;
  document.body.appendChild(d);
  d.querySelector("#prNo").onclick=()=>d.remove();
  let mins=15;const mv=d.querySelector("#mVal");d.querySelector("#mMin").onclick=()=>{mins=Math.max(5,mins-5);mv.textContent=mins};d.querySelector("#mPlus").onclick=()=>{mins=Math.min(120,mins+5);mv.textContent=mins};
- d.querySelector("#prOk").onclick=async()=>{const p=Number(d.querySelector("#prIn").value);if(!(p>0))return;const bt=d.querySelector("#prOk");bt.disabled=true;try{await confirmCustomerOrder(id,p,mins);d.remove()}catch(e){bt.disabled=false;say("فشل إرسال الطلب: "+(e.code||e.message),1)}};
+ d.querySelector("#prOk").onclick=async()=>{const p=Math.round(Number(d.querySelector("#prIn").value)),er=d.querySelector("#prErr");if(!(p>=500&&p<=5000000)){er.textContent="اكتب سعراً صحيحاً (من 500 إلى 5,000,000)";return}er.textContent="";const bt=d.querySelector("#prOk");bt.disabled=true;try{await confirmCustomerOrder(id,p,mins);d.remove()}catch(e){bt.disabled=false;er.textContent=e.code||e.message||"فشل التسجيل"}};
 }
 onCallEnd=c=>{if(c.role==="r")setTimeout(()=>priceUI(c.oid),300)};
 const stops=[];
 let sayT;function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fde8ec":"#dff5ea";m.style.color=bad?"#b0002a":"#0b7a4e";clearTimeout(sayT);sayT=setTimeout(()=>m.style.display="none",4500)}
 
-$("btnLogin").onclick=async()=>{
+$("lf").onsubmit=async e=>{
+ e.preventDefault();
  $("err").textContent="";$("btnLogin").disabled=true;$("btnLogin").textContent="جاري...";
  try{ await signInWithEmailAndPassword(auth,$("un").value.trim()+"@baqubah.app",$("pw").value); }
  catch(e){ $("err").textContent="رقم الهاتف أو كلمة المرور غير صحيحة."; }
  finally{$("btnLogin").disabled=false;$("btnLogin").textContent="دخول";}
 };
+$("btnOut").onclick=async()=>{
+ if(Object.values(orders).some(o=>o&&o.status==="preparing")&&!confirm("عندك طلبات قيد التحضير. تسجيل الخروج؟"))return;
+ try{await signOut(auth)}catch(e){}
+};
 
 onAuthStateChanged(auth, async u=>{
- if(!u){$("login").hidden=false;$("app").hidden=true;return;}
+ if(!u){
+  stops.forEach(f=>{try{f()}catch(e){}});stops.length=0;
+  try{closeCall(true)}catch(e){}
+  if(alarmTimer){clearInterval(alarmTimer);alarmTimer=null;try{window.Capacitor.Plugins.StoreAlarm.stop()}catch(e){}}
+  uid=null;store=null;orders={};priv={};cOrders={};
+  $("login").hidden=false;$("app").hidden=true;$("pw").value="";return;
+ }
  const snap=await get(ref(db,"users/"+u.uid));
  if(!snap.exists()||snap.val().role!=="store"||snap.val().isActive===false){
   await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
@@ -576,38 +582,27 @@ function start(){
   const p=s.val()||{};
   presenceData=p;driversOnline=countOnline();
   $("onCount").textContent=driversOnline;
-  $("pulse").className="dot "+(driversOnline>0?"":"off");checkForced();
+  $("pulse").className="dot "+(driversOnline>0?"":"off");checkOverdue();
  }));
  stops.push(onValue(ref(db,"areas"),s=>{ areas=s.val()||{}; drawAreas(); }));
- stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{ orders=s.val()||{}; syncCust(); cq(); checkTimeoutOrders(); checkForced(); fetchDriversNames(); drawOrders(); }));
+ stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{ orders=s.val()||{}; syncCust(); cq(); checkOverdue(); fetchDriversNames(); drawOrders(); }));
  stops.push(onValue(query(ref(db,"customerOrders"),orderByChild("restaurantId"),equalTo(uid)),s=>{cOrders=s.val()||{};cq();syncCust()}));
  stops.push(onValue(query(ref(db,"orderPrivate"),orderByChild("storeId"),equalTo(uid)),s=>{ priv=s.val()||{}; drawOrders(); }));
 }
 
+const triedDrivers=new Set();
 async function fetchDriversNames(){
   const driverIds = [...new Set(Object.values(orders).map(o => o.driverId).filter(Boolean))];
   for(const dId of driverIds){
-    if(!driversData[dId]){
+    if(!driversData[dId] && !triedDrivers.has(dId)){
+      triedDrivers.add(dId);
       try{
         const snap = await get(ref(db, "users/" + dId));
         if(snap.exists()){
           driversData[dId] = snap.val();
           drawOrders();
         }
-      }catch(e){ console.warn("driver info", e); }
-    }
-  }
-}
-
-async function checkTimeoutOrders() {
-  const now = Date.now();
-  const fifteenMinutes = 15 * 60 * 1000;
-  for (const [id, o] of Object.entries(orders)) {
-    if (o.status === "pending" && (now - (o.createdAt || 0)) > fifteenMinutes) {
-      try {
-        await update(ref(db, "orders/" + id), { status: "cancelled", cancelReason: "نفاذ وقت قبول الطلب" });
-        say("نفاذ وقت قبول الطلب (15 دقيقة)، حاول مرة أخرى", 1);
-      } catch(e){}
+      }catch(e){ /* الاسم والرقم موجودان داخل الطلب نفسه */ }
     }
   }
 }
@@ -649,19 +644,21 @@ function renderAreaList() {
   }
   
   areaListDiv.innerHTML = filtered.map(([id, a]) => `
-    <div class="dropdown-item" onclick="selectArea('${esc(id)}')">
+    <div class="dropdown-item" data-area="${esc(id)}">
       <span>${esc(a.name)}</span>
       <span class="price">${fmt(a.fee)} د.ع</span>
     </div>
   `).join("");
 }
 
-window.selectArea = (id) => {
+function selectArea(id){
+  if(!areas[id])return;
   $("area").value = id;
   areaSearchInput.value = areas[id].name;
   areaListDiv.style.display = "none";
   calcTotal();
-};
+}
+areaListDiv.addEventListener("click",e=>{const it=e.target.closest("[data-area]");if(it)selectArea(it.dataset.area)});
 
 $("price").oninput=calcTotal;
 
@@ -677,40 +674,40 @@ function calcTotal(){
 
 $("btnCreate").onclick=async()=>{
  const aId=$("area").value, a=areas[aId], p=Number($("price").value);
- const ph=$("phone").value.trim(), cn=$("cname").value.trim(), nt=$("note").value.trim();
- if(!a)return say("اختر المنطقة",1);
- if(!p||p<500)return say("أدخل سعراً صحيحاً",1);
+ const ph=$("phone").value.trim(), cn=$("cname").value.trim().slice(0,60), nt=$("note").value.trim().slice(0,200);
+ if(!a||a.isActive===false)return say("اختر المنطقة",1);
+ if(!Number.isInteger(p)||p<500||p>5000000)return say("أدخل سعراً صحيحاً (من 500 إلى 5,000,000)",1);
  if(!/^07[0-9]{9}$/.test(ph))return say("رقم الزبون يجب أن يبدأ بـ 07 ويكون 11 رقماً",1);
 
- $("btnCreate").disabled=true;$("btnCreate").textContent="جاري الإرسال...";
+ $("btnCreate").disabled=true;$("btnCreate").textContent="جاري التسجيل...";
  try{
   const key=push(ref(db,"orders")).key;
-  const storeCom = getStoreCom();
+  const storeCom = getStoreCom(), fee=Number(a.fee)||0, now=Date.now();
   await update(ref(db),{
    ["orders/"+key]:{
-    storeId:uid, storeName:store.name, storePhone:store.phone||"",
-    areaId:aId, area:a.name, itemPrice:p, deliveryFee:a.fee, customerTotal:p+a.fee,
-    storeCommission:storeCom, amountToReceive:p-storeCom, storeMapUrl:store.mapUrl||"",
-    status:"pending", createdAt:Date.now(), orderType:"store"
+    storeId:uid, storeName:store.name, storePhone:storePhoneOf(),
+    areaId:aId, area:a.name, itemPrice:p, deliveryFee:fee, customerTotal:p+fee,
+    storeCommission:storeCom, amountToReceive:Math.max(0,p-storeCom), storeMapUrl:store.mapUrl||"",
+    status:"preparing", prepMinutes:15, prepReadyAt:now+15*60000, createdAt:now, orderType:"store"
    },
    ["orderPrivate/"+key]:{ storeId:uid, customerPhone:ph, ...(cn?{customerName:cn}:{}), ...(nt?{note:nt}:{}) }
   });
   $("price").value="";$("phone").value="";$("cname").value="";$("note").value="";
-  $("area").value=""; $("areaSearch").value=""; 
-  calcTotal(); say("تم إرسال الطلب بنجاح"); goTab("pend");
- }catch(e){say("فشل الإرسال: "+e.message,1);}
- $("btnCreate").disabled=false;$("btnCreate").textContent="إرسال الطلب";
+  $("area").value=""; $("areaSearch").value="";
+  calcTotal(); say("تم تسجيل الطلب. اضغط «جاهز» عندما ينتهي التجهيز"); goTab("prep");
+ }catch(e){say("فشل التسجيل: "+(e.code||e.message),1);}
+ $("btnCreate").disabled=false;$("btnCreate").textContent="تسجيل الطلب";
 };
 
 function drawOrders(){
- const os=Object.entries(orders).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
- const G={prep:["preparing"],pend:["pending","waiting_store"],acc:["accepted","arrived_store","picked_up","delivering"],rej:["cancelled"],done:["delivered"]};
+ const os=Object.entries(orders).filter(([,o])=>o&&typeof o==="object").sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
+ const G={prep:["preparing"],acc:["pending","waiting_store","accepted","arrived_store","picked_up","delivering"],done:["delivered","cancelled"]};
  const grp=k=>os.filter(([,o])=>G[k].includes(o.status));
- checkWaitingAlarm(os.filter(([,o])=>!["delivered","cancelled"].includes(o.status)));
- const cap={prep:"nPrep",pend:"nPend",acc:"nAcc",rej:"nRej",done:"nDone"};
+ checkReadyAlarm(os);
+ const cap={prep:"nPrep",acc:"nAcc",done:"nDone"};
  for(const k in cap)$(cap[k]).textContent=grp(k).length;
- const t=document.body.dataset.tab||"pend",list=G[t]?grp(t):[];
- const live=t==="prep"||t==="pend"||t==="acc";
+ const t=document.body.dataset.tab||"prep",list=G[t]?(t==="done"?grp(t).slice(0,60):grp(t)):[];
+ const live=t==="prep"||t==="acc";
  $("activeContainer").hidden=!(live&&list.length);
  $("activeEmpty").hidden=list.length>0||t==="new";
  if(live){
@@ -726,34 +723,34 @@ function drawOrders(){
 
 function card(id,o,isHistory){
  const q=priv[id]||{}, ts=Number(o.createdAt)||0;
- const lvlMap={preparing:0,pending:0,waiting_store:1,accepted:2,arrived_store:3,picked_up:4,delivering:4,delivered:5};
- const lvl=lvlMap[o.status]||0;
- const names=["قبول","وصول","استلام","تسليم"];
+ const lvlMap={preparing:1,pending:2,waiting_store:3,accepted:3,arrived_store:3,picked_up:4,delivering:4,delivered:5};
+ const lvl=lvlMap[o.status]||1;
+ const names=["تجهيز","سائق","استلام","تسليم"];
  let top="";
  if(!isHistory){
-  const t0=o.status==="pending"?ts:(Number(o.acceptedAt)||ts);
   if(o.status==="preparing")top=`<div class="elapsed"><span>المتبقي لتجهيز الطلب</span><b class="pr" data-ts="${Number(o.prepReadyAt)||ts}"></b></div>`;
-  else top=`<div class="elapsed"><span>${o.status==="pending"?"منذ إرسال الطلب":"منذ قبول السائق"}</span><b class="el" data-ts="${t0}"></b></div>`;
+  else{
+   const t0=o.status==="pending"?(Number(o.readyAt)||ts):(Number(o.acceptedAt)||ts);
+   top=`<div class="elapsed"><span>${o.status==="pending"?"بانتظار سائق منذ":"منذ قبول السائق"}</span><b class="el" data-ts="${t0}"></b></div>`;
+  }
   top+=`<div class="steps" style="--fill:${Math.min(1,Math.max(0,(lvl-1)/3))*75}%">${names.map((n,k)=>`<div class="st ${lvl>k+1?'done':lvl===k+1?'now':''}"><i>${lvl>k+1?'✓':k+1}</i>${n}</div>`).join("")}</div>`;
  }
  let badgeCls="pending";
- if(["accepted","arrived_store","picked_up","delivering"].includes(o.status))badgeCls="acc";
+ if(["accepted","arrived_store","picked_up","delivering","waiting_store"].includes(o.status))badgeCls="acc";
  if(o.status==="delivered")badgeCls="done";
  if(o.status==="cancelled")badgeCls="canc";
  let driverInfo="";
  if(o.driverId){
   const dObj=driversData[o.driverId]||{};
   const dName=dObj.name||o.driverName||"سائق";
-  const dPhone=dObj.phone||dObj.username||o.driverPhone||"";
+  const dPhone=String(dObj.phone||dObj.username||o.driverPhone||"").replace(/[^0-9+]/g,"");
   driverInfo=`<div class="drv"><div class="drv-row"><div class="drv-av">${esc(String(dName).trim().charAt(0)||"س")}</div><div class="drv-meta"><b>${esc(dName)}${o.forcedAssign?'<span class="tag">تعيين تلقائي</span>':''}</b><span>${esc(dPhone)}</span></div></div>${dPhone&&!isHistory?`<a class="call" href="tel:${esc(dPhone)}">اتصال بالسائق</a>`:""}</div>`;
  }
  let actionHtml="";
  if(o.status==="preparing"){
-  actionHtml=`<div class="prep"><button type="button" onclick="prepAdj('${esc(id)}',-5)">−</button><b>وقت التحضير ±5 د</b><button type="button" onclick="prepAdj('${esc(id)}',5)">+</button></div><div class="actions"><button class="ok2" onclick="prepReady('${esc(id)}')">تم التجهيز</button><button class="bad" onclick="cancelOrder('${esc(id)}')">إلغاء</button></div>`;
- }else if(o.status==="waiting_store"){
-  actionHtml=`<div class="actions"><button class="ok" onclick="acceptDriver('${esc(id)}')">قبول السائق</button><button class="bad" onclick="cancelOrder('${esc(id)}')">رفض</button></div>`;
- }else if(o.status==="pending"||o.status==="accepted"){
-  actionHtml=`<div class="actions"><button class="bad" onclick="cancelOrder('${esc(id)}')">إلغاء الطلب</button></div>`;
+  actionHtml=`<div class="actions"><button type="button" class="ok2" data-ready="${esc(id)}">✓ جاهز</button></div>`;
+ }else if(o.status==="pending"&&!isHistory){
+  actionHtml=`<p class="meta" style="text-align:center;margin-top:8px">الطلب ظاهر للسائقين الآن، لا تحتاج أي إجراء.</p>`;
  }
  const storeCom=Number(o.storeCommission!==undefined?o.storeCommission:getStoreCom());
  const receiveAmt=Math.max(0,(Number(o.itemPrice)||0)-storeCom);
@@ -771,20 +768,8 @@ function card(id,o,isHistory){
  </div>`;
 }
 
-window.acceptDriver = async(id) => {
- try{ await update(ref(db,"orders/"+id),{status:"accepted"}); say("تم القبول، السائق في الطريق."); }
- catch(e){ say("حدث خطأ، حاول مجدداً", 1); }
-};
-
-window.cancelOrder = async(id) => {
- if(!confirm("هل أنت متأكد من إلغاء الطلب؟"))return;
- try{
-  const isC=!!(orders[id]&&orders[id].customerOrder);
-  const u={["orders/"+id+"/status"]:"cancelled",["orders/"+id+"/cancelReason"]:isC?"ألغاه المتجر (الزبون لم يكمل)":"تم الرفض من قبل المتجر"};
-  if(isC)u["customerOrders/"+id+"/status"]="cancelled";
-  await update(ref(db),u); say("تم إلغاء الطلب.");
- }catch(e){ say("فشل الإلغاء: "+e.message,1); }
-};
+// زر «جاهز» (الضغطة الوحيدة المطلوبة من المتجر بعد تسجيل السعر)
+$("activeOrders").addEventListener("click",e=>{const b=e.target.closest("[data-ready]");if(!b)return;b.disabled=true;releaseOrder(b.dataset.ready)});
 
 // ---- إعادة الاتصال عند رجوع التطبيق من الخلفية (نفس منطق تطبيق السائق)
 let lastResume=0;
@@ -798,12 +783,12 @@ document.addEventListener("visibilitychange",resumeStore);
 window.addEventListener("focus",resumeStore);
 window.addEventListener("online",resumeStore);
 let selO=null,scT=null;
-function chipCls(o){const t=o&&o.status;return t==="pending"?"wait":t==="waiting_store"?"ask":t==="accepted"?"go":t==="arrived_store"?"at":"cust"}
+function chipCls(o){const t=o&&o.status;return t==="preparing"?"ask":t==="pending"?"wait":(t==="accepted"||t==="waiting_store")?"go":t==="arrived_store"?"at":"cust"}
 function markO(sc){document.querySelectorAll("#chips .chip").forEach(x=>x.classList.toggle("on",x.dataset.sel===selO));if(sc){const on=document.querySelector("#chips .chip.on");if(on)on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"})}}
 $("chips").onclick=e=>{const b=e.target.closest("[data-sel]");if(!b)return;selO=b.dataset.sel;markO(false);const c=document.getElementById("o-"+selO);if(c)c.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"})};
 $("activeOrders").addEventListener("scroll",()=>{cancelAnimationFrame(scT);scT=requestAnimationFrame(()=>{const p=$("activeOrders"),r=p.getBoundingClientRect(),c=r.left+r.width/2;let best=null,bd=1e9;p.querySelectorAll(".card").forEach(x=>{const q=x.getBoundingClientRect(),dd=Math.abs(q.left+q.width/2-c);if(dd<bd){bd=dd;best=x}});if(best){const id=best.id.replace("o-","");if(id!==selO){selO=id;markO(true)}}})},{passive:true});
 function goTab(t){document.body.dataset.tab=t;selO=null;$("chips")._h=null;try{drawOrders()}catch(e){}$("tabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.t===t));window.scrollTo(0,0)}
-document.body.dataset.tab="pend";$("historyOrders").hidden=false;
+document.body.dataset.tab="prep";$("historyOrders").hidden=false;
 $("tabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(b)goTab(b.dataset.t)};
 $("btnHistory").onclick = () => { $("historyOrders").hidden = !$("historyOrders").hidden; };
 </script>

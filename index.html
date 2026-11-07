@@ -154,6 +154,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div id="msg"></div>
 <main>
 <section id="t1" class="tab">
+<div id="cancelReqs1"></div>
 <div class="grid">
 <div class="box">إجمالي الطلبات<strong id="s1">0</strong></div>
 <div class="box">قيد التنفيذ<strong id="s2">0</strong></div>
@@ -178,6 +179,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 </section>
 
 <section id="t9" class="tab" hidden>
+<div id="cancelReqs9"></div>
 <div class="box">
   <h3>الطلبات الحية</h3>
   <p class="sub">الطلبات الجارية الآن، مع وقت انتظارها واسم السائق ورقمه.</p>
@@ -355,7 +357,7 @@ const waLink=(ph,txt)=>{let p=String(ph||"").replace(/\D/g,"");if(p.startsWith("
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const tm=t=>t?`<span class="tm">${new Date(t).toLocaleString("ar-IQ",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}</span>`:'<span class="tm">—</span>';
-const ST={preparing:"قيد التحضير",pending:"بانتظار سائق",waiting_store:"بانتظار موافقة المتجر",accepted:"السائق بالطريق للمتجر",arrived_store:"السائق وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
+const ST={preparing:"قيد التحضير (بانتظار جاهز من المتجر)",pending:"جاهز - بانتظار سائق",waiting_store:"السائق بالطريق للمتجر",accepted:"السائق بالطريق للمتجر",arrived_store:"السائق وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
 
 $("f").innerHTML+=Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
 
@@ -483,7 +485,13 @@ function renderCust(){
   <td><div class="acts">${ok?`<button type="button" data-na="${esc(id)}" class="org">إيقاف التفعيل</button>`:`<a class="tag b" target="_blank" href="${esc(waLink(c.phone,msg))}">📲 إرسال الرمز</a><button type="button" data-ap="${esc(id)}" class="grn">تفعيل مباشر</button><button type="button" data-nc="${esc(id)}" class="gray">رمز جديد</button>`}
   <button type="button" data-${bn?"ub":"bn"}="${esc(id)}" class="${bn?"grn":"red"}">${bn?"فك الحظر":"حظر"}</button></div></td></tr>`}),"لا يوجد زبائن.");
 }
-{const _d=draw;draw=function(){_d();try{renderCust()}catch(e){console.error(e)}}}
+function renderCancelReqs(){
+ const rows=Object.entries(orders).filter(([id,o])=>o&&o.cancelRequest&&!o.cancelRequest.state&&!["delivered","cancelled"].includes(o.status));
+ const h=rows.length?`<div class="box" style="border:2px solid var(--amber)"><h3>⚠️ طلبات إلغاء من المتاجر (${rows.length})</h3>${table(["الطلب","المتجر","السبب","الوقت","إجراءات"],rows.map(([id,o])=>`<tr><td><bdi>#${esc(id.slice(-6))}</bdi><div class="tm">${esc(ST[o.status]||o.status)}</div></td><td>${esc(o.storeName)}</td><td>${esc(o.cancelRequest.reason)}</td><td>${tm(o.cancelRequest.at)}</td><td><div class="acts"><button type="button" data-cra="${esc(id)}" class="red">موافقة وإلغاء</button><button type="button" data-crr="${esc(id)}" class="gray">رفض</button></div></td></tr>`),"")}</div>`:"";
+ [1,9].forEach(n=>{const el=$("cancelReqs"+n);if(el&&el._h!==h){el._h=h;el.innerHTML=h}});
+}
+const cancelStat=id=>{const so=Object.values(orders).filter(o=>o&&o.storeId===id),cn=so.filter(o=>o.cancelRequest&&o.cancelRequest.state==="approved").length,rq=so.filter(o=>o.cancelRequest).length;return `<span class="tag ${cn>=3?"r":"g"}">${cn} / ${so.length}</span><div class="tm">طلبات إلغاء: ${rq}</div>`};
+{const _d=draw;draw=function(){_d();try{renderCust()}catch(e){console.error(e)}try{renderCancelReqs()}catch(e){console.error(e)}}}
 $("t10").addEventListener("click",e=>{
  const b=e.target.closest("button");if(!b)return;
  const d=b.dataset;
@@ -531,7 +539,7 @@ const debtTag=id=>{const d=getDebt(id);return `<span class="tag ${d>0?"r":(d<0?"
 const chipOf=id=>`<div class="chips">${debtTag(id)}<span class="tag b">${carrying(id)} طلب معه</span></div>`;
 // ===== تعيين تلقائي بعد 7 دقائق لأقرب سائق =====
 const FRESH_MS=120000,forcing=new Set();
-function parseLatLng(u){if(!u)return null;const s=decodeURIComponent(String(u));for(const p of [/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/]){const m=s.match(p);if(m){const a=+m[1],b=+m[2];if(Math.abs(a)<=90&&Math.abs(b)<=180)return{lat:a,lng:b}}}return null}
+function parseLatLng(u){if(!u)return null;let s=String(u);try{s=decodeURIComponent(s)}catch(e){}for(const p of [/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/]){const m=s.match(p);if(m){const a=+m[1],b=+m[2];if(Math.abs(a)<=90&&Math.abs(b)<=180)return{lat:a,lng:b}}}return null}
 const hav=(a,b)=>{const R=6371,r=x=>x*Math.PI/180,dl=r(b.lat-a.lat),dg=r(b.lng-a.lng),x=Math.sin(dl/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
 function pickDriver(o){
  const here=parseLatLng(o.storeMapUrl||(users[o.storeId]&&users[o.storeId].mapUrl)),now=Date.now(),limit=Number(settings.debtLimit??15000);
@@ -563,11 +571,7 @@ async function unassignOrder(oid){
 const relg=new Set();
 function checkForced(){
  const now=Date.now();
- for(const [id,o] of Object.entries(orders)){
-  if(!o||o.status!=="preparing"||!Number(o.prepReadyAt)||now<Number(o.prepReadyAt)||relg.has(id))continue;
-  relg.add(id);
-  runTransaction(ref(db,"orders/"+id),cur=>{if(!cur||cur.status!=="preparing")return;return{...cur,status:"pending",createdAt:Date.now(),releasedAt:Date.now()}}).catch(()=>{}).finally(()=>setTimeout(()=>relg.delete(id),15000));
- }
+ // الإرسال للسائقين يتم فقط عند ضغط المتجر «جاهز» أو يدوياً من الإدارة (خيار: إرسال للسائقين)
  for(const [id,o] of Object.entries(orders)){
   if(!o||o.status!=="pending"||o.driverId||forcing.has(id)||now-(Number(o.createdAt)||now)<7*60000)continue;
   const d=pickDriver(o);if(!d)continue;
@@ -597,6 +601,7 @@ document.addEventListener("change",e=>{
  if(sc&&sc.value){const id=sc.dataset.lvc,v=sc.value;sc.value="";if(v==="cc")run(async()=>{if(!(await showToastConfirm("إلغاء طلب الزبون؟")))return;await update(ref(db,"customerOrders/"+id),{status:"cancelled"});say("تم إلغاء طلب الزبون.")});return}
  const s=e.target.closest("select[data-lv]");if(!s||!s.value)return;const id=s.dataset.lv,v=s.value;s.value="";
  if(v==="as")openAssign(id);
+ else if(v==="rel")run(async()=>{if(!(await showToastConfirm("إرسال الطلب #"+id.slice(-6)+" للسائقين الآن؟")))return;await runTransaction(ref(db,"orders/"+id),cur=>{if(cur===null)return cur;if(cur.status!=="preparing")return;return{...cur,status:"pending",createdAt:Date.now(),releasedAt:Date.now(),readyAt:Date.now(),releasedByAdmin:true}});say("تم إرسال الطلب للسائقين.")});
  else if(v==="un")run(async()=>{if(!(await showToastConfirm("إلغاء التعيين ورفع الطلب لجميع السائقين؟")))return;await unassignOrder(id);say("تم رفع الطلب للسائقين.")});
  else if(v==="del")run(async()=>{if(!(await showToastConfirm("حذف الطلب #"+id.slice(-6)+" نهائياً؟")))return;await deleteOrdersArchived({[id]:orders[id]});say("تم حذف الطلب.")});
 });
@@ -706,13 +711,14 @@ function draw(){
  // لا نعيد رسم جدول المتاجر وانت تكتب المبلغ
  const ae=document.activeElement;
  if(!(ae&&ae.tagName==="INPUT"&&$("stores").contains(ae))){
- $("stores").innerHTML=table(["الاسم","رقم الدخول","الموقع","عمولة طلب المتجر (د.ع)","عمولة تطبيق الزبون (%)","تاريخ التسجيل","إجراءات"],sts.map(([id,u])=>
+ $("stores").innerHTML=table(["الاسم","رقم الدخول","الموقع","عمولة طلب المتجر (د.ع)","عمولة تطبيق الزبون (%)","الإلغاءات","تاريخ التسجيل","إجراءات"],sts.map(([id,u])=>
   `<tr><td><b>${esc(u.name)}</b></td><td dir="ltr">${esc(u.username)}</td>
   <td>${mapLink(u.mapUrl)} ${u.mapUrl?(hasLatLng(u.mapUrl)?'<span class="tag g">مقروء</span>':'<span class="tag y">غير مقروء</span>'):'<span class="tag r">لا يوجد</span>'}</td>
   <td><input class="pc" type="number" min="0" step="50" id="pc-${esc(id)}" value="${esc(storeFee(u))}">
   <button type="button" data-pc="${esc(id)}" class="grn">حفظ</button></td>
   <td><input class="pc" type="number" min="0" max="100" step="0.5" id="cp-${esc(id)}" placeholder="افتراضي" value="${esc(u.custCommissionPct??"")}">
   <button type="button" data-cp="${esc(id)}" class="grn">حفظ</button></td>
+  <td>${cancelStat(id)}</td>
   <td>${tm(u.createdAt)}</td>
   <td><button type="button" data-ed="${esc(id)}" data-ek="store" class="blue">تعديل</button>
   <button type="button" data-tg="${esc(id)}" class="${u.isActive===false?"grn":"org"}">${u.isActive===false?"تفعيل":"تعطيل"}</button>
@@ -776,7 +782,7 @@ function drawLiveOrders(){
      const driverName=name?`<b>${esc(name)}</b>${o.driverId?chipOf(o.driverId):""}`:'<span style="color:#94a3b8">بانتظار سائق</span>';
      const driverPhone=phone?`<a href="tel:${esc(phone)}" dir="ltr">${esc(phone)}</a>`:'—';
      return `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${o.customerOrder?'<span class="tag b">طلب زبون</span>':'<span class="tag">طلب متجر</span>'}${o.customerOrder?cpTag(id):""}</td><td>${esc(o.storeName)}</td><td>${driverName}</td>
-       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span>${o.forcedAssign?' <span class="tag b">تعيين تلقائي</span>':''}</td><td>${tm(o.createdAt)}</td><td>${o.acceptedAt&&o.createdAt?fmtAge(o.acceptedAt-o.createdAt):"—"}</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td><td>${o.acceptedAt?`<span class="ageC" data-ts="${Number(o.acceptedAt)}"></span>`:"—"}</td><td><select data-lv="${esc(id)}"><option value="">اختر إجراء</option><option value="as">${o.driverId?"تعيين لسائق آخر":"تعيين لسائق"}</option>${o.driverId?'<option value="un">إلغاء التعيين (رفعه للسائقين)</option>':""}<option value="del">حذف الطلب</option></select></td></tr>`;
+       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span>${o.forcedAssign?' <span class="tag b">تعيين تلقائي</span>':''}${o.status==="preparing"&&Number(o.prepReadyAt)&&Date.now()>Number(o.prepReadyAt)?' <span class="tag r">انتهى وقت التحضير ولم يضغط جاهز</span>':''}</td><td>${tm(o.createdAt)}</td><td>${o.acceptedAt&&o.createdAt?fmtAge(o.acceptedAt-o.createdAt):"—"}</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td><td>${o.acceptedAt?`<span class="ageC" data-ts="${Number(o.acceptedAt)}"></span>`:"—"}</td><td><select data-lv="${esc(id)}"><option value="">اختر إجراء</option>${o.status==="preparing"?'<option value="rel">إرسال للسائقين (جاهز)</option>':""}<option value="as">${o.driverId?"تعيين لسائق آخر":"تعيين لسائق"}</option>${o.driverId?'<option value="un">إلغاء التعيين (رفعه للسائقين)</option>':""}<option value="del">حذف الطلب</option></select></td></tr>`;
    })],"لا توجد طلبات حية الآن."
  );
  tickAges();
@@ -790,7 +796,7 @@ function drawOrders(){
   `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(o.storeName)}${o.customerOrder?' <span class="tag b">طلب زبون</span>':''}</td><td>${esc(o.area)}</td>
   <td>${tm(o.createdAt)}</td><td>${tm(o.statusUpdatedAt||o.deliveredAt||o.updatedAt)}</td>
   <td>${ST[o.status]||esc(o.status)}${o.forcedAssign?' <span class="tag b">تلقائي</span>':''}</td>
-  <td><select data-s="${esc(id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${o.status===k?"selected":""}>${v}</option>`).join("")}</select>
+  <td><select data-s="${esc(id)}">${Object.entries(ST).filter(([k])=>k!=="waiting_store"||o.status===k).map(([k,v])=>`<option value="${k}" ${o.status===k?"selected":""}>${v}</option>`).join("")}</select>
   <button type="button" data-ss="${esc(id)}">حفظ</button>
   <button type="button" data-del="${esc(id)}" data-kind="order" class="red">حذف</button></td></tr>`),"لا توجد طلبات.");
 }
@@ -923,7 +929,7 @@ $("editForm").onsubmit=e=>{e.preventDefault();run(async()=>{
 document.addEventListener("click",e=>{
  const b=e.target.closest("button");if(!b||b.disabled||b.type==="submit")return;const d=b.dataset;
  if(d.ed){openEdit(d.ek,d.ed);return}
- if(!(d.ss||d.tg||d.ta||d.pc||d.cp||d.zp||d.ded||d.bon||d.del))return;
+ if(!(d.ss||d.tg||d.ta||d.pc||d.cp||d.zp||d.ded||d.bon||d.cra||d.crr||d.del))return;
  run(async()=>{
   if(d.ss){
     if(await showToastConfirm("تغيير حالة الطلب؟")){
@@ -972,6 +978,17 @@ document.addEventListener("click",e=>{
     const note=(prompt("السبب (اختياري):")||"").trim();
     await push(ref(db,"finance"),{type:isD?"deduction":"bonus",userId:id,userName:users[id].name,amount,note,createdAt:Date.now()});
     say(isD?"تم تسجيل الخصم.":"تم تسجيل المكافأة.");
+  }
+  else if(d.cra){
+    const o=orders[d.cra];
+    if(o&&await showToastConfirm("الموافقة على إلغاء الطلب؟")){
+      const u={["orders/"+d.cra+"/status"]:"cancelled",["orders/"+d.cra+"/cancelReason"]:"ألغاه المتجر بموافقة الإدارة: "+((o.cancelRequest&&o.cancelRequest.reason)||""),["orders/"+d.cra+"/cancelRequest/state"]:"approved",["orders/"+d.cra+"/statusUpdatedAt"]:Date.now()};
+      if(o.customerOrderId)u["customerOrders/"+o.customerOrderId+"/status"]="cancelled";
+      await update(ref(db),u);say("تم إلغاء الطلب.");
+    }
+  }
+  else if(d.crr){
+    if(await showToastConfirm("رفض طلب الإلغاء؟")){await update(ref(db),{["orders/"+d.crr+"/cancelRequest/state"]:"rejected"});say("تم رفض طلب الإلغاء.")}
   }
   else if(d.zp){ await resetWallet(d.zp); }
   else if(d.del){

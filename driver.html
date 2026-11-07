@@ -525,6 +525,7 @@ function __main(){
  const PC=()=>{const v=Number(settings.driverCommissionPercent);return(settings.driverCommissionPercent!=null&&v>=0&&v<=100)?v/100:0.1};
  let uid=null,driver=null,settings={},isOnline=false,pos={lat:null,lng:null},debt=0,debtLimit=15000;
  let pend={},mine={},finance={},privData={},stops=[],gps=null,tick=null,presenceTick=null,pendLoaded=false;
+ let srvOff=0;const sNow=()=>Date.now()+srvOff;
  let seenAv=null,prevMine=null,busy=false,connectionRef=null,sideTab="overview",dailyCount=0,totalCount=0,completedCount=0,todayProfit=0;
 
  $("lf").onsubmit=async e=>{
@@ -614,6 +615,7 @@ function __main(){
  function start(){
   clear();startGPS();
   const pr=ref(db,"presence/"+uid);
+  stops.push(onValue(ref(db,".info/serverTimeOffset"),s=>{srvOff=Number(s.val())||0},()=>{}));
   stops.push(onValue(ref(db,".info/connected"),s=>{
    const connected=s.val()===true;
    $("off").hidden=connected;
@@ -645,16 +647,13 @@ function __main(){
   stops.push(onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{finance=s.val()||{};draw()},eh));
   stops.push(onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{pend=s.val()||{};pendLoaded=true;draw()},eh));
   stops.push(onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
-   mine=s.val()||{};
+   mine=s.val()||{};for(const k in mine){const m=mine[k];if(m&&m.status==="waiting_store")mine[k]={...m,status:"accepted"}}
    if(prevMine){
     for(const id in mine){
      const o=mine[id],p=prevMine[id];
      if(p&&o&&p.status!==o.status){
-      if(p.status==="waiting_store"&&o.status==="accepted"){
-       notify("تمت الموافقة","المتجر وافق على طلبك، توجه للمتجر");
-       speak("المتجر وافق على طلبك");say("المتجر وافق على طلبك");
-      }else if(o.status==="cancelled"){
-       notify("تم إلغاء الطلب","المتجر ألغى الطلب");speak("تم إلغاء الطلب");say("تم إلغاء الطلب");
+      if(o.status==="cancelled"){
+       notify("تم إلغاء الطلب","تم إلغاء الطلب من الإدارة");speak("تم إلغاء الطلب");say("تم إلغاء الطلب");
       }
      }else if(!p&&o&&o.status==="accepted"&&o.forcedAssign){forcedAlert(o)}
     }
@@ -744,8 +743,12 @@ function __main(){
    Promise.resolve(plugin.updateStatus({online})).catch(()=>{lastNativeDriverStatus=null;});
   }catch(_){lastNativeDriverStatus=null;}
  }
+ const safeUrl=u=>{const v=String(u||"").trim();return /^https?:\/\/[^\s"'<>]+$/i.test(v)?v:""};
+ const phoneDigits=v=>String(v||"").replace(/[^0-9+]/g,"");
+ // رقم المتجر: ظاهر دائماً للسائق (قبل القبول وبعده) مع زر اتصال
+ const storePhoneBox=o=>{const p=phoneDigits(o.storePhone);return `<div class="customer-box"><b>هاتف المتجر: <span dir="ltr">${p?esc(p):"غير متوفر"}</span></b>${p?`<div class="btn-group"><a href="tel:${esc(p)}" class="btn-call">اتصال بالمتجر</a></div>`:""}</div>`};
  const typeTag=o=>o&&o.customerOrder?'<span class="badge" style="background:#0f9a63;color:#fff">طلب زبون</span>':'<span class="badge" style="background:#64748b;color:#fff">طلب متجر</span>';
-function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة المتجر"],accepted:["h-store","بالطريق للمتجر"],arrived_store:["h-at","وصلت للمتجر"],picked_up:["h-cust","بالطريق للزبون"],delivering:["h-cust","بالطريق للزبون"]}[o.status]||["h-new","طلب جديد"];return `<div class="hero ${m[0]}"><i class="hero-ic"></i><div class="hero-t">${m[1]}</div><div class="hero-s">قيمة التوصيل ${fmt(Number(o.deliveryFee)||0)} د.ع</div></div>`}
+function heroOf(o){const m={waiting_store:["h-store","بالطريق للمتجر"],accepted:["h-store","بالطريق للمتجر"],arrived_store:["h-at","وصلت للمتجر"],picked_up:["h-cust","بالطريق للزبون"],delivering:["h-cust","بالطريق للزبون"]}[o.status]||["h-new","طلب جديد"];return `<div class="hero ${m[0]}"><i class="hero-ic"></i><div class="hero-t">${m[1]}</div><div class="hero-s">قيمة التوصيل ${fmt(Number(o.deliveryFee)||0)} د.ع</div></div>`}
  const tabSt={};
  function tabOpen(id){const t=tabSt[id]||"d",i=esc(id);return `<div class="tabs"><button type="button" class="tab ${t==="d"?"on":""}" data-tab="d" data-id="${i}">التفاصيل</button><button type="button" class="tab ${t==="f"?"on":""}" data-tab="f" data-id="${i}">الحساب المالي</button></div><div class="pane" data-pane="d" ${t==="d"?"":"hidden"}>`}
  function tabMid(id){return `</div><div class="pane" data-pane="f" ${(tabSt[id]||"d")==="f"?"":"hidden"}>`}
@@ -791,7 +794,7 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
     const res=await ref(db,"orders/"+id).transaction(cur=>{
      if(cur===null)return cur;
      if(cur.status!=="pending"||cur.driverId)return;
-     return{...cur,driverId:uid,driverName:driver.name||"",driverPhone:driver.phone||"",status:"accepted",forcedAssign:true,acceptedAt:Date.now(),stepAt:Date.now()};
+     return{...cur,driverId:uid,driverName:driver.name||"",driverPhone:driver.phone||"",status:"accepted",forcedAssign:true,acceptedAt:sNow(),stepAt:sNow()};
     });
     if(res&&res.committed)break;
    }
@@ -801,7 +804,7 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
  function draw(){
   if(!uid)return;
   stats();ui();syncNativeDriverStatus();
-  const act=activeOf(),nAct=Object.keys(act).length,now=Date.now();
+  const act=activeOf(),nAct=Object.keys(act).length,now=sNow();
   let av=[];
   if(isOnline&&debt<debtLimit&&pendLoaded){
    av=Object.entries(pend).filter(([id,o])=>{
@@ -833,10 +836,10 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
   $("availContainer").hidden=!av.length;
   setHtml("availList",av.map(([id,o])=>`<div class="card new" id="order-${esc(id)}">
    <div class="row"><b>طلب #${esc(id.slice(-6))}</b>${typeTag(o)}<div class="age-wrap"><small>منذ</small><span class="age" data-ts="${Number(o.createdAt)||0}"></span></div></div>
-   ${heroOf(o)}${tabOpen(id)}
+   ${heroOf(o)}${storePhoneBox(o)}${tabOpen(id)}
    <div class="tl"><i class="tl-ic s"></i><div class="tl-b"><small>المتجر</small><strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></div></div>
    <div class="tl"><i class="tl-ic c"></i><div class="tl-b"><small>المنطقة</small><strong class="area-name">${esc(o.area||"غير محددة")}</strong></div></div>
-   ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" rel="noopener" class="map-link">فتح موقع المتجر على الخريطة</a>`:""}
+   ${safeUrl(o.storeMapUrl)?`<a href="${esc(safeUrl(o.storeMapUrl))}" target="_blank" rel="noopener noreferrer" class="map-link">فتح موقع المتجر على الخريطة</a>`:""}
    ${tabMid(id)}${finBox(o)}</div>
    <div class="actions">
     <button data-a="accept" data-id="${esc(id)}">قبول الطلب</button>
@@ -846,10 +849,7 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
   $("activeContainer").hidden=!nAct;
   setHtml("activeList",Object.entries(act).map(([id,o])=>{
    let btn="",warn="",badge="";const q=privData[id]||{},st=typeof o.stepAt==="number"?o.stepAt:0;
-   if(o.status==="waiting_store"){
-    badge='<span class="badge wait">بانتظار موافقة المتجر</span>';
-    btn='<div class="wait-msg">يرجى الانتظار حتى يوافق المتجر على طلبك...</div>';
-   }else if(o.status==="accepted"){
+   if(o.status==="accepted"){
     badge='<span class="badge">بالطريق للمتجر</span>';
     if(o.storeLat!=null&&o.storeLng!=null&&pos.lat!=null){
      const d=getDist(pos.lat,pos.lng,Number(o.storeLat),Number(o.storeLng));
@@ -863,10 +863,8 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
     badge='<span class="badge">بالطريق للزبون</span>';const ok=(now-st)>300000;
     btn=`<button class="grn ${ok?"":"lock"}" style="width:100%;margin-top:10px" data-a="done" data-id="${esc(id)}">تم التوصيل للزبون</button>`;
    }
-   const storePhone=String(o.storePhone||"");
-   const storeBox=`<div class="customer-box"><b>هاتف المتجر: <span dir="ltr">${esc(storePhone||"غير متوفر")}</span></b>${storePhone?`<div class="btn-group"><a href="tel:${esc(storePhone)}" class="btn-call">اتصال بالمتجر</a></div>`:""}</div>`;
    let cust="";
-   if((q.customerPhone||q.note||q.customerName)&&o.status!=="waiting_store"){
+   if(q.customerPhone||q.note||q.customerName){
     const cp=String(q.customerPhone||"");
     const digits=cp.replace(/\D/g,"");
     const international=digits.startsWith("964")?digits:(digits.startsWith("0")?"964"+digits.slice(1):"964"+digits);
@@ -878,13 +876,13 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
      ${cp?`<div class="btn-group"><a href="tel:${esc(cp)}" class="btn-call">اتصال</a><a href="${esc(wa)}" target="_blank" rel="noopener" class="btn-wa">واتساب — طلب الموقع</a></div>`:""}
     </div>`;
    }
-   return `<div class="card ${o.status==="waiting_store"?"waiting":""}" id="order-${esc(id)}">
+   return `<div class="card" id="order-${esc(id)}">
     <div class="row"><b>طلب #${esc(id.slice(-6))}</b>${typeTag(o)}${o.forcedAssign?'<span class="badge forced">تعيين تلقائي</span>':''}<div class="age-wrap"><small>منذ القبول</small><span class="age" data-ts="${Number(o.acceptedAt)||Number(o.createdAt)||0}"></span></div></div>
-    ${heroOf(o)}${tabOpen(id)}
+    ${heroOf(o)}${storePhoneBox(o)}${tabOpen(id)}
     <div class="tl"><i class="tl-ic s"></i><div class="tl-b"><small>المتجر</small><strong class="store-name">${esc(o.storeName||"غير محدد")}</strong></div></div>
     <div class="tl"><i class="tl-ic c"></i><div class="tl-b"><small>المنطقة</small><strong class="area-name">${esc(o.area||"غير محددة")}</strong></div></div>
-    ${o.storeMapUrl?`<a href="${esc(o.storeMapUrl)}" target="_blank" rel="noopener" class="map-link">فتح موقع المتجر على الخريطة</a>`:""}
-    ${storeBox}${cust}${warn}${tabMid(id)}${finBox(o)}</div>${btn}
+    ${safeUrl(o.storeMapUrl)?`<a href="${esc(safeUrl(o.storeMapUrl))}" target="_blank" rel="noopener noreferrer" class="map-link">فتح موقع المتجر على الخريطة</a>`:""}
+    ${cust}${warn}${tabMid(id)}${finBox(o)}</div>${btn}
    </div>`;
   }).join(""));
   updateAges();autoAssign();
@@ -917,7 +915,7 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
   const cash=Object.values(finance).filter(f=>f&&f.type==="cash_received").reduce((a,f)=>a+Number(f.amount||0),0);
   const dedT=Object.values(finance).filter(f=>f&&f.type==="deduction").reduce((a,f)=>a+Number(f.amount||0),0),bonT=Object.values(finance).filter(f=>f&&f.type==="bonus").reduce((a,f)=>a+Number(f.amount||0),0);
   const money=n=>fmt(n)+" د.ع";
-  const statusName=o=>({pending:"بانتظار سائق",waiting_store:"بانتظار موافقة المتجر",accepted:"بالطريق للمتجر",arrived_store:"وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"}[o.status]||o.status||"غير معروف");
+  const statusName=o=>({pending:"بانتظار سائق",waiting_store:"بالطريق للمتجر",accepted:"بالطريق للمتجر",arrived_store:"وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"}[o.status]||o.status||"غير معروف");
   const orderRows=list=>list.length?list.map(([id,o])=>`<div class="side-order"><b>طلب #${esc(id.slice(-6))}</b><br>المتجر: ${esc(o.storeName||"غير محدد")}<br>الحالة: ${esc(statusName(o))}<br>المنطقة: ${esc(o.area||"غير محددة")}<br>${o.status==="delivered"?"ربح السائق: "+money(o.driverProfit||0):""}</div>`).join(""):'<div class="side-empty">لا توجد بيانات لعرضها حالياً.</div>';
   let html="";
   if(sideTab==="overview")html=`<div class="side-panel"><h3>ملخص الحساب</h3><div class="side-stat"><span>إجمالي الطلبات</span><b>${totalCount}</b></div><div class="side-stat"><span>الطلبات المكتملة</span><b>${completedCount}</b></div><div class="side-stat"><span>طلبات اليوم</span><b>${dailyCount}</b></div><div class="side-stat"><span>أرباح اليوم</span><b>${money(todayProfit)}</b></div><div class="side-stat"><span>الدين الحالي</span><b>${money(debt)}</b></div><div class="side-stat"><span>المبالغ المسددة للإدارة</span><b>${money(cash)}</b></div><div class="side-stat"><span>سقف الدين</span><b>${money(debtLimit)}</b></div><div class="side-stat"><span>حالة السائق</span><b>${isOnline?"متصل":"غير متصل"}</b></div></div>`;
@@ -945,12 +943,17 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
    if(a==="accept"){
     if(debt>=debtLimit){say("لا يمكنك قبول الطلبات، تجاوزت سقف الدين");return}
     if(!isOnline){say("يجب أن تكون متصلاً لتقبل الطلب");return}
-    const snap=await get(r),current=snap.val();
-    if(!current||current.status!=="pending"||current.driverId){say("تم قبول الطلب المتوفر من سائق آخر قبلك");speak("تم قبول الطلب المتوفر من سائق آخر قبلك");return}
-    const cust=!!current.customerOrder,ns0=cust?"accepted":"waiting_store";
-    await update(r,{driverId:uid,driverName:driver.name||"",driverPhone:driver.phone||"",status:ns0,stepAt:serverTimestamp(),acceptedAt:Date.now()});
-    if(current.customerOrderId)update(ref(db,"customerOrders/"+current.customerOrderId),{status:ns0}).catch(()=>{});
-    if(cust){say("تم قبول الطلب، توجه للمتجر");speak("تم قبول الطلب، توجه للمتجر")}else{say("تم قبول الطلب، بانتظار موافقة المتجر");speak("تم قبول الطلب، بانتظار موافقة المتجر")}
+    const now=sNow();
+    // معاملة ذرّية: سائق واحد فقط يفوز بالطلب، والطلب يصبح مباشرة «بالطريق للمتجر» بدون موافقة المتجر
+    const res=await r.transaction(cur=>{
+     if(cur===null)return cur;
+     if(cur.status!=="pending"||cur.driverId)return;
+     return{...cur,driverId:uid,driverName:driver.name||"",driverPhone:driver.phone||"",status:"accepted",acceptedAt:now,stepAt:now};
+    });
+    const v=res.snapshot&&res.snapshot.val();
+    if(!res.committed||!v||v.driverId!==uid){say("تم قبول الطلب المتوفر من سائق آخر قبلك");speak("تم قبول الطلب المتوفر من سائق آخر قبلك");return}
+    if(v.customerOrderId)update(ref(db,"customerOrders/"+v.customerOrderId),{status:"accepted"}).catch(()=>{});
+    say("تم قبول الطلب، توجه للمتجر");speak("تم قبول الطلب، توجه للمتجر");
    }else if(a==="reject"){
     await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]:true});say("تم رفض الطلب.");
    }else{
@@ -960,16 +963,24 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
      const d=getDist(pos.lat,pos.lng,Number(o.storeLat),Number(o.storeLng));
      if(d>300){waitPop("أنت بعيد عن المتجر ("+Math.round(d)+" م). اقترب أكثر ثم اضغط «وصلت للمتجر».",0);return}
     }
-    if(a==="arrive"){const t0=typeof o.stepAt==="number"?o.stepAt:0,w=60000-(Date.now()-t0);if(t0&&w>0){waitPop("انتظر دقيقة قبل ما تضغط «وصلت للمتجر»",Date.now()+w);return}}
-    if(a==="pick"||a==="done"){const t0=typeof o.stepAt==="number"?o.stepAt:0,need=a==="pick"?120000:300000,w=need-(Date.now()-t0);if(t0&&w>0){waitPop(a==="pick"?"انتظر دقيقتين قبل ما تضغط «تم استلام الطلب»":"انتظر 5 دقائق قبل ما تضغط «تم التوصيل للزبون»",Date.now()+w);return}}
+    if(a==="arrive"){const t0=typeof o.stepAt==="number"?o.stepAt:0,w=60000-(sNow()-t0);if(t0&&w>0){waitPop("انتظر دقيقة قبل ما تضغط «وصلت للمتجر»",Date.now()+w);return}}
+    if(a==="pick"||a==="done"){const t0=typeof o.stepAt==="number"?o.stepAt:0,need=a==="pick"?120000:300000,w=need-(sNow()-t0);if(t0&&w>0){waitPop(a==="pick"?"انتظر دقيقتين قبل ما تضغط «تم استلام الطلب»":"انتظر 5 دقائق قبل ما تضغط «تم التوصيل للزبون»",Date.now()+w);return}}
     if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟")))return;
-    const patch={status:ns,stepAt:serverTimestamp()};
-    if(ns==="delivered"){
-     const fee=Number(o.deliveryFee)||0,p=Math.round(fee-Math.round(fee*PC()));
-     patch.deliveredAt=Date.now();patch.driverProfit=p;patch.platformDeliveryCommission=Math.round(fee-p);
-    }
-    await update(r,patch);
-    if(o.customerOrderId)update(ref(db,"customerOrders/"+o.customerOrderId),{status:ns}).catch(()=>{});
+    const prevOk={arrive:["accepted","waiting_store"],pick:["arrived_store"],done:["picked_up","delivering"]}[a];
+    // معاملة ذرّية: لا يمكن تخطي مرحلة، ولا تسليم طلب ألغته الإدارة، ولا احتساب العمولة مرتين
+    const res=await r.transaction(cur=>{
+     if(cur===null)return cur;
+     if(cur.driverId!==uid||!prevOk.includes(cur.status))return;
+     const n={...cur,status:ns,stepAt:sNow()};
+     if(ns==="delivered"){
+      const fee=Number(cur.deliveryFee)||0,p=Math.round(fee-Math.round(fee*PC()));
+      n.deliveredAt=sNow();n.driverProfit=p;n.platformDeliveryCommission=Math.round(fee-p);
+     }
+     return n;
+    });
+    const v=res.snapshot&&res.snapshot.val();
+    if(!res.committed||!v||v.status!==ns){say("تعذر التحديث: حالة الطلب تغيّرت (ربما ألغته الإدارة)");return}
+    if(v.customerOrderId)update(ref(db,"customerOrders/"+v.customerOrderId),{status:ns}).catch(()=>{});
     if(ns==="delivered")speak("تم التوصيل بنجاح");else speak("تم تحديث الحالة");
    }
   }catch(er){say("فشلت العملية: "+(er&&(er.code||er.message)||er))}
