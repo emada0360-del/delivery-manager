@@ -19,6 +19,10 @@ jobs:
             name: Baqubah Store
             id: com.baqubah.store
             page: store.html
+          - role: customer
+            name: Baqubah Delivery
+            id: com.baqubah.customer
+            page: customer.html
 
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +58,10 @@ jobs:
               echo "Missing GitHub secret GOOGLE_SERVICES_JSON"
               exit 1
             fi
+          fi
+
+          if [ "${{ matrix.role }}" = "customer" ]; then
+            npm i --legacy-peer-deps @capacitor/device@6
           fi
 
           cat > capacitor.config.json <<CFG
@@ -134,6 +142,15 @@ jobs:
               d.rounded_rectangle([650, 590, 730, 690], radius=16, fill=T)
               return im
 
+          def glyph_customer():
+              im = Image.new("RGBA", (C, C), T)
+              d = ImageDraw.Draw(im)
+              d.ellipse([340, 270, 740, 670], fill=W)
+              d.polygon([(372, 540), (708, 540), (540, 800)], fill=W)
+              d.rounded_rectangle([450, 430, 630, 580], radius=22, fill=T)
+              d.arc([480, 360, 600, 480], 180, 360, fill=T, width=22)
+              return im
+
           def mask(size, circle):
               m = Image.new("L", (size * 4, size * 4), 0)
               d = ImageDraw.Draw(m)
@@ -146,6 +163,7 @@ jobs:
           cfg = {
               "driver": ((255, 94, 98), (190, 0, 70), glyph_driver),
               "store": ((52, 211, 153), (37, 99, 235), glyph_store),
+              "customer": ((99, 102, 241), (168, 85, 247), glyph_customer),
           }
           c1, c2, gfn = cfg.get(role, cfg["store"])
           bg = gradient(c1, c2)
@@ -177,6 +195,22 @@ jobs:
           xml = xml.replace("\n          ", "\n")
           for n in ("ic_launcher.xml", "ic_launcher_round.xml"):
               (any26 / n).write_text(xml)
+
+          if role == "customer":
+              manifest_path = Path("app/src/main/AndroidManifest.xml")
+              s = manifest_path.read_text()
+
+              for perm in ["INTERNET", "ACCESS_NETWORK_STATE", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"]:
+                  line = f'<uses-permission android:name="android.permission.{perm}" />'
+                  if line not in s:
+                      s = s.replace("<application", f"{line}\n    <application", 1)
+
+              for feat in ["android.hardware.microphone", "android.hardware.location.gps"]:
+                  line = f'<uses-feature android:name="{feat}" android:required="false" />'
+                  if line not in s:
+                      s = s.replace("<application", f"{line}\n    <application", 1)
+
+              manifest_path.write_text(s)
 
           if role == "driver":
               p = Path("app/build.gradle")
