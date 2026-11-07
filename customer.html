@@ -1,73 +1,113 @@
 <!doctype html>
 <html lang="ar" dir="rtl"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0d131a"><title>Baqubah Delivery</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script>
+window.notifyApp=async(t,b)=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P||!P.LocalNotifications)return;await P.LocalNotifications.createChannel({id:'orders',name:'Orders',importance:5,sound:'default',vibration:true});await P.LocalNotifications.schedule({notifications:[{id:Math.floor(Math.random()*2e9),title:t,body:b,channelId:'orders'}]});}catch(e){}};
+(async()=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(P&&P.LocalNotifications)await P.LocalNotifications.requestPermissions()}catch(e){}})();
+</script>
 <style>
-:root{--bg:#f1f4f8;--s:#fff;--raised:#f4f6f9;--ink:#0f1b2a;--mu:#5b6e83;--br:#d9002f;--go:#0f9a63;--amber:#b86e00;--info:#1a6fd4;--ln:#e1e7ef;--night:#0d131a;--shadow:0 1px 2px #0f1b2a0d,0 10px 30px #0f1b2a0f;--font:"Readex Pro",system-ui,"Segoe UI",Tahoma,Arial,sans-serif}
+:root{--bg:#f3f5f9;--s:#fff;--raised:#f1f4f8;--ink:#0f1b2a;--mu:#5f7186;--br:#d9002f;--go:#0f9a63;--amber:#b86e00;--info:#1a6fd4;--ln:#e3e8ef;--night:#0d131a;--nav:70px;--shadow:0 1px 2px #0f1b2a0d,0 8px 24px #0f1b2a12;--font:"Readex Pro",system-ui,"Segoe UI",Tahoma,Arial,sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1118;--s:#141c26;--raised:#1b2531;--ink:#eaf0f7;--mu:#93a3b6;--ln:#253244;--shadow:0 1px 2px #0006,0 8px 24px #0004}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;font-family:var(--font);font-size:15px;line-height:1.6;background:var(--bg);color:var(--ink);padding-bottom:calc(30px + env(safe-area-inset-bottom,0px))}
+html,body{margin:0}
+body{font-family:var(--font);font-size:15px;line-height:1.6;background:var(--bg);color:var(--ink)}
 [hidden]{display:none!important}
-header{background:var(--night);color:#fff;padding:calc(11px + env(safe-area-inset-top,0px)) 16px 11px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5}
-header h2{margin:0;font-size:16px;font-weight:600}
-button{border:0;border-radius:14px;padding:13px 16px;background:var(--br);color:#fff;font:700 15px var(--font);cursor:pointer;transition:transform .12s}
-button:active{transform:scale(.97)}
-button.g{background:var(--go)}button.l{background:#e8edf3;color:var(--ink)}button:disabled{opacity:.45}
-header button{padding:7px 14px;font-size:13px;border-radius:999px}
-input{width:100%;height:50px;padding:0 14px;border:1.5px solid var(--ln);border-radius:14px;font:inherit;margin:0 0 10px;background:var(--raised);outline:none}
-input:focus{border-color:var(--info);background:#fff}
-main{max-width:560px;margin:auto;padding:12px}
-.box{background:var(--s);border-radius:22px;padding:16px;margin:0 0 12px;box-shadow:var(--shadow)}
-#auth{max-width:420px;margin:8vh auto 0;width:calc(100% - 24px)}
-#auth h3{margin:0 0 14px;font-size:20px;text-align:center}
+header{background:var(--night);color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;display:flex;align-items:center;position:sticky;top:0;z-index:5}
+.hb{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;border-radius:12px;background:var(--br);display:grid;place-items:center;font-size:20px}
+header h2{margin:0;font-size:16px;font-weight:700;line-height:1.2}
+header small{color:#9fb0c3;font-size:12px}
+button{border:0;border-radius:14px;padding:13px 16px;background:var(--br);color:#fff;font:700 15px var(--font);cursor:pointer;transition:transform .12s,filter .15s}
+button:active{transform:scale(.97);filter:brightness(.93)}
+button.g{background:var(--go)}button.l{background:var(--raised);color:var(--ink)}button:disabled{opacity:.45;cursor:not-allowed}
+button.full{width:100%;margin-bottom:8px}
+input{width:100%;height:50px;padding:0 14px;border:1.5px solid var(--ln);border-radius:14px;font:inherit;color:var(--ink);margin:0 0 10px;background:var(--raised);outline:none}
+input:focus{border-color:var(--info)}
+main{max-width:560px;margin:auto;padding:12px 12px calc(var(--nav) + 22px + env(safe-area-inset-bottom,0px))}
+.box{background:var(--s);border-radius:20px;padding:16px;margin:0 0 12px;box-shadow:var(--shadow)}
+.hint{color:var(--mu);font-size:12.5px;margin:8px 0 0}.hint.c{text-align:center}
+.mu{color:var(--mu);font-size:12.5px;display:block}
+h4{margin:16px 4px 10px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+h4 span{font-size:12.5px;color:var(--mu);font-weight:500}
+
+#auth{max-width:420px;margin:7vh auto 0;width:calc(100% - 24px);padding:22px}
+#auth h3{margin:0 0 4px;font-size:21px;text-align:center}
+#auth .sub{text-align:center;color:var(--mu);font-size:13px;margin:0 0 16px}
 .err{color:var(--br);font-weight:700;margin:4px 0 8px;min-height:20px;text-align:center;font-size:14px}
 
-/* موقع التوصيل */
-.loc{display:flex;align-items:center;gap:10px}
-.loc .pin{width:40px;height:40px;border-radius:50%;background:#e8f7f0;display:grid;place-items:center;font-size:19px;flex:none}
+.loc{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.loc .pin{width:40px;height:40px;border-radius:50%;background:#0f9a6320;display:grid;place-items:center;font-size:19px;flex:none}
 .loc .t{flex:1;min-width:0}.loc .t b{display:block;font-size:14px}.loc .t span{font-size:12.5px;color:var(--mu)}
 .loc button{padding:8px 14px;font-size:13px}
-#mapBox{margin-top:12px}
-#map{height:240px;border-radius:16px;margin-bottom:8px}
+.search{position:relative;margin-bottom:10px}
+.search span{position:absolute;inset-inline-start:14px;top:13px;font-size:16px;opacity:.6}
+.search input{margin:0;padding-inline-start:42px;background:var(--s);box-shadow:var(--shadow);border-color:transparent}
+.fcs{display:flex;gap:8px;margin-bottom:10px}
+.fc{padding:8px 16px;font-size:13px;border-radius:999px;background:var(--s);color:var(--mu);box-shadow:var(--shadow)}
+.fc.on{background:var(--ink);color:var(--bg)}
+.fees{background:var(--s);border-radius:18px;padding:12px 14px;margin-bottom:6px;box-shadow:var(--shadow)}
+.fees b{font-size:13px}
+.fr{display:flex;gap:8px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}
+.fr::-webkit-scrollbar{display:none}
+.fr span{flex:none;background:var(--raised);border-radius:12px;padding:6px 12px;font-size:12px;color:var(--mu);text-align:center;line-height:1.4}
+.fr em{display:block;font-style:normal;color:var(--go);font-weight:700;font-size:13px}
 
-/* المطاعم */
-h4{margin:16px 4px 10px;font-size:15px;color:var(--mu);font-weight:600}
-.rest{display:flex;gap:12px;align-items:center}
-.av{width:50px;height:50px;border-radius:16px;background:var(--br);color:#fff;display:grid;place-items:center;font-size:21px;font-weight:700;flex:none}
-.rest .n{flex:1;min-width:0}.rest .n b{display:block;font-size:16px}
-.rest .n span{font-size:12.5px;color:var(--mu)}
-.tag{padding:4px 11px;border-radius:99px;background:#e8f7f0;color:var(--go);font-weight:700;font-size:12.5px;white-space:nowrap}
-.tag.w{background:#fff3e0;color:var(--amber)}
+.rc{background:var(--s);border-radius:20px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.rh{display:flex;gap:12px;align-items:center}
+.av{width:50px;height:50px;border-radius:16px;color:#fff;display:grid;place-items:center;font-size:21px;font-weight:700;flex:none}
+.av.big{width:76px;height:76px;border-radius:50%;font-size:32px;margin:0 auto 10px;background:var(--info)}
+.rn{flex:1;min-width:0}.rn b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rn span{font-size:12.5px;color:var(--mu)}
+.fee{flex:none;text-align:center;background:#0f9a6318;color:var(--go);border-radius:14px;padding:6px 12px;font-weight:700;font-size:15px;line-height:1.3}
+.fee small{display:block;font-weight:500;font-size:11px;opacity:.85}
+.fee.off{background:#b86e0018;color:var(--amber);font-size:13px}
 .why{font-size:12.5px;color:var(--amber);margin-top:8px}
-.acts{display:flex;gap:8px;margin-top:12px}
-.acts .main{flex:1}.acts .sm{flex:0 0 auto;padding:13px 14px}
+.ra{display:flex;gap:8px;margin-top:12px}
+.ra .main{flex:1}.ra .sm{flex:0 0 48px;padding:13px 0;font-size:17px}
 
-/* الطلب الحالي */
-.top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
-.top b{font-size:16px}
-.badge{padding:4px 12px;border-radius:99px;font-size:12.5px;font-weight:700;background:#e8f7f0;color:var(--go)}
-.badge.c{background:#fde8ec;color:var(--br)}.badge.w{background:#fff3e0;color:var(--amber)}
+.empty{text-align:center;color:var(--mu);padding:34px 10px}.empty div{font-size:40px;margin-bottom:6px}.empty b{display:block;color:var(--ink);font-size:16px}.empty span{font-size:13px}
+.me{text-align:center}.me b{display:block;font-size:19px}.me span{color:var(--mu);font-size:14px}
+
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.top b{font-size:16px;display:block}
+.badge{padding:4px 12px;border-radius:99px;font-size:12.5px;font-weight:700;background:#0f9a6320;color:var(--go);white-space:nowrap}
+.badge.c{background:#d9002f1c;color:var(--br)}.badge.w{background:#b86e0020;color:var(--amber)}.badge.i{background:#1a6fd420;color:var(--info)}
+.live{border:2px solid #0f9a6355}
 .steps{display:grid;grid-template-columns:repeat(4,1fr);margin:6px 0 12px;position:relative}
 .steps::before{content:"";position:absolute;top:12px;inset-inline:12.5%;height:3px;background:var(--ln);border-radius:3px}
 .st{position:relative;text-align:center;font-size:11.5px;color:var(--mu);font-weight:500}
-.st i{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--ln);margin:0 auto 5px;font-style:normal;font-weight:700;font-size:12px;box-shadow:0 0 0 4px #fff}
-.st.d i{background:var(--go);color:#fff}.st.n i{background:#fff;color:var(--go);box-shadow:0 0 0 4px #fff,inset 0 0 0 2.5px var(--go)}
+.st i{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--ln);margin:0 auto 5px;font-style:normal;font-weight:700;font-size:12px;box-shadow:0 0 0 4px var(--s)}
+.st.d i{background:var(--go);color:#fff}.st.n i{background:var(--s);color:var(--go);box-shadow:0 0 0 4px var(--s),inset 0 0 0 2.5px var(--go)}
 .st.d,.st.n{color:var(--ink)}
-.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--ln);font-size:14px;color:var(--mu)}
+.row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--ln);font-size:14px;color:var(--mu)}
 .row b{color:var(--ink)}.row:last-of-type{border-bottom:0}
 .row.tot b{font-size:18px;color:var(--go)}
-.hint{color:var(--mu);font-size:12.5px;margin:8px 0 0}
-#menuM{position:fixed;inset:0;background:#fff;z-index:20;display:flex;flex-direction:column}
+.acts{display:flex;gap:8px;margin-top:12px}
+.acts .main{flex:1}.acts .sm{flex:0 0 auto}
+.ho .l.full{margin:10px 0 0}
+
+#bnav{position:fixed;bottom:0;inset-inline:0;z-index:10;background:var(--s);border-top:1px solid var(--ln);display:flex;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 20px #0f1b2a0f}
+#bnav button{flex:1;background:none;color:var(--mu);padding:6px 4px;font-size:12px;font-weight:600;border-radius:12px;position:relative;display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.5}
+#bnav button i{font-style:normal;font-size:21px}
+#bnav button.on{color:var(--br)}
+#bnav em{position:absolute;top:0;inset-inline-start:calc(50% + 6px);background:var(--br);color:#fff;font-style:normal;font-size:11px;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 4px}
+#toast{position:fixed;top:calc(64px + env(safe-area-inset-top,0px));inset-inline:16px;max-width:520px;margin:0 auto;z-index:30;background:var(--night);color:#fff;padding:13px 16px;border-radius:16px;font-weight:600;text-align:center;box-shadow:0 10px 30px #0f1b2a44;opacity:0;transform:translateY(-12px);pointer-events:none;transition:.25s}
+#toast.show{opacity:1;transform:none}#toast.bad{background:var(--br)}
+#menuM{position:fixed;inset:0;background:var(--s);z-index:20;display:flex;flex-direction:column}
 #menuM iframe{flex:1;border:0;width:100%}
 #menuM .bar{display:flex;gap:8px;padding:10px;background:var(--night)}#menuM .bar>*{flex:1}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style></head><body>
-<header><h2>🛵 Baqubah Delivery</h2><button class="l" id="out" hidden>خروج</button></header>
+<header><div class="hb"><div class="logo">🛵</div><div><h2>Baqubah Delivery</h2><small id="hello">توصيل سريع لباب بيتك</small></div></div></header>
 
 <section id="auth" class="box" hidden>
  <h3 id="aT">تسجيل الدخول</h3>
+ <p class="sub">اطلب من مطعمك المفضل وإحنا نوصلها لك</p>
  <input id="aN" placeholder="الاسم" hidden>
  <input id="aP" type="tel" inputmode="numeric" placeholder="رقم الهاتف" dir="ltr">
  <input id="aW" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)">
@@ -76,31 +116,51 @@ h4{margin:16px 4px 10px;font-size:15px;color:var(--mu);font-weight:600}
  <p style="text-align:center;margin:14px 0 0"><a href="#" id="aS" style="color:var(--br);font-weight:600">ليس لديك حساب؟ إنشاء حساب</a></p>
 </section>
 
-<main id="app" hidden>
- <div id="cur" class="box" hidden></div>
+<div id="app" hidden>
+<main>
+ <div id="cur" hidden></div>
 
- <div class="box">
-  <div class="loc">
+ <section id="p-home">
+  <div class="loc box">
    <div class="pin">📍</div>
    <div class="t"><b>موقع التوصيل</b><span id="locS">جارٍ تحديد موقعك...</span></div>
    <button class="l" id="locEdit">تحديث</button>
   </div>
-  <div id="mapBox" hidden>
-   <div id="map"></div>
-   <button class="l" id="gps" style="width:100%">📍 تحديث موقعي الدقيق</button>
-   <p class="hint" id="accS">يتم تحديد موقعك تلقائياً بدقة عالية عبر GPS.</p>
-  </div>
- </div>
+  <div class="search"><span>🔍</span><input id="q" placeholder="ابحث عن مطعم" autocomplete="off"></div>
+  <div class="fcs"><button class="fc on" data-f="all">الكل</button><button class="fc" data-f="ok">المتاح لموقعي</button></div>
+  <div id="feesBar"></div>
+  <h4>المطاعم <span id="cnt"></span></h4>
+  <div id="list"></div>
+ </section>
 
- <h4>المطاعم المتاحة</h4>
- <div id="list"></div>
+ <section id="p-orders" hidden>
+  <h4>طلباتي</h4>
+  <div id="hist"></div>
+ </section>
+
+ <section id="p-me" hidden>
+  <div class="box me"><div class="av big" id="meAv">؟</div><b id="meName"></b><span id="mePh" dir="ltr"></span></div>
+  <div class="box">
+   <button class="l full" id="meLoc">📍 تحديث موقعي</button>
+   <button class="l full" id="meFees">💰 أسعار التوصيل حسب البعد</button>
+   <button class="full" id="out">تسجيل الخروج</button>
+  </div>
+  <p class="hint c">Baqubah Delivery · تطبيق الزبون</p>
+ </section>
 </main>
+<nav id="bnav">
+ <button id="n-home" class="on" data-t="home"><i>🏠</i>الرئيسية</button>
+ <button id="n-orders" data-t="orders"><i>🧾</i>طلباتي<em id="nBadge" hidden>0</em></button>
+ <button id="n-me" data-t="me"><i>👤</i>حسابي</button>
+</nav>
+</div>
+<div id="toast"></div>
 
 <div id="locGate" hidden style="position:fixed;inset:0;z-index:99999;background:#0d131a;color:#fff;display:flex;flex-direction:column;padding:14px;gap:10px">
  <b style="font-size:18px;text-align:center">📍 تحديد موقعك تلقائياً</b>
  <div id="gmap" style="flex:1;min-height:240px;border-radius:16px;overflow:hidden"></div>
  <div id="gHint" style="text-align:center;color:#c9d4e0;font-size:14px;line-height:1.6">جارٍ تحديد موقعك تلقائياً...</div>
- <button id="gGps" class="l" style="width:100%">🔄 إعادة تحديد موقعي</button>
+ <button id="gGps" class="l" style="width:100%;background:#243142;color:#fff">🔄 إعادة تحديد موقعي</button>
  <button id="gOk" class="g" style="width:100%" disabled>استخدام هذا الموقع مؤقتاً</button>
 </div>
 <div id="menuM" hidden><div class="bar"><button class="l" id="mx">رجوع</button><button id="mo">فتح في المتصفح</button></div><iframe id="mf" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe></div>
@@ -126,6 +186,7 @@ async function devId(){
 }
 async function isBanned(){try{return (await get(ref(db,"bannedDevices/"+await devId()))).exists()}catch(e){console.warn(e);return false}}
 let mLayer=null,me=null,prof=null,rests={},fees=[],orders={},loc=null,map,pin,unsubs=[];
+let restsLoaded=false,filt="all",curTab="home",firstSt=true;const lastSt={};
 
 // ===== مكالمة صوتية داخل التطبيق (WebRTC + Firebase للإشارات) =====
 async function iceServers(){
@@ -224,7 +285,7 @@ $("out").onclick=()=>signOut(auth);
 onAuthStateChanged(auth,async u=>{
  unsubs.forEach(f=>f());unsubs=[];me=u;
  $("auth").hidden=!!u;$("app").hidden=!u;$("out").hidden=!u;
- if(!u)return;
+ if(!u){orders={};restsLoaded=false;for(const k in lastSt)delete lastSt[k];return}
  if(pendingReg)await pendingReg.catch(()=>{});
  try{
  const s=await get(ref(db,"customers/"+u.uid));prof=s.val();
@@ -238,10 +299,11 @@ onAuthStateChanged(auth,async u=>{
  const did=await devId();
  if(await isBanned()){await signOut(auth);$("aE").textContent="تم حظر هذا الجهاز من استخدام الخدمة";return}
  update(ref(db,"customers/"+u.uid),{deviceId:did}).catch(()=>{});
+ firstSt=true;renderMe();drawFees();
  initMap();needLoc();
- unsubs.push(onValue(ref(db,"restaurants"),s=>{rests=s.val()||{};drawList()}));
- unsubs.push(onValue(ref(db,"settings/custFees"),s=>{fees=s.val()||[];drawList()}));
- unsubs.push(onValue(query(ref(db,"customerOrders"),orderByChild("customerId"),equalTo(u.uid)),s=>{orders=s.val()||{};drawCur();drawList()}));
+ unsubs.push(onValue(ref(db,"restaurants"),s=>{rests=s.val()||{};restsLoaded=true;drawList();drawHist()}));
+ unsubs.push(onValue(ref(db,"settings/custFees"),s=>{fees=s.val()||[];drawFees();drawList()}));
+ unsubs.push(onValue(query(ref(db,"customerOrders"),orderByChild("customerId"),equalTo(u.uid)),s=>{orders=s.val()||{};watchStatus();drawCur();drawList();drawHist()}));
 });
 
 // ---- الخارطة والموقع ----
@@ -329,24 +391,48 @@ function drawMapLayers(){
  if(mLayer)map.removeLayer(mLayer);
  mLayer=L.layerGroup(Object.values(rests).map(r=>{const p=typeof r.lat==="number"?{lat:r.lat,lng:r.lng}:ll(r.mapUrl);return p?L.marker([p.lat,p.lng]).bindTooltip(r.name||""):null}).filter(Boolean)).addTo(map);
 }
+const COLS=["#d9002f","#0f9a63","#1a6fd4","#b86e00","#7a3ff2","#0e9f9a","#e0284a"];
+const colOf=s=>{let h=0;for(const c of String(s||""))h=(h*31+c.charCodeAt(0))>>>0;return COLS[h%COLS.length]};
+const ago=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?"الآن":m<60?"قبل "+m+" د":m<1440?"قبل "+Math.floor(m/60)+" س":new Date(t).toLocaleDateString("ar-IQ",{month:"2-digit",day:"2-digit"})};
+let tT;function toast(m,bad){const t=$("toast");t.textContent=m;t.className="show"+(bad?" bad":"");clearTimeout(tT);tT=setTimeout(()=>{t.className=""},4200)}
+function showTab(t){curTab=t;["home","orders","me"].forEach(k=>{$("p-"+k).hidden=k!==t;$("n-"+k).classList.toggle("on",k===t)});drawCur();window.scrollTo(0,0)}
+$("bnav").onclick=e=>{const b=e.target.closest("[data-t]");if(b)showTab(b.dataset.t)};
+document.querySelectorAll(".fc").forEach(b=>b.onclick=()=>{filt=b.dataset.f;document.querySelectorAll(".fc").forEach(x=>x.classList.toggle("on",x===b));drawList()});
+$("q").oninput=()=>drawList();
+$("meLoc").onclick=()=>{showTab("home");startTracking();if(!loc)openPicker()};
+$("meFees").onclick=()=>{showTab("home");setTimeout(()=>{const f=$("feesBar");if(f&&f.scrollIntoView)f.scrollIntoView({behavior:"smooth",block:"center"})},80)};
+
+function renderMe(){
+ if(!prof)return;
+ const n=prof.name||"زبون";
+ $("meAv").textContent=n.trim().charAt(0)||"؟";$("meName").textContent=n;$("mePh").textContent=prof.phone||"";
+ $("hello").textContent="أهلاً "+n;
+}
+function drawFees(){
+ const f=[...fees].sort((a,b)=>a.km-b.km);
+ $("feesBar").innerHTML=f.length?`<div class="fees"><b>🛵 أسعار التوصيل حسب بعدك عن المطعم</b><div class="fr">${f.map(x=>`<span>حتى ${esc(x.km)} كم<em>${fmt(x.fee)}</em></span>`).join("")}</div></div>`:"";
+}
 function drawList(){
  drawMapLayers();
- const busy=Object.values(orders).some(isLive);
- const items=Object.entries(rests).filter(([,r])=>r.isOpen!==false).map(([id,r])=>({id,r,q:quote(r)}));
+ const busy=Object.values(orders).some(isLive),qs=($("q").value||"").trim().toLowerCase();
+ let items=Object.entries(rests).filter(([,r])=>r.isOpen!==false).map(([id,r])=>({id,r,q:quote(r)}));
+ if(qs)items=items.filter(x=>String(x.r.name||"").toLowerCase().includes(qs));
+ if(filt==="ok")items=items.filter(x=>x.q.ok);
  items.sort((a,b)=>(b.q.ok-a.q.ok)||((a.q.km||99)-(b.q.km||99)));
- $("list").innerHTML=items.map(({id,r,q})=>`<div class="box"><div class="rest"><div class="av">${esc((r.name||"؟").trim().charAt(0))}</div>
-  <div class="n"><b>${esc(r.name)}</b><span>${q.ok?"يبعد "+q.km.toFixed(1)+" كم عنك · توصيلك من هذا المطعم "+fmt(q.fee)+" د.ع حسب بعدك":""}</span></div>
-  ${q.ok?`<span class="tag">توصيل ${fmt(q.fee)} د.ع</span>`:`<span class="tag w">غير متاح</span>`}</div>
-  ${q.ok?"":`<div class="why">${q.why}</div>`}
-  <div class="acts"><button class="g main" data-c="${esc(id)}" ${q.ok&&!busy?"":"disabled"}>📞 اطلب بالاتصال</button>${r.menuUrl?`<button class="l sm" data-m="${esc(id)}">📋 المنيو</button>`:""}${r.mapUrl?`<button class="l sm" data-g="${esc(id)}">🗺️</button>`:""}</div>
-  ${busy&&q.ok?'<div class="why">لديك طلب جارٍ، انتظر اكتماله لتطلب مجدداً.</div>':""}</div>`).join("")||'<p style="text-align:center;color:var(--mu)">لا توجد مطاعم حالياً</p>';
+ $("cnt").textContent=items.length?"("+items.length+")":"";
+ if(!restsLoaded){$("list").innerHTML='<div class="empty"><div>⏳</div><b>جارٍ التحميل...</b></div>';return}
+ $("list").innerHTML=items.map(({id,r,q})=>`<div class="rc" id="rc-${esc(id)}"><div class="rh"><div class="av" style="background:${colOf(r.name)}">${esc((r.name||"؟").trim().charAt(0))}</div>
+  <div class="rn"><b>${esc(r.name)}</b><span>${q.ok?"📍 يبعد "+q.km.toFixed(1)+" كم عنك":"📍 "+esc(q.why)}</span></div>
+  ${q.ok?`<div class="fee">${fmt(q.fee)}<small>د.ع توصيل</small></div>`:`<div class="fee off">غير متاح</div>`}</div>
+  <div class="ra"><button class="g main" data-c="${esc(id)}" ${q.ok&&!busy?"":"disabled"}>📞 اطلب بالاتصال</button>${r.menuUrl?`<button class="l sm" data-m="${esc(id)}" aria-label="المنيو">📋</button>`:""}${r.mapUrl?`<button class="l sm" data-g="${esc(id)}" aria-label="الخريطة">🗺️</button>`:""}</div>
+  ${busy&&q.ok?'<div class="why">لديك طلب جارٍ، انتظر اكتماله لتطلب مجدداً.</div>':""}</div>`).join("")||`<div class="empty"><div>🍽️</div><b>${qs||filt==="ok"?"لا توجد نتائج":"لا توجد مطاعم حالياً"}</b><span>${filt==="ok"?"جرّب «الكل» أو حدّث موقعك":""}</span></div>`;
 }
 $("list").onclick=async e=>{
  const b=e.target.closest("button");if(!b)return;
  if(b.dataset.g){window.open(rests[b.dataset.g].mapUrl,"_blank");return}
  if(b.dataset.m){const u=rests[b.dataset.m].menuUrl;$("mf").src=u;$("mo").onclick=()=>window.open(u,"_blank");$("menuM").hidden=false}
  if(b.dataset.c){
-  if(Object.values(orders).some(isLive))return alert("لديك طلب جارٍ بالفعل");
+  if(Object.values(orders).some(isLive))return toast("لديك طلب جارٍ بالفعل",1);
   const r=rests[b.dataset.c],q=quote(r);if(!q.ok)return;
   b.disabled=true;
   try{
@@ -355,32 +441,63 @@ $("list").onclick=async e=>{
    await set(o,{customerId:me.uid,restaurantId:b.dataset.c,restaurantName:r.name,lat:loc.lat,lng:loc.lng,distanceKm:+q.km.toFixed(2),deliveryFee:q.fee,status:"calling",createdAt:Date.now()});
    await set(ref(db,"customerOrderPrivate/"+o.key),{customerId:me.uid,name:prof.name,phone:prof.phone,deviceId:await devId()});
    dial(o.key);
-  }catch(er){alert("تعذر إرسال الطلب: "+(er.code||er.message));drawList()}
+  }catch(er){toast("تعذر إرسال الطلب: "+(er.code||er.message),1);drawList()}
  }
 };
 $("cur").onclick=async e=>{
  const b=e.target.closest("button");if(!b)return;
  if(b.dataset.redial)dial(b.dataset.redial);
- if(b.dataset.cancel&&confirm("إلغاء الطلب؟"))update(ref(db,"customerOrders/"+b.dataset.cancel),{status:"cancelled"}).catch(()=>alert("تعذر الإلغاء، تواصل مع الإدارة"));
+ if(b.dataset.cancel&&confirm("إلغاء الطلب؟"))update(ref(db,"customerOrders/"+b.dataset.cancel),{status:"cancelled"}).catch(()=>toast("تعذر الإلغاء، تواصل مع الإدارة",1));
 };
 document.addEventListener("visibilitychange",()=>{if(document.hidden){if(!call)goOffline(db)}else goOnline(db)});
 $("mx").onclick=()=>{$("menuM").hidden=true;$("mf").src="about:blank"};
-setInterval(()=>{if(me){drawCur();drawList()}},60000);
+setInterval(()=>{if(me){drawCur();drawList();drawHist()}},60000);
+
+// ---- طلباتي ----
+function drawHist(){
+ const rows=Object.entries(orders).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0)).slice(0,40);
+ const lv=rows.filter(([,o])=>isLive(o)).length;$("nBadge").hidden=!lv;$("nBadge").textContent=lv;
+ $("hist").innerHTML=rows.length?rows.map(([id,o])=>{
+  const price=Number(o.price)||0,fee=Number(o.deliveryFee)||0,expired=o.status==="calling"&&!isLive(o);
+  const bc=o.status==="delivered"?"":(o.status==="cancelled"||expired?"c":(["accepted","arrived_store","picked_up","delivering"].includes(o.status)?"i":"w"));
+  return `<div class="box ho"><div class="top"><div><b>${esc(o.restaurantName)}</b><span class="mu">${ago(Number(o.createdAt)||0)} · #${esc(id.slice(-5))}</span></div><span class="badge ${bc}">${expired?"لم يكتمل":(ST[o.status]||esc(o.status))}</span></div>
+  <div class="row"><span>سعر الطلب</span><b>${price?fmt(price)+" د.ع":"—"}</b></div>
+  <div class="row"><span>أجرة التوصيل</span><b>${fmt(fee)} د.ع</b></div>
+  <div class="row tot"><span>المجموع</span><b>${price?fmt(price+fee)+" د.ع":"—"}</b></div>
+  ${(DONE.includes(o.status)||expired)&&rests[o.restaurantId]?`<button class="l full" data-again="${esc(o.restaurantId)}">🔁 اطلب مجدداً</button>`:""}</div>`}).join(""):
+  '<div class="empty"><div>🧾</div><b>ما عندك طلبات بعد</b><span>اطلب من أي مطعم وراح يظهر هنا</span></div>';
+}
+$("hist").onclick=e=>{
+ const b=e.target.closest("[data-again]");if(!b)return;
+ showTab("home");setTimeout(()=>{const c=document.getElementById("rc-"+b.dataset.again);if(c&&c.scrollIntoView)c.scrollIntoView({behavior:"smooth",block:"center"})},80);
+};
+
+// ---- إشعارات تغيّر حالة الطلب ----
+const NT={preparing:"المطعم يجهّز طلبك 👨‍🍳",pending:"طلبك جاهز، نبحث لك عن سائق 🛵",accepted:"السائق قبل طلبك وبالطريق للمطعم 🛵",arrived_store:"السائق وصل للمطعم",picked_up:"السائق استلم طلبك وبالطريق إليك 🎉",delivering:"السائق بالطريق إليك 🎉",delivered:"تم تسليم طلبك، بالعافية 🍽️",cancelled:"تم إلغاء طلبك"};
+function watchStatus(){
+ for(const [id,o] of Object.entries(orders)){
+  const p=lastSt[id];lastSt[id]=o.status;
+  if(firstSt||p===undefined||p===o.status)continue;
+  const m=NT[o.status];
+  if(m){toast(m,o.status==="cancelled");try{window.notifyApp&&window.notifyApp("Baqubah Delivery",m)}catch(e){}try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}}
+ }
+ firstSt=false;
+}
 
 // ---- الطلب الحالي ----
 function drawCur(){
  const act=Object.entries(orders).sort((a,b)=>b[1].createdAt-a[1].createdAt)[0];
  const show=act&&(isLive(act[1])||(act[1].status!=="calling"&&Date.now()-(Number(act[1].createdAt)||0)<6*3600e3));
- $("cur").hidden=!show;if(!show)return;
+ $("cur").hidden=!show||curTab==="me";if(!show)return;
  const [id,o]=act,price=Number(o.price)||0,stage=STAGE[o.status]??1,fee=Number(o.deliveryFee)||0;
  const bc=o.status==="cancelled"?"c":(o.status==="calling"?"w":"");
  const steps=["التحضير","السائق للمطعم","بالطريق إليك","التسليم"].map((n,k)=>`<div class="st ${stage>k+1?"d":stage===k+1?"n":""}"><i>${stage>k+1?"✓":k+1}</i>${n}</div>`).join("");
- $("cur").innerHTML=`<div class="top"><b>${esc(o.restaurantName)}</b><span class="badge ${bc}">${ST[o.status]||esc(o.status)}</span></div>
+ $("cur").innerHTML=`<div class="box ${isLive(o)?"live":""}"><div class="top"><div><span class="mu">طلبك الحالي</span><b>${esc(o.restaurantName)}</b></div><span class="badge ${bc}">${ST[o.status]||esc(o.status)}</span></div>
  ${o.status==="cancelled"?"":`<div class="steps">${steps}</div>`}
  ${o.status==="calling"&&!price?`<p class="hint" style="margin:0 0 10px">بعد المكالمة سيسجّل المطعم سعر طلبك.</p><div class="acts"><button class="g main" data-redial="${id}">📞 إعادة الاتصال</button><button class="l sm" data-cancel="${id}">إلغاء</button></div>`:""}
  <div class="row"><span>سعر الطلب</span><b>${price?fmt(price)+" د.ع"+(o.priceFixed?" (مُصحَّح، كان "+fmt(o.priceOld)+")":""):"بانتظار المطعم"}</b></div>
  <div class="row"><span>أجرة التوصيل</span><b>${fmt(fee)} د.ع</b></div>
  <div class="row tot"><span>المجموع</span><b>${price?fmt(price+fee)+" د.ع":"—"}</b></div>
- ${isLive(o)?'<p class="hint">لإلغاء الطلب بعد تحديد السعر تواصل مع الإدارة.</p>':""}`;
+ ${isLive(o)&&price?'<p class="hint">لإلغاء الطلب بعد تحديد السعر تواصل مع الإدارة.</p>':""}</div>`;
 }
 </script></body></html>

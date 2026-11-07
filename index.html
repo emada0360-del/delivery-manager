@@ -347,7 +347,7 @@ const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const tm=t=>t?`<span class="tm">${new Date(t).toLocaleString("ar-IQ",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}</span>`:'<span class="tm">—</span>';
-const ST={pending:"بانتظار سائق",waiting_store:"بانتظار موافقة المتجر",accepted:"السائق بالطريق للمتجر",arrived_store:"السائق وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
+const ST={preparing:"قيد التحضير",pending:"بانتظار سائق",waiting_store:"بانتظار موافقة المتجر",accepted:"السائق بالطريق للمتجر",arrived_store:"السائق وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
 
 $("f").innerHTML+=Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
 
@@ -517,7 +517,7 @@ async function assignOrder(oid,did,auto){
   if(!cur||["delivered","cancelled"].includes(cur.status))return;
   if(auto&&(cur.status!=="pending"||cur.driverId))return;
   const n={...cur,driverId:did,driverName:u.name||"",driverPhone:u.phone||u.username||"",forcedAssign:true,reassignedAt:Date.now()};
-  if(cur.status==="pending"||cur.status==="waiting_store"){n.status="accepted";n.acceptedAt=cur.acceptedAt||Date.now();n.stepAt=Date.now()}
+  if(cur.status==="pending"||cur.status==="waiting_store"||cur.status==="preparing"){n.status="accepted";n.acceptedAt=cur.acceptedAt||Date.now();n.stepAt=Date.now()}
   if(cur.driverId&&cur.driverId!==did)n.rejectedBy={...(cur.rejectedBy||{}),[cur.driverId]:true};
   return n;
  });
@@ -532,8 +532,14 @@ async function unassignOrder(oid){
   return n;
  });
 }
+const relg=new Set();
 function checkForced(){
  const now=Date.now();
+ for(const [id,o] of Object.entries(orders)){
+  if(!o||o.status!=="preparing"||!Number(o.prepReadyAt)||now<Number(o.prepReadyAt)||relg.has(id))continue;
+  relg.add(id);
+  runTransaction(ref(db,"orders/"+id),cur=>{if(!cur||cur.status!=="preparing")return;return{...cur,status:"pending",createdAt:Date.now(),releasedAt:Date.now()}}).catch(()=>{}).finally(()=>setTimeout(()=>relg.delete(id),15000));
+ }
  for(const [id,o] of Object.entries(orders)){
   if(!o||o.status!=="pending"||o.driverId||forcing.has(id)||now-(Number(o.createdAt)||now)<7*60000)continue;
   const d=pickDriver(o);if(!d)continue;

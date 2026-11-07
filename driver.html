@@ -946,9 +946,10 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
     if(!isOnline){say("يجب أن تكون متصلاً لتقبل الطلب");return}
     const snap=await get(r),current=snap.val();
     if(!current||current.status!=="pending"||current.driverId){say("تم قبول الطلب المتوفر من سائق آخر قبلك");speak("تم قبول الطلب المتوفر من سائق آخر قبلك");return}
-    await update(r,{driverId:uid,driverName:driver.name||"",driverPhone:driver.phone||"",status:"waiting_store",stepAt:serverTimestamp(),acceptedAt:Date.now()});
-    if(current.customerOrderId)update(ref(db,"customerOrders/"+current.customerOrderId),{status:"waiting_store"}).catch(()=>{});
-    say("تم قبول الطلب، بانتظار موافقة المتجر");speak("تم قبول الطلب، بانتظار موافقة المتجر");
+    const cust=!!current.customerOrder,ns0=cust?"accepted":"waiting_store";
+    await update(r,{driverId:uid,driverName:driver.name||"",driverPhone:driver.phone||"",status:ns0,stepAt:serverTimestamp(),acceptedAt:Date.now()});
+    if(current.customerOrderId)update(ref(db,"customerOrders/"+current.customerOrderId),{status:ns0}).catch(()=>{});
+    if(cust){say("تم قبول الطلب، توجه للمتجر");speak("تم قبول الطلب، توجه للمتجر")}else{say("تم قبول الطلب، بانتظار موافقة المتجر");speak("تم قبول الطلب، بانتظار موافقة المتجر")}
    }else if(a==="reject"){
     await update(ref(db,"orders/"+id+"/rejectedBy"),{[uid]:true});say("تم رفض الطلب.");
    }else{
