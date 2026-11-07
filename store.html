@@ -463,21 +463,46 @@ function closeCall(quiet){
 // ---- استقبال طلبات الزبائن ----
 let cOrders={},ringing=null,priceFor=null;
 function cq(){
- const need=Object.entries(cOrders).filter(([,o])=>o.status==="calling"&&o.ring&&!o.price);
+ const need=Object.entries(cOrders).filter(([id,o])=>o.status==="calling"&&!o.price&&!orders[id]&&Date.now()-(Number(o.createdAt)||0)<30*60000);
  let b=document.getElementById("cqBar");
  if(!b){b=document.createElement("div");b.id="cqBar";b.style.cssText="margin:6px 0";document.getElementById("tabs").after(b);b.onclick=e=>{const x=e.target.closest("[data-pr]");if(x)priceUI(x.dataset.pr)}}
- b.innerHTML=need.map(([id])=>`<button data-pr="${id}" style="width:100%;margin-bottom:6px;background:#0f9a63">💰 اكتب سعر طلب الزبون #${id.slice(-5)}</button>`).join("");
- const r=need.find(([id,o])=>!call&&ringing!==id+o.ring&&Date.now()-o.ring<45000);
+ b.innerHTML=need.map(([id])=>`<button data-pr="${id}" style="width:100%;margin-bottom:6px;background:#0f9a63">📞 طلب زبون جديد #${id.slice(-5)} — اضغط لكتابة السعر</button>`).join("");
+ const r=need.find(([id,o])=>o.ring&&!call&&ringing!==id+o.ring&&Date.now()-o.ring<45000);
  if(r){const [id,o]=r;ringing=id+o.ring;ring(true);try{window.notifyApp&&window.notifyApp("📞 زبون يتصل","اضغط للرد")}catch(e){}
   ui("زبون يتصل بالمطعم",[["رد",()=>answerCall(id),"#0f9a63"],["رفض",()=>{ring(false);ui("")}]]);
   setTimeout(()=>{if(!call){ring(false);if(document.getElementById("callUI"))ui("")}},45000);}
 }
+async function confirmCustomerOrder(id,p){
+ const co=cOrders[id];if(!co)throw Error("الطلب غير موجود");
+ if(orders[id])return;
+ let pv={};try{const sn=await get(ref(db,"customerOrderPrivate/"+id));if(sn.exists())pv=sn.val()}catch(e){console.warn("cust private",e)}
+ const com=getStoreCom(),fee=Number(co.deliveryFee)||0,now=Date.now();
+ const cl=(co.lat!=null&&co.lng!=null)?Number(co.lat).toFixed(5)+","+Number(co.lng).toFixed(5):"";
+ const note="طلب من تطبيق الزبون"+(cl?" - موقع الزبون: https://www.google.com/maps?q="+cl:"");
+ await update(ref(db),{
+  ["orders/"+id]:{storeId:uid,storeName:store.name,storePhone:store.phone||"",areaId:"customer-app",area:"زبون التطبيق",itemPrice:p,deliveryFee:fee,customerTotal:p+fee,storeCommission:com,amountToReceive:p-com,storeMapUrl:store.mapUrl||"",status:"pending",createdAt:now,customerOrder:true,customerOrderId:id},
+  ["orderPrivate/"+id]:{storeId:uid,customerPhone:String(pv.phone||""),...(pv.name?{customerName:String(pv.name)}:{}),note},
+  ["customerOrders/"+id+"/price"]:p,["customerOrders/"+id+"/priceAt"]:now,["customerOrders/"+id+"/status"]:"pending"
+ });
+ if(!pv.phone)say("تم إرسال الطلب للسائقين لكن رقم الزبون لم يُقرأ (صلاحيات القاعدة)",1);else say("تم إرسال طلب الزبون للسائقين");
+ goTab("pend");
+}
+const synced={};
+function syncCust(){
+ for(const [id,o] of Object.entries(orders)){
+  if(!o||!o.customerOrderId)continue;
+  const c=cOrders[id];if(!c||c.status===o.status)continue;
+  const k=id+":"+o.status;if(synced[k])continue;synced[k]=1;
+  update(ref(db,"customerOrders/"+id),{status:o.status}).catch(()=>{});
+ }
+}
 function priceUI(id){
+ if(cOrders[id]&&cOrders[id].price&&orders[id])return;
  const d=document.createElement("div");d.style.cssText="position:fixed;inset:0;background:#0d131aee;z-index:98;display:grid;place-items:center;padding:20px";
  d.innerHTML=`<div style="background:#fff;border-radius:18px;padding:18px;width:100%;max-width:340px;color:#0f1b2a"><b>سعر الطلب (بدون التوصيل)</b><input id="prIn" type="number" inputmode="numeric" placeholder="مثال: 10000" style="width:100%;padding:12px;margin:10px 0;border:1px solid #ccd;border-radius:12px;font-size:18px"><div style="display:flex;gap:8px"><button id="prOk" style="flex:1">حفظ السعر</button><button id="prNo" style="flex:1;background:#e8edf3;color:#0f1b2a">لاحقاً</button></div></div>`;
  document.body.appendChild(d);
  d.querySelector("#prNo").onclick=()=>d.remove();
- d.querySelector("#prOk").onclick=async()=>{const p=Number(d.querySelector("#prIn").value);if(!(p>0))return;await update(ref(db,"customerOrders/"+id),{price:p,priceAt:Date.now(),status:"preparing"});d.remove()};
+ d.querySelector("#prOk").onclick=async()=>{const p=Number(d.querySelector("#prIn").value);if(!(p>0))return;const bt=d.querySelector("#prOk");bt.disabled=true;try{await confirmCustomerOrder(id,p);d.remove()}catch(e){bt.disabled=false;say("فشل إرسال الطلب: "+(e.code||e.message),1)}};
 }
 onCallEnd=c=>{if(c.role==="r")setTimeout(()=>priceUI(c.oid),300)};
 const stops=[];
@@ -522,8 +547,8 @@ function start(){
   $("pulse").className="dot "+(driversOnline>0?"":"off");checkForced();
  }));
  stops.push(onValue(ref(db,"areas"),s=>{ areas=s.val()||{}; drawAreas(); }));
- stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{ orders=s.val()||{}; checkTimeoutOrders(); checkForced(); fetchDriversNames(); drawOrders(); }));
- stops.push(onValue(query(ref(db,"customerOrders"),orderByChild("restaurantId"),equalTo(uid)),s=>{cOrders=s.val()||{};cq()}));
+ stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{ orders=s.val()||{}; syncCust(); cq(); checkTimeoutOrders(); checkForced(); fetchDriversNames(); drawOrders(); }));
+ stops.push(onValue(query(ref(db,"customerOrders"),orderByChild("restaurantId"),equalTo(uid)),s=>{cOrders=s.val()||{};cq();syncCust()}));
  stops.push(onValue(query(ref(db,"orderPrivate"),orderByChild("storeId"),equalTo(uid)),s=>{ priv=s.val()||{}; drawOrders(); }));
 }
 
@@ -696,7 +721,7 @@ function card(id,o,isHistory){
  const storeCom=Number(o.storeCommission!==undefined?o.storeCommission:getStoreCom());
  const receiveAmt=Math.max(0,(Number(o.itemPrice)||0)-storeCom);
  return `<div class="card" id="o-${esc(id)}">
-  <div class="card-top"><b>#${esc(id.slice(-6))}</b><span class="badge ${badgeCls}">${ST[o.status]||""}</span></div>
+  <div class="card-top"><b>#${esc(id.slice(-6))}</b>${o.customerOrder?'<span class="tag">من تطبيق الزبون</span>':''}<span class="badge ${badgeCls}">${ST[o.status]||""}</span></div>
   ${top}${driverInfo}
   <div class="summary-box">
    <div class="summary-row"><span>سعر الطلب</span> <b>${fmt(o.itemPrice)} د.ع</b></div>

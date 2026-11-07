@@ -206,8 +206,8 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <form id="fs" class="box"><h3>إضافة متجر جديد</h3>
 <input id="su" placeholder="رقم الهاتف (للدخول)" required>
 <input id="sn" placeholder="اسم المتجر" required>
-<input id="sm" placeholder="رابط غوغل ماب كامل، مثل https://www.google.com/maps?q=33.75,44.63">
-<p class="sub" style="margin-top:-8px">الرابط الكامل مهم: به يُختار أقرب سائق تلقائياً. الروابط المختصرة (goo.gl، maps.app) لا تُقرأ.</p>
+<input id="sm" placeholder="رابط غوغل ماب الكامل أو الإحداثيات 33.75,44.63">
+<p class="sub" style="margin-top:-8px">يتحول الرابط تلقائياً إلى إحداثيات. الرابط الكامل مهم (المختصر goo.gl / maps.app لا يُقرأ، استعمل الإحداثيات بدله).</p>
 <input id="sp" type="password" placeholder="كلمة المرور (6 أحرف)" required>
 <button type="submit" class="grn">إضافة المتجر</button></form>
 <div id="stores" class="box wrap"></div>
@@ -354,7 +354,7 @@ const ST={pending:"بانتظار سائق",waiting_store:"بانتظار موا
 
 $("f").innerHTML+=Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
 
-let custers={},banned={},custZones={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
+let cord={},custers={},banned={},custZones={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
 let showProfitFlag=false;
 
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fde8ec":"#dff5ea";m.style.color=bad?"#b0002a":"#0b7a4e";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
@@ -424,7 +424,7 @@ function scheduleDraw(){
 }
 
 function start(){
- const src={users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customerZones:v=>custZones=v,customers:v=>custers=v,bannedDevices:v=>banned=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
+ const src={customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customerZones:v=>custZones=v,customers:v=>custers=v,bannedDevices:v=>banned=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
  const prev={};
  for(const p in src)onValue(ref(db,p),s=>{
    const v=s.val()||{};
@@ -659,6 +659,7 @@ function draw(){
 
  drawOrders();
  drawLiveOrders();
+ syncCust();
  checkForced();
 
  const limit=Number(settings.debtLimit??15000);
@@ -729,7 +730,9 @@ $("btnPrintAreas").onclick=()=>{
 function drawLiveOrders(){
  const live=Object.entries(orders).filter(([id,o])=>o&&!["delivered","cancelled"].includes(o.status))
    .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
- $("liveOrders").innerHTML=table(
+ const calling=Object.entries(cord).filter(([id,o])=>o&&o.status==="calling"&&!o.price&&!orders[id]&&Date.now()-(Number(o.createdAt)||0)<30*60000);
+ const callHtml=calling.map(([id,o])=>`<div class="chk">📞 طلب زبون قيد الاتصال بالمتجر: <b>${esc(o.restaurantName)}</b> — توصيل ${fmt(o.deliveryFee)} د.ع — منذ <span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></div>`).join("");
+ $("liveOrders").innerHTML=callHtml+table(
    ["الطلب","المتجر","السائق","رقم السائق","الحالة","وقت الإرسال","مدة القبول","منذ الإرسال","منذ القبول","إجراءات"],
    live.map(([id,o])=>{
      let tagClass="y";
@@ -855,9 +858,13 @@ $("editForm").onsubmit=e=>{e.preventDefault();run(async()=>{
     if(phone&&!/^[0-9+]{7,15}$/.test(phone))throw Error("رقم الهاتف غير صحيح (أرقام فقط).");
     upd["users/"+id+"/name"]=name;
     upd["users/"+id+"/phone"]=phone;
-    const mapUrl=g("mapUrl");
-    if(kind==="store")upd["users/"+id+"/mapUrl"]=mapUrl;
-    if(kind==="store"&&users[id]&&users[id].custVisible)upd["restaurants/"+id+"/mapUrl"]=mapUrl;
+    let mapUrl=g("mapUrl");
+    if(kind==="store"){
+     const mm=normMap(mapUrl);mapUrl=mm.url;
+     upd["users/"+id+"/mapUrl"]=mapUrl;
+     if(mm.p){upd["users/"+id+"/custLat"]=mm.p.lat;upd["users/"+id+"/custLng"]=mm.p.lng;if(users[id]&&users[id].custVisible){upd["restaurants/"+id+"/lat"]=mm.p.lat;upd["restaurants/"+id+"/lng"]=mm.p.lng}}
+     if(users[id]&&users[id].custVisible)upd["restaurants/"+id+"/mapUrl"]=mapUrl;
+    }
     // تحديث الطلبات الجارية فقط
     for(const [oid,o] of Object.entries(orders)){
       if(!o||FINAL.includes(o.status))continue;
@@ -937,16 +944,33 @@ async function resetWallet(id){
  say("تم تصفير المحفظة.");
 }
 
+function normMap(u){
+ u=(u||"").trim();if(!u)return{url:"",p:null};
+ const p=parseLatLng(u);
+ if(!p)throw Error("تعذر قراءة الإحداثيات من الرابط. استخدم الرابط الكامل من خرائط غوغل (ليس المختصر) أو اكتب الإحداثيات مثل 33.7500,44.6300");
+ return{url:"https://www.google.com/maps?q="+p.lat+","+p.lng,p};
+}
+const syn={};
+function syncCust(){
+ for(const [id,o] of Object.entries(orders)){
+  if(!o||!o.customerOrderId)continue;
+  const c=cord[id];if(!c||c.status===o.status)continue;
+  const k=id+":"+o.status;if(syn[k])continue;syn[k]=1;
+  update(ref(db,"customerOrders/"+id),{status:o.status}).catch(()=>{});
+ }
+}
 async function addUser(role,username,name,pass,extra={}){
  username=username.trim().toLowerCase();
  if(!/^[a-z0-9._-]+$/.test(username) && !username.includes("@"))throw Error("رقم المستخدم: حروف إنجليزية وأرقام فقط.");
  if(pass.length<6)throw Error("كلمة المرور 6 أحرف على الأقل.");
  if(Object.values(users).some(u=>u&&u.username===username))throw Error("رقم المستخدم مستخدم مسبقاً.");
+ const mm=role==="store"?normMap(extra.mapUrl):{url:(extra.mapUrl||"").trim(),p:null};
  const sec=initializeApp(cfg,"sec"+Date.now());
  try{
   const email=username.includes("@")?username:username+"@baqubah.app";
   const c=await createUserWithEmailAndPassword(getAuth(sec),email,pass);
-  const rec={role,username,name,email,mapUrl:(extra.mapUrl||"").trim(),isActive:true,createdAt:Date.now()};
+  const rec={role,username,name,email,mapUrl:mm.url,isActive:true,createdAt:Date.now()};
+  if(mm.p){rec.custLat=mm.p.lat;rec.custLng=mm.p.lng}
   if(role==="store")rec.commissionAmount=Number(settings.storeCommissionFixed??500);
   await set(ref(db,"users/"+c.user.uid),rec);
  }finally{await deleteApp(sec)}
