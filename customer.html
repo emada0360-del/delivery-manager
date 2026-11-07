@@ -268,7 +268,7 @@ function D(t){dbg.push(t);if(dbg.length>7)dbg.shift();const e=$("locDbg");if(e)e
 function gateMsg(h){$("locGate").hidden=false;$("locMsg").innerHTML=h}
 function NGp(){return window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Geolocation}
 function stopWatches(){
- try{if(wN!=null&&NGp())NGp().clearWatch({id:wN})}catch(e){}wN=null;
+ try{if(wN!=null&&wN!=="pending"&&NGp())NGp().clearWatch({id:wN})}catch(e){}wN=null;
  try{if(wW!=null)navigator.geolocation.clearWatch(wW)}catch(e){}wW=null;
 }
 function onFix(p){
@@ -289,7 +289,7 @@ function onErr(er){
 const TO=(p,ms,t)=>Promise.race([p,new Promise((_,j)=>setTimeout(()=>j(new Error(t+" timeout")),ms))]);
 function needLoc(){
  if(loc){$("locGate").hidden=true;return}
- stopWatches();dbg=[];
+ dbg=[];
  const my=++locTry;let fails=0,total=0,denied=false;
  gateMsg("جارٍ تحديد موقعك بدقة عالية...");
  const fail=(tag,e)=>{
@@ -309,15 +309,17 @@ function needLoc(){
     D("perm2:"+pr.location+"/"+pr.coarseLocation);
    }
    if(pr.location!=="granted"&&pr.coarseLocation!=="granted"){fail("native",{code:1,message:"denied"});return}
-   const p=await TO(NG.getCurrentPosition({enableHighAccuracy:true,timeout:15000,maximumAge:0}),20000,"get");
+   // المراقبة الدقيقة تشتغل بالتوازي (تحسّن الموقع باستمرار)
+   if(wN==null){wN="pending";NG.watchPosition({enableHighAccuracy:true,timeout:30000,maximumAge:5000},(pos,err)=>{if(pos){D("watch fix");onFix(pos)}else if(err)D("watch:"+(err.message||err.code))}).then(id=>{wN=id}).catch(e=>{wN=null;D("watchfail:"+(e&&e.message))})}
+   // قراءة سريعة أولاً (شبكة/آخر موقع معروف) حتى لا ننتظر GPS البارد
+   const p=await TO(NG.getCurrentPosition({enableHighAccuracy:false,timeout:12000,maximumAge:600000}),15000,"get");
    D("native fix");onFix(p);
-   if(wN==null)wN=await NG.watchPosition({enableHighAccuracy:true,timeout:30000,maximumAge:5000},(pos,err)=>{if(pos)onFix(pos)});
   }catch(e){fail("native",e)}
  })()}
  if(navigator.geolocation&&window.isSecureContext!==false){total++;
   navigator.geolocation.getCurrentPosition(p=>{if(my!==locTry)return;D("web fix");onFix(p);
    if(wW==null)try{wW=navigator.geolocation.watchPosition(onFix,()=>{},{enableHighAccuracy:true,maximumAge:5000,timeout:30000})}catch(e){}
-  },e=>fail("web",e),{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+  },e=>fail("web",e),{enableHighAccuracy:false,timeout:12000,maximumAge:600000});
  }
  if(!total)onErr({code:2});
  // شبكة أمان: إذا ما رجع أي شيء خلال 25 ثانية
