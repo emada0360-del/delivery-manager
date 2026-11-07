@@ -265,8 +265,8 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div class="box"><h3>الزونات على الخارطة</h3>
 <p class="sub">اضغط على الخارطة لتحديد المركز، اكتب الاسم ونصف القطر ثم أضف. الزبون خارج الزونات المفتوحة لا يستطيع الطلب.</p>
 <div id="custMap" style="height:340px;border-radius:14px;margin-bottom:10px"></div>
-<input id="zName" placeholder="اسم الزون"><input id="zRad" type="number" min="0.5" step="0.5" value="3" placeholder="نصف القطر (كم)">
-<button type="button" id="btnZone" class="grn">إضافة زون</button>
+<select id="zArea"></select><input id="zRad" type="number" min="0.5" step="0.5" value="3" placeholder="نصف القطر (كم)">
+<button type="button" id="btnZone" class="grn">إضافة زون للمنطقة</button> <button type="button" id="btnZoneClr" class="red">مسح كل الزونات القديمة</button>
 <div id="custZones" class="wrap" style="margin-top:10px"></div></div>
 </section>
 
@@ -483,6 +483,8 @@ function renderCust(){
   const d=c.deviceId||"",bn=d&&banned[d];
   return `<tr><td><b>${esc(c.name)}</b> ${bn?'<span class="tag r">محظور</span>':''}</td><td dir="ltr">${esc(c.phone)}</td><td dir="ltr">${esc(d.slice(0,10))||"—"}</td>
   <td>${d?`<button type="button" data-${bn?"ub":"bn"}="${esc(id)}" class="${bn?"grn":"red"}">${bn?"فك الحظر":"حظر الجهاز"}</button>`:"—"}</td></tr>`}),"لا يوجد زبائن.");
+ {const h=Object.entries(areas).map(([id,a])=>`<option value="${esc(id)}">${esc(a.name)}</option>`).join("")||'<option value="">أضف مناطق أولاً من تبويب المناطق</option>';
+  if($("zArea")._h!==h){const v=$("zArea").value;$("zArea").innerHTML=h;$("zArea")._h=h;if(v)$("zArea").value=v}}
  drawCZones();
 }
 {const _d=draw;draw=function(){_d();try{renderCust()}catch(e){console.error(e)}}}
@@ -503,14 +505,16 @@ $("t10").addEventListener("click",e=>{
   f.sort((a,b)=>a.km-b.km);await update(ref(db),{"settings/custFees":f});say("تم حفظ الأسعار.");
  });
  if(b.id==="btnZone")run(async()=>{
-  const n=$("zName").value.trim(),r=Number($("zRad").value);
+  const aid=$("zArea").value,n=(areas[aid]||{}).name||"",r=Number($("zRad").value);
   if(!cPt)throw new Error("اضغط على الخارطة لتحديد المركز أولاً.");
-  if(!n||!(r>0))throw new Error("اكتب الاسم ونصف القطر.");
-  await set(push(ref(db,"customerZones")),{name:n,lat:cPt.lat,lng:cPt.lng,radiusKm:r,isOpen:true,createdAt:Date.now()});
-  $("zName").value="";say("تمت إضافة الزون.");
+  if(!aid||!n)throw new Error("اختر المنطقة أولاً (أضفها من تبويب المناطق).");
+  if(!(r>0))throw new Error("اكتب نصف القطر.");
+  await set(push(ref(db,"customerZones")),{areaId:aid,name:n,lat:cPt.lat,lng:cPt.lng,radiusKm:r,isOpen:true,createdAt:Date.now()});
+  say("تمت إضافة الزون للمنطقة.");
  });
  if(d.bn&&confirm("حظر جهاز هذا الزبون؟"))run(async()=>{const c=custers[d.bn];await set(ref(db,"bannedDevices/"+c.deviceId),{name:c.name,phone:c.phone,at:Date.now()});say("تم حظر الجهاز.")});
  if(d.ub)run(async()=>{await set(ref(db,"bannedDevices/"+custers[d.ub].deviceId),null);say("تم فك الحظر.")});
+ if(b.id==="btnZoneClr"&&confirm("حذف جميع الزونات الحالية؟ ستبدأ من جديد."))run(async()=>{await update(ref(db),{customerZones:null});say("تم مسح الزونات.")});
  if(d.zt)run(async()=>{await update(ref(db,"customerZones/"+d.zt),{isOpen:custZones[d.zt].isOpen===false});say("تم التحديث.")});
  if(d.zd&&confirm("حذف هذا الزون؟"))run(async()=>{await update(ref(db),{["customerZones/"+d.zd]:null});say("تم الحذف.")});
 });
@@ -850,6 +854,7 @@ $("editForm").onsubmit=e=>{e.preventDefault();run(async()=>{
     upd["users/"+id+"/phone"]=phone;
     const mapUrl=g("mapUrl");
     if(kind==="store")upd["users/"+id+"/mapUrl"]=mapUrl;
+    if(kind==="store"&&users[id]&&users[id].custVisible)upd["restaurants/"+id+"/mapUrl"]=mapUrl;
     // تحديث الطلبات الجارية فقط
     for(const [oid,o] of Object.entries(orders)){
       if(!o||FINAL.includes(o.status))continue;

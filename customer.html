@@ -71,7 +71,7 @@ async function devId(){
  return String(id).replace(/[^A-Za-z0-9_-]/g,"_");
 }
 async function isBanned(){try{return (await get(ref(db,"bannedDevices/"+await devId()))).exists()}catch(e){console.warn(e);return false}}
-let me=null,prof=null,rests={},zones={},fees=[],orders={},loc=null,map,pin,unsubs=[];
+let zLayer=null,mLayer=null,me=null,prof=null,rests={},zones={},fees=[],orders={},loc=null,map,pin,unsubs=[];
 
 
 // ===== مكالمة صوتية داخل التطبيق (WebRTC + Firebase للإشارات) =====
@@ -226,15 +226,23 @@ try{navigator.permissions&&navigator.permissions.query({name:"geolocation"}).the
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&me&&!loc)needLoc()});
 
 // ---- قائمة المطاعم ----
+function drawMapLayers(){
+ if(!map)return;
+ if(zLayer)map.removeLayer(zLayer);if(mLayer)map.removeLayer(mLayer);
+ zLayer=L.layerGroup(Object.values(zones).filter(z=>z.isOpen!==false).map(z=>L.circle([z.lat,z.lng],{radius:(z.radiusKm||1)*1000,color:"#0f9a63",fillOpacity:.12,weight:2}))).addTo(map);
+ mLayer=L.layerGroup(Object.values(rests).map(r=>{const p=ll(r.mapUrl);return p?L.marker([p.lat,p.lng]).bindTooltip(r.name||""):null}).filter(Boolean)).addTo(map);
+}
 function drawList(){
+ drawMapLayers();
  $("list").innerHTML=Object.entries(rests).filter(([,r])=>r.isOpen!==false).map(([id,r])=>{
   const q=quote(r);
   return `<div class="box"><div class="rest"><div class="av">${esc((r.name||"؟").trim().charAt(0))}</div><b>${esc(r.name)}</b>${q.ok?`<span class="tag">توصيل ${fmt(q.fee)} د.ع</span>`:""}</div>
   ${q.ok?"":`<div style="color:var(--mu);font-size:13px;margin-top:8px">${q.why}</div>`}
-  <div class="acts">${r.menuUrl?`<button class="l" data-m="${esc(id)}">📋 المنيو</button>`:""}<button class="g" data-c="${esc(id)}" ${q.ok?"":"disabled"}>📞 اتصال داخل التطبيق</button></div></div>`}).join("")||'<p style="text-align:center;color:var(--mu)">لا توجد مطاعم حالياً</p>';
+  <div class="acts">${r.menuUrl?`<button class="l" data-m="${esc(id)}">📋 المنيو</button>`:""}${r.mapUrl?`<button class="l" data-g="${esc(id)}">🗺️ الموقع</button>`:""}<button class="g" data-c="${esc(id)}" ${q.ok?"":"disabled"}>📞 اتصال داخل التطبيق</button></div></div>`}).join("")||'<p style="text-align:center;color:var(--mu)">لا توجد مطاعم حالياً</p>';
 }
 $("list").onclick=async e=>{
  const b=e.target.closest("button");if(!b)return;
+ if(b.dataset.g){window.open(rests[b.dataset.g].mapUrl,"_blank");return}
  if(b.dataset.m){const u=rests[b.dataset.m].menuUrl;$("mf").src=u;$("mo").onclick=()=>window.open(u,"_blank");$("menuM").hidden=false}
  if(b.dataset.c){
   if(Object.values(orders).some(o=>!["delivered","cancelled"].includes(o.status)))return alert("لديك طلب جارٍ بالفعل");
