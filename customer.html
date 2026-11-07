@@ -53,7 +53,7 @@ input{width:100%;padding:13px;border:1px solid var(--ln);border-radius:12px;font
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,ref,set,update,push,onValue,onChildAdded,get,query,orderByChild,equalTo} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {getDatabase,goOnline,goOffline,ref,set,update,push,onValue,onChildAdded,get,query,orderByChild,equalTo} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 const cfg={apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",authDomain:"baqubah-delivery-e729e.firebaseapp.com",databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",projectId:"baqubah-delivery-e729e",storageBucket:"baqubah-delivery-e729e.firebasestorage.app",messagingSenderId:"450084520701",appId:"1:450084520701:web:719e2040338540ce36f494"};
 const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
 const $=id=>document.getElementById(id),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -142,7 +142,7 @@ function closeCall(quiet){
 }
 
 // ---- تسجيل ----
-let reg=false;
+let reg=false,pendingReg=null;
 $("aS").onclick=e=>{e.preventDefault();reg=!reg;$("aN").hidden=!reg;$("aT").textContent=reg?"إنشاء حساب":"تسجيل الدخول";$("aB").textContent=reg?"إنشاء الحساب":"دخول";$("aS").textContent=reg?"لدي حساب":"ليس لديك حساب؟ إنشاء حساب"};
 $("aB").onclick=async()=>{
  $("aE").textContent="";const ph=$("aP").value.replace(/\D/g,""),pw=$("aW").value,nm=$("aN").value.trim();
@@ -150,7 +150,16 @@ $("aB").onclick=async()=>{
   if(ph.length<10)throw Error("اكتب رقم هاتف صحيح");
   if(reg&&!nm)throw Error("اكتب اسمك");
   const em="c"+ph+"@baqubah.app";
-  if(reg){const c=await createUserWithEmailAndPassword(auth,em,pw);await set(ref(db,"customers/"+c.user.uid),{name:nm,phone:ph,createdAt:Date.now()})}
+  if(reg){
+   pendingReg=(async()=>{
+    let uid;
+    try{uid=(await createUserWithEmailAndPassword(auth,em,pw)).user.uid}
+    catch(e){if(e.code!=="auth/email-already-in-use")throw e;uid=(await signInWithEmailAndPassword(auth,em,pw)).user.uid}
+    const ex=await get(ref(db,"customers/"+uid));
+    if(!ex.exists())await set(ref(db,"customers/"+uid),{name:nm,phone:ph,createdAt:Date.now()});
+   })();
+   try{await pendingReg}finally{pendingReg=null}
+  }
   else await signInWithEmailAndPassword(auth,em,pw);
  }catch(e){$("aE").textContent=/invalid|credential|not-found|wrong/.test(e.code||"")?"الرقم أو كلمة المرور غير صحيحة":/in-use/.test(e.code||"")?"الرقم مسجل مسبقاً":e.message}
 };
@@ -159,6 +168,7 @@ onAuthStateChanged(auth,async u=>{
  unsubs.forEach(f=>f());unsubs=[];me=u;
  $("auth").hidden=!!u;$("app").hidden=!u;$("out").hidden=!u;
  if(!u)return;
+ if(pendingReg)await pendingReg.catch(()=>{});
  const s=await get(ref(db,"customers/"+u.uid));prof=s.val();
  if(!prof){await signOut(auth);$("aE").textContent="هذا الحساب ليس حساب زبون";return}
  const did=await devId();
@@ -215,6 +225,7 @@ $("list").onclick=async e=>{
  }
 };
 $("cur").onclick=e=>{const b=e.target.closest("[data-redial]");if(b)dial(b.dataset.redial)};
+document.addEventListener("visibilitychange",()=>{if(document.hidden){if(!call)goOffline(db)}else goOnline(db)});
 $("mx").onclick=()=>{$("menuM").hidden=true;$("mf").src="about:blank"};
 
 // ---- الطلب الحالي ----
