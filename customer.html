@@ -126,6 +126,7 @@ h4 span{font-size:12.5px;color:var(--mu);font-weight:500}
    <div class="t"><b>موقع التوصيل</b><span id="locS">جارٍ تحديد موقعك...</span></div>
    <button class="l" id="locEdit">تحديث</button>
   </div>
+  <div id="gate" hidden></div>
   <div class="search"><span>🔍</span><input id="q" placeholder="ابحث عن مطعم" autocomplete="off"></div>
   <div class="fcs"><button class="fc on" data-f="all">الكل</button><button class="fc" data-f="ok">المتاح لموقعي</button></div>
   <div id="feesBar"></div>
@@ -186,6 +187,7 @@ async function devId(){
 }
 async function isBanned(){try{return (await get(ref(db,"bannedDevices/"+await devId()))).exists()}catch(e){console.warn(e);return false}}
 let mLayer=null,me=null,prof=null,rests={},fees=[],orders={},loc=null,map,pin,unsubs=[];
+let reqApp=false,approved=false,adminWa="";
 let restsLoaded=false,filt="all",curTab="home",firstSt=true;const lastSt={};
 
 // ===== مكالمة صوتية داخل التطبيق (WebRTC + Firebase للإشارات) =====
@@ -285,7 +287,7 @@ $("out").onclick=()=>signOut(auth);
 onAuthStateChanged(auth,async u=>{
  unsubs.forEach(f=>f());unsubs=[];me=u;
  $("auth").hidden=!!u;$("app").hidden=!u;$("out").hidden=!u;
- if(!u){orders={};restsLoaded=false;for(const k in lastSt)delete lastSt[k];return}
+ if(!u){orders={};restsLoaded=false;approved=false;reqApp=false;for(const k in lastSt)delete lastSt[k];return}
  if(pendingReg)await pendingReg.catch(()=>{});
  try{
  const s=await get(ref(db,"customers/"+u.uid));prof=s.val();
@@ -302,6 +304,9 @@ onAuthStateChanged(auth,async u=>{
  firstSt=true;renderMe();drawFees();
  initMap();needLoc();
  unsubs.push(onValue(ref(db,"restaurants"),s=>{rests=s.val()||{};restsLoaded=true;drawList();drawHist()}));
+ unsubs.push(onValue(ref(db,"settings/requireApproval"),s=>{reqApp=s.val()===true;drawGate();drawList()}));
+ unsubs.push(onValue(ref(db,"settings/adminWhatsapp"),s=>{adminWa=String(s.val()||"");drawGate()}));
+ unsubs.push(onValue(ref(db,"approvedCustomers/"+u.uid),s=>{approved=s.val()===true;drawGate();drawList()}));
  unsubs.push(onValue(ref(db,"settings/custFees"),s=>{fees=s.val()||[];drawFees();drawList()}));
  unsubs.push(onValue(query(ref(db,"customerOrders"),orderByChild("customerId"),equalTo(u.uid)),s=>{orders=s.val()||{};watchStatus();drawCur();drawList();drawHist()}));
 });
@@ -414,7 +419,7 @@ function drawFees(){
 }
 function drawList(){
  drawMapLayers();
- const busy=Object.values(orders).some(isLive),qs=($("q").value||"").trim().toLowerCase();
+ const blocked=reqApp&&!approved,busy=Object.values(orders).some(isLive),qs=($("q").value||"").trim().toLowerCase();
  let items=Object.entries(rests).filter(([,r])=>r.isOpen!==false).map(([id,r])=>({id,r,q:quote(r)}));
  if(qs)items=items.filter(x=>String(x.r.name||"").toLowerCase().includes(qs));
  if(filt==="ok")items=items.filter(x=>x.q.ok);
@@ -424,7 +429,7 @@ function drawList(){
  $("list").innerHTML=items.map(({id,r,q})=>`<div class="rc" id="rc-${esc(id)}"><div class="rh"><div class="av" style="background:${colOf(r.name)}">${esc((r.name||"؟").trim().charAt(0))}</div>
   <div class="rn"><b>${esc(r.name)}</b><span>${q.ok?"📍 يبعد "+q.km.toFixed(1)+" كم عنك":"📍 "+esc(q.why)}</span></div>
   ${q.ok?`<div class="fee">${fmt(q.fee)}<small>د.ع توصيل</small></div>`:`<div class="fee off">غير متاح</div>`}</div>
-  <div class="ra"><button class="g main" data-c="${esc(id)}" ${q.ok&&!busy?"":"disabled"}>📞 اطلب بالاتصال</button>${r.menuUrl?`<button class="l sm" data-m="${esc(id)}" aria-label="المنيو">📋</button>`:""}${r.mapUrl?`<button class="l sm" data-g="${esc(id)}" aria-label="الخريطة">🗺️</button>`:""}</div>
+  <div class="ra"><button class="g main" data-c="${esc(id)}" ${q.ok&&!busy&&!blocked?"":"disabled"}>📞 اطلب بالاتصال</button>${r.menuUrl?`<button class="l sm" data-m="${esc(id)}" aria-label="المنيو">📋</button>`:""}${r.mapUrl?`<button class="l sm" data-g="${esc(id)}" aria-label="الخريطة">🗺️</button>`:""}</div>
   ${busy&&q.ok?'<div class="why">لديك طلب جارٍ، انتظر اكتماله لتطلب مجدداً.</div>':""}</div>`).join("")||`<div class="empty"><div>🍽️</div><b>${qs||filt==="ok"?"لا توجد نتائج":"لا توجد مطاعم حالياً"}</b><span>${filt==="ok"?"جرّب «الكل» أو حدّث موقعك":""}</span></div>`;
 }
 $("list").onclick=async e=>{
@@ -432,6 +437,7 @@ $("list").onclick=async e=>{
  if(b.dataset.g){window.open(rests[b.dataset.g].mapUrl,"_blank");return}
  if(b.dataset.m){const u=rests[b.dataset.m].menuUrl;$("mf").src=u;$("mo").onclick=()=>window.open(u,"_blank");$("menuM").hidden=false}
  if(b.dataset.c){
+  if(reqApp&&!approved)return toast("حسابك بانتظار التفعيل من الإدارة",1);
   if(Object.values(orders).some(isLive))return toast("لديك طلب جارٍ بالفعل",1);
   const r=rests[b.dataset.c],q=quote(r);if(!q.ok)return;
   b.disabled=true;
@@ -471,6 +477,15 @@ $("hist").onclick=e=>{
  const b=e.target.closest("[data-again]");if(!b)return;
  showTab("home");setTimeout(()=>{const c=document.getElementById("rc-"+b.dataset.again);if(c&&c.scrollIntoView)c.scrollIntoView({behavior:"smooth",block:"center"})},80);
 };
+
+// ---- تفعيل الحساب ----
+function drawGate(){
+ const g=$("gate"),need=reqApp&&!approved;g.hidden=!need;if(!need)return;
+ const msg="مرحباً، أريد تفعيل حسابي في Baqubah Delivery. الاسم: "+((prof&&prof.name)||"")+" الرقم: "+((prof&&prof.phone)||"");
+ let p=adminWa.replace(/\D/g,"");if(p.startsWith("0"))p="964"+p.slice(1);
+ g.innerHTML=`<div class="box" style="border:2px solid #b86e0055"><b>⏳ حسابك بانتظار التفعيل</b><p class="hint" style="margin:6px 0 10px">لحماية الخدمة نفعّل كل حساب بعد التأكد من رقمه. تواصل مع الإدارة وراح يتفعل خلال دقائق.</p>${p?`<button class="g full" id="gWa">💬 تواصل مع الإدارة عبر واتساب</button>`:'<p class="hint">سيتواصل معك فريقنا قريباً.</p>'}</div>`;
+ const b=$("gWa");if(b)b.onclick=()=>window.open("https://wa.me/"+p+"?text="+encodeURIComponent(msg),"_blank");
+}
 
 // ---- إشعارات تغيّر حالة الطلب ----
 const NT={preparing:"المطعم يجهّز طلبك 👨‍🍳",pending:"طلبك جاهز، نبحث لك عن سائق 🛵",accepted:"السائق قبل طلبك وبالطريق للمطعم 🛵",arrived_store:"السائق وصل للمطعم",picked_up:"السائق استلم طلبك وبالطريق إليك 🎉",delivering:"السائق بالطريق إليك 🎉",delivered:"تم تسليم طلبك، بالعافية 🍽️",cancelled:"تم إلغاء طلبك"};

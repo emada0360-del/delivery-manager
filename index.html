@@ -264,7 +264,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div id="feeRows"></div>
 <input id="custFees" type="hidden">
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="btnFeeAdd">+ إضافة فئة</button><button type="button" id="btnCustFees" class="grn">حفظ الأسعار</button></div></div>
-<div class="box"><h3>الزبائن وحظر الأجهزة</h3><p class="sub">الحظر يمنع الجهاز نفسه من تسجيل الدخول أو فتح حساب جديد. (يعتمد على معرّف الجهاز داخل الـAPK، وفي المتصفح على معرّف محلي أضعف.)</p><div id="custUsers" class="wrap"></div></div>
+<div class="box"><h3>الزبائن وتفعيل الحسابات والحظر</h3><button type="button" id="btnApproveAll" class="grn" style="margin-bottom:10px">تفعيل جميع الزبائن الحاليين</button><p class="sub">الحظر يمنع الجهاز نفسه من تسجيل الدخول أو فتح حساب جديد. (يعتمد على معرّف الجهاز داخل الـAPK، وفي المتصفح على معرّف محلي أضعف.)</p><div id="custUsers" class="wrap"></div></div>
 </section>
 
 <section id="t8" class="tab" hidden>
@@ -272,6 +272,10 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <h3>إعدادات عامة والعمولات</h3>
 <label>حد الدين الأقصى لتعطيل السائق (دينار)</label>
 <input id="set-limit" type="number" min="0" step="1000" value="15000">
+
+<label style="display:flex;align-items:center;gap:10px;margin:6px 0 14px"><input id="set-reqapp" type="checkbox" style="width:22px;height:22px;margin:0;min-height:0"> تفعيل حسابات الزبائن يدوياً (الزبون ما يطلب إلا بعد تفعيلك له)</label>
+<label>رقم واتساب الإدارة (يتواصل معه الزبون للتفعيل، مثال 07701234567)</label>
+<input id="set-adminwa" type="tel" dir="ltr" placeholder="07XXXXXXXXX">
 
 <label>عمولة المتجر لكل طلب (دينار)</label>
 <input id="set-store-commission" type="number" min="0" step="50" value="500">
@@ -344,6 +348,7 @@ const cfg = {
 
 const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
 const $=id=>document.getElementById(id);
+const waLink=(ph,txt)=>{let p=String(ph||"").replace(/\D/g,"");if(p.startsWith("0"))p="964"+p.slice(1);return "https://wa.me/"+p+(txt?"?text="+encodeURIComponent(txt):"")};
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const tm=t=>t?`<span class="tm">${new Date(t).toLocaleString("ar-IQ",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}</span>`:'<span class="tm">—</span>';
@@ -351,7 +356,7 @@ const ST={preparing:"قيد التحضير",pending:"بانتظار سائق",wa
 
 $("f").innerHTML+=Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
 
-let cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
+let appr={},cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
 let showProfitFlag=false;
 
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fde8ec":"#dff5ea";m.style.color=bad?"#b0002a":"#0b7a4e";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
@@ -408,6 +413,8 @@ function fillSettings(){
  put("set-store-commission",s.storeCommissionFixed??500);
  put("set-driver-commission",s.driverCommissionPercent??10);
  put("ann",s.announcement||"");
+ put("set-adminwa",s.adminWhatsapp||"");
+ {const c=$("set-reqapp");if(c&&document.activeElement!==c)c.checked=s.requireApproval===true}
 }
 
 // منع إعادة رسم الجداول أثناء الضغط على زر (هذا سبب ضياع الضغطة)
@@ -421,7 +428,7 @@ function scheduleDraw(){
 }
 
 function start(){
- const src={customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customers:v=>custers=v,bannedDevices:v=>banned=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
+ const src={customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customers:v=>custers=v,approvedCustomers:v=>appr=v,bannedDevices:v=>banned=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
  const prev={};
  for(const p in src)onValue(ref(db,p),s=>{
    const v=s.val()||{};
@@ -454,10 +461,13 @@ function renderCust(){
    <td><button type="button" data-cs="${esc(id)}" class="grn">حفظ</button></td></tr>`),"لا توجد متاجر.");
  }
  if(!feeDirty&&!(ae&&ae.closest&&ae.closest("#feeRows"))){const f=Array.isArray(settings.custFees)?settings.custFees:[];$("custFees").value=f.map(x=>x.km+":"+x.fee).join(",");renderFeeRows()}
- if(!(ae&&ae.tagName==="INPUT"))$("custUsers").innerHTML=table(["الاسم","الهاتف","الجهاز","إجراء"],Object.entries(custers).map(([id,c])=>{
-  const d=c.deviceId||"",bn=d&&banned[d];
-  return `<tr><td><b>${esc(c.name)}</b> ${bn?'<span class="tag r">محظور</span>':''}</td><td dir="ltr">${esc(c.phone)}</td><td dir="ltr">${esc(d.slice(0,10))||"—"}</td>
-  <td>${d?`<button type="button" data-${bn?"ub":"bn"}="${esc(id)}" class="${bn?"grn":"red"}">${bn?"فك الحظر":"حظر الجهاز"}</button>`:"—"}</td></tr>`}),"لا يوجد زبائن.");
+ if(!(ae&&ae.tagName==="INPUT"))$("custUsers").innerHTML=table(["الاسم","الهاتف","الحالة","إجراءات"],Object.entries(custers).map(([id,c])=>{
+  const d=c.deviceId||"",bn=d&&banned[d],ok=appr[id]===true;
+  return `<tr><td><b>${esc(c.name)}</b> ${bn?'<span class="tag r">محظور</span>':''}</td><td dir="ltr">${esc(c.phone)}</td>
+  <td><span class="tag ${ok?"g":"y"}">${ok?"مفعّل":"بانتظار التفعيل"}</span></td>
+  <td><div class="acts"><button type="button" data-${ok?"na":"ap"}="${esc(id)}" class="${ok?"org":"grn"}">${ok?"إيقاف التفعيل":"تفعيل"}</button>
+  <a class="tag b" target="_blank" href="${esc(waLink(c.phone,"مرحباً "+(c.name||"")+"، معك إدارة Baqubah Delivery. نتأكد من رقمك لتفعيل حسابك."))}">واتساب</a>
+  ${d?`<button type="button" data-${bn?"ub":"bn"}="${esc(id)}" class="${bn?"grn":"red"}">${bn?"فك الحظر":"حظر الجهاز"}</button>`:""}</div></td></tr>`}),"لا يوجد زبائن.");
 }
 {const _d=draw;draw=function(){_d();try{renderCust()}catch(e){console.error(e)}}}
 $("t10").addEventListener("click",e=>{
@@ -479,6 +489,9 @@ $("t10").addEventListener("click",e=>{
   f.sort((a,b)=>a.km-b.km);await update(ref(db),{"settings/custFees":f});feeDirty=false;say("تم حفظ الأسعار.");
  });
  if(d.bn&&confirm("حظر جهاز هذا الزبون؟"))run(async()=>{const c=custers[d.bn];await set(ref(db,"bannedDevices/"+c.deviceId),{name:c.name,phone:c.phone,at:Date.now()});say("تم حظر الجهاز.")});
+ if(d.ap)run(async()=>{await set(ref(db,"approvedCustomers/"+d.ap),true);say("تم تفعيل الزبون.")});
+ if(d.na)run(async()=>{await set(ref(db,"approvedCustomers/"+d.na),null);say("تم إيقاف التفعيل.")});
+ if(b.id==="btnApproveAll"&&confirm("تفعيل جميع الزبائن الحاليين؟"))run(async()=>{const u={};Object.keys(custers).forEach(k=>{u["approvedCustomers/"+k]=true});await update(ref(db),u);say("تم تفعيل الجميع.")});
  if(d.ub)run(async()=>{await set(ref(db,"bannedDevices/"+custers[d.ub].deviceId),null);say("تم فك الحظر.")});
 });
 
@@ -782,7 +795,9 @@ $("btnSet").onclick=()=>run(async()=>{
     debtLimit:Number($("set-limit").value),
     deleteOrdersAfterDays:Number($("set-days").value),
     storeCommissionFixed:pct,
-    driverCommissionPercent:drv
+    driverCommissionPercent:drv,
+    requireApproval:$("set-reqapp").checked,
+    adminWhatsapp:$("set-adminwa").value.trim()
   });
   say("تم حفظ الإعدادات.");
 });
@@ -974,6 +989,7 @@ async function addUser(role,username,name,pass,extra={}){
   const email=username.includes("@")?username:username+"@baqubah.app";
   const c=await createUserWithEmailAndPassword(getAuth(sec),email,pass);
   const rec={role,username,name,email,mapUrl:mm.url,isActive:true,createdAt:Date.now()};
+  if(/^[0-9+]{7,15}$/.test(username))rec.phone=username;
   if(mm.p){rec.custLat=mm.p.lat;rec.custLng=mm.p.lng}
   if(role==="store")rec.commissionAmount=Number(settings.storeCommissionFixed??500);
   await set(ref(db,"users/"+c.user.uid),rec);
