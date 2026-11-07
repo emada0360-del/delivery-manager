@@ -47,6 +47,11 @@ input{width:100%;padding:13px;border:1px solid var(--ln);border-radius:12px;font
  <div id="list"></div>
 </main>
 
+<div id="locGate" hidden style="position:fixed;inset:0;z-index:30;background:#0d131a;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px">
+ <div style="font-size:56px">📍</div><b style="font-size:20px">تحديد الموقع مطلوب</b>
+ <div id="locMsg" style="color:#c9d4e0;line-height:1.7">اسمح للتطبيق بالوصول إلى موقعك لتحديد أجرة التوصيل ومعرفة المطاعم المتاحة.</div>
+ <button id="locBtn" class="g" style="width:100%;max-width:320px">السماح بتحديد الموقع</button>
+</div>
 <div id="menuM" hidden><div class="bar"><button class="l" id="mx">رجوع</button><button id="mo">فتح في المتصفح</button></div><iframe id="mf" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -181,7 +186,7 @@ onAuthStateChanged(auth,async u=>{
  const did=await devId();
  if(await isBanned()){await signOut(auth);$("aE").textContent="تم حظر هذا الجهاز من استخدام الخدمة";return}
  update(ref(db,"customers/"+u.uid),{deviceId:did}).catch(()=>{});
- initMap();
+ initMap();needLoc();
  unsubs.push(onValue(ref(db,"restaurants"),s=>{rests=s.val()||{};drawList()}));
  unsubs.push(onValue(ref(db,"customerZones"),s=>{zones=s.val()||{};drawList()}));
  unsubs.push(onValue(ref(db,"settings/custFees"),s=>{fees=s.val()||[];drawList()}));
@@ -208,6 +213,17 @@ function quote(r){
  const d=km(p.lat,p.lng,loc.lat,loc.lng),ring=[...fees].sort((a,b)=>a.km-b.km).find(f=>d<=f.km);
  return ring?{ok:true,fee:ring.fee,km:d}:{ok:false,why:"المسافة أبعد من نطاق التوصيل"};
 }
+
+function needLoc(){
+ $("locGate").hidden=!!loc;if(loc)return;
+ if(!navigator.geolocation){$("locMsg").textContent="جهازك لا يدعم تحديد الموقع.";return}
+ navigator.geolocation.getCurrentPosition(p=>{setLoc(p.coords.latitude,p.coords.longitude);map.setView([p.coords.latitude,p.coords.longitude],15);$("locGate").hidden=true},
+  er=>{$("locGate").hidden=false;$("locMsg").innerHTML=er.code===1?"تم رفض إذن الموقع.<br>افتح إعدادات المتصفح أو التطبيق ← الأذونات ← الموقع ← <b>السماح</b>، ثم اضغط الزر أدناه.":"تعذر تحديد موقعك. فعّل GPS وتأكد من الإنترنت ثم أعد المحاولة."},
+  {enableHighAccuracy:true,timeout:20000,maximumAge:30000});
+}
+$("locBtn").onclick=needLoc;
+try{navigator.permissions&&navigator.permissions.query({name:"geolocation"}).then(r=>{r.onchange=()=>{if(r.state==="granted"&&me)needLoc()}})}catch(e){}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&me&&!loc)needLoc()});
 
 // ---- قائمة المطاعم ----
 function drawList(){
