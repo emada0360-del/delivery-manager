@@ -467,10 +467,11 @@ function renderCust(){
  const ae=document.activeElement;
  const sts=Object.entries(users).filter(([,u])=>u&&u.role==="store");
  if(!(ae&&ae.tagName==="INPUT"&&$("custRest").contains(ae))){
-  $("custRest").innerHTML=table(["المطعم","يظهر للزبون","رابط المنيو","حفظ"],sts.map(([id,u])=>
+  $("custRest").innerHTML=table(["المطعم","يظهر للزبون","رابط المنيو","الإحداثيات (عرض,طول)","حفظ"],sts.map(([id,u])=>
    `<tr><td><b>${esc(u.name)}</b></td>
    <td><input type="checkbox" id="cv-${esc(id)}" ${u.custVisible?"checked":""} style="width:22px;height:22px"></td>
    <td><input id="cm-${esc(id)}" dir="ltr" value="${esc(u.menuUrl||"")}" placeholder="https://..."></td>
+   <td><input id="cl-${esc(id)}" dir="ltr" value="${esc(u.custLat!=null?u.custLat+","+u.custLng:(()=>{const p=parseLatLng(u.mapUrl);return p?p.lat+","+p.lng:""})())}" placeholder="33.7500,44.6300"></td>
    <td><button type="button" data-cs="${esc(id)}" class="grn">حفظ</button></td></tr>`),"لا توجد متاجر.");
  }
  if(!(ae&&ae.id==="custFees")){const f=Array.isArray(settings.custFees)?settings.custFees:[];$("custFees").value=f.map(x=>x.km+":"+x.fee).join(",")}
@@ -495,8 +496,10 @@ $("t10").addEventListener("click",e=>{
  if(d.cs)run(async()=>{
   const u=users[d.cs],vis=$("cv-"+d.cs).checked,mu=$("cm-"+d.cs).value.trim();
   if(mu&&!/^https?:\/\//i.test(mu))throw new Error("رابط المنيو يجب أن يبدأ بـ https://");
-  await update(ref(db),{["users/"+d.cs+"/custVisible"]:vis,["users/"+d.cs+"/menuUrl"]:mu,
-   ["restaurants/"+d.cs]:vis?{name:u.name,menuUrl:mu,mapUrl:u.mapUrl||"",isOpen:u.isActive!==false}:null});
+  const cm=($("cl-"+d.cs).value||"").match(/(-?\d+(?:\.\d+)?)\s*[,،\s]\s*(-?\d+(?:\.\d+)?)/),lat=cm?+cm[1]:null,lng=cm?+cm[2]:null;
+  if(vis&&lat==null)throw new Error("حدد إحداثيات المطعم (مثال: 33.7500,44.6300). انسخها من خرائط Google بالضغط المطول على الموقع.");
+  await update(ref(db),{["users/"+d.cs+"/custLat"]:lat,["users/"+d.cs+"/custLng"]:lng,["users/"+d.cs+"/custVisible"]:vis,["users/"+d.cs+"/menuUrl"]:mu,
+   ["restaurants/"+d.cs]:vis?{name:u.name,menuUrl:mu,mapUrl:u.mapUrl||"",lat:lat,lng:lng,isOpen:u.isActive!==false}:null});
   say("تم الحفظ.");
  });
  if(b.id==="btnCustFees")run(async()=>{

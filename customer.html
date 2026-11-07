@@ -209,7 +209,7 @@ function quote(r){
  if(!loc)return{ok:false,why:"حدد موقعك أولاً"};
  const zs=Object.values(zones);
  if(!zs.some(z=>z.isOpen!==false&&km(z.lat,z.lng,loc.lat,loc.lng)<=z.radiusKm))return{ok:false,why:"موقعك خارج مناطق الخدمة حالياً"};
- const p=ll(r.mapUrl);if(!p)return{ok:false,why:"موقع المطعم غير محدد"};
+ const p=typeof r.lat==="number"?{lat:r.lat,lng:r.lng}:ll(r.mapUrl);if(!p)return{ok:false,why:"المطعم لم يحدد موقعه بعد، تواصل مع الإدارة"};
  const d=km(p.lat,p.lng,loc.lat,loc.lng),ring=[...fees].sort((a,b)=>a.km-b.km).find(f=>d<=f.km);
  return ring?{ok:true,fee:ring.fee,km:d}:{ok:false,why:"المسافة أبعد من نطاق التوصيل"};
 }
@@ -230,7 +230,7 @@ function drawMapLayers(){
  if(!map)return;
  if(zLayer)map.removeLayer(zLayer);if(mLayer)map.removeLayer(mLayer);
  zLayer=L.layerGroup(Object.values(zones).filter(z=>z.isOpen!==false).map(z=>L.circle([z.lat,z.lng],{radius:(z.radiusKm||1)*1000,color:"#0f9a63",fillOpacity:.12,weight:2}))).addTo(map);
- mLayer=L.layerGroup(Object.values(rests).map(r=>{const p=ll(r.mapUrl);return p?L.marker([p.lat,p.lng]).bindTooltip(r.name||""):null}).filter(Boolean)).addTo(map);
+ mLayer=L.layerGroup(Object.values(rests).map(r=>{const p=typeof r.lat==="number"?{lat:r.lat,lng:r.lng}:ll(r.mapUrl);return p?L.marker([p.lat,p.lng]).bindTooltip(r.name||""):null}).filter(Boolean)).addTo(map);
 }
 function drawList(){
  drawMapLayers();
