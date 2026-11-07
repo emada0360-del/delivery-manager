@@ -259,8 +259,10 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <p class="sub">فعّل "يظهر للزبون" وضع رابط المنيو (يفتح داخل التطبيق). أرقام المتاجر لا تظهر للزبون أبداً.</p>
 <div id="custRest" class="wrap"></div></div>
 <div class="box"><h3>أسعار الكروة حسب البعد عن المطعم</h3>
-<p class="sub">الصيغة: «كم:سعر» مفصولة بفواصل. مثال: 2:3000,4:4500,6:6000 يعني حتى 2 كم = 3000، وحتى 4 كم = 4500، وحتى 6 كم = 6000. وما فوق آخر رقم غير متاح.</p>
-<input id="custFees" dir="ltr" placeholder="2:3000,4:4500,6:6000"><button type="button" id="btnCustFees" class="grn">حفظ الأسعار</button></div>
+<p class="sub">كل سطر فئة: «حتى كم = سعر». مثال: حتى 2 كم = 3000، وحتى 4 كم = 4000. وأي مسافة أبعد من آخر سطر تظهر للزبون «غير متاح».</p>
+<div id="feeRows"></div>
+<input id="custFees" type="hidden">
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="btnFeeAdd">+ إضافة فئة</button><button type="button" id="btnCustFees" class="grn">حفظ الأسعار</button></div></div>
 <div class="box"><h3>الزبائن وحظر الأجهزة</h3><p class="sub">الحظر يمنع الجهاز نفسه من تسجيل الدخول أو فتح حساب جديد. (يعتمد على معرّف الجهاز داخل الـAPK، وفي المتصفح على معرّف محلي أضعف.)</p><div id="custUsers" class="wrap"></div></div>
 <div class="box"><h3>الزونات على الخارطة</h3>
 <p class="sub">اضغط على الخارطة لتحديد المركز، اكتب الاسم ونصف القطر ثم أضف. الزبون خارج الزونات المفتوحة لا يستطيع الطلب.</p>
@@ -474,7 +476,7 @@ function renderCust(){
    <td><input id="cl-${esc(id)}" dir="ltr" value="${esc(u.custLat!=null?u.custLat+","+u.custLng:(()=>{const p=parseLatLng(u.mapUrl);return p?p.lat+","+p.lng:""})())}" placeholder="33.7500,44.6300"></td>
    <td><button type="button" data-cs="${esc(id)}" class="grn">حفظ</button></td></tr>`),"لا توجد متاجر.");
  }
- if(!(ae&&ae.id==="custFees")){const f=Array.isArray(settings.custFees)?settings.custFees:[];$("custFees").value=f.map(x=>x.km+":"+x.fee).join(",")}
+ if(!feeDirty&&!(ae&&ae.closest&&ae.closest("#feeRows"))){const f=Array.isArray(settings.custFees)?settings.custFees:[];$("custFees").value=f.map(x=>x.km+":"+x.fee).join(",");renderFeeRows()}
  $("custZones").innerHTML=table(["الزون","نصف القطر","الحالة","إجراءات"],Object.entries(custZones).map(([id,z])=>
   `<tr><td><b>${esc(z.name)}</b></td><td>${esc(z.radiusKm)} كم</td>
   <td><span class="tag ${z.isOpen===false?"r":"g"}">${z.isOpen===false?"مغلق":"مفتوح"}</span></td>
@@ -503,9 +505,10 @@ $("t10").addEventListener("click",e=>{
   say("تم الحفظ.");
  });
  if(b.id==="btnCustFees")run(async()=>{
+  syncFees();
   const f=$("custFees").value.split(",").map(x=>x.trim()).filter(Boolean).map(x=>{const[k,v]=x.split(":");return{km:Number(k),fee:Number(v)}});
   if(!f.length||f.some(x=>!(x.km>0)||!(x.fee>=0)))throw new Error("الصيغة غير صحيحة، مثال: 2:3000,4:4500");
-  f.sort((a,b)=>a.km-b.km);await update(ref(db),{"settings/custFees":f});say("تم حفظ الأسعار.");
+  f.sort((a,b)=>a.km-b.km);await update(ref(db),{"settings/custFees":f});feeDirty=false;say("تم حفظ الأسعار.");
  });
  if(b.id==="btnZone")run(async()=>{
   const aid=$("zArea").value,n=(areas[aid]||{}).name||"",r=Number($("zRad").value);
@@ -649,6 +652,31 @@ async function deleteOrdersArchived(map){
  await update(ref(db),upd);
  return ids.length;
 }
+
+// ---- محرر فئات أسعار الزبون (صفوف بدل نص) ----
+let feeDirty=false;
+function addFeeRow(km,fee){
+ const w=document.createElement("div");w.className="feeRow";w.style.cssText="display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap";
+ w.innerHTML='<span>حتى</span><input type="number" class="fk" min="0.5" step="0.5" inputmode="decimal" style="width:90px"><span>كم =</span><input type="number" class="ff" min="0" step="500" inputmode="numeric" style="width:110px"><span>د.ع</span><button type="button" class="red" data-fx="1" style="padding:6px 12px">✕</button>';
+ w.querySelector(".fk").value=km;w.querySelector(".ff").value=fee;
+ $("feeRows").appendChild(w);
+}
+function renderFeeRows(){
+ const box=$("feeRows");if(!box)return;box.innerHTML="";
+ const v=$("custFees").value.split(",").map(x=>x.trim()).filter(Boolean);
+ if(!v.length){addFeeRow("","");return}
+ v.forEach(x=>{const [k,f]=x.split(":");addFeeRow(k,f)});
+}
+function syncFees(){
+ const rows=[...document.querySelectorAll("#feeRows .feeRow")].map(r=>[r.querySelector(".fk").value.trim(),r.querySelector(".ff").value.trim()]).filter(a=>a[0]||a[1]);
+ if(rows.some(a=>!a[0]||a[1]===""))throw new Error("كمّل كل الفئات: المسافة والسعر، أو احذف السطر الفارغ بزر ✕.");
+ $("custFees").value=rows.map(a=>a[0]+":"+a[1]).join(",");
+}
+document.addEventListener("input",e=>{if(e.target.closest&&e.target.closest("#feeRows"))feeDirty=true});
+document.addEventListener("click",e=>{
+ if(e.target.id==="btnFeeAdd"){feeDirty=true;const k=[...document.querySelectorAll("#feeRows .fk")];const last=k.length?Number(k[k.length-1].value)||0:0;addFeeRow(last?last+2:2,"");return}
+ const x=e.target.closest("[data-fx]");if(x&&x.parentElement.classList.contains("feeRow")){x.parentElement.remove();feeDirty=true}
+});
 
 function draw(){
  const os=Object.values(orders).filter(Boolean),drs=list("driver"),sts=list("store");
