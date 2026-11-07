@@ -282,6 +282,14 @@ let uid=null,store=null,areas={},orders={},priv={},driversData={},settings={},dr
 let alarmTimer = null,presenceData={},annSeen=null;
 
 // عمولة المتجر بالدينار: حقل المتجر نفسه أولاً، بعدها المبلغ العام من الإدارة، وأخيراً 500
+// عمولة طلبات تطبيق الزبون (% من سعر الطلب): حقل المتجر أولاً ثم الافتراضي من الإدارة، وإذا ما موجود يرجع للدينار
+function getCustPct(){
+  const own = store && store.custCommissionPct;
+  if(own !== undefined && own !== null && own !== "" && Number(own) >= 0) return Number(own);
+  const g = settings.custCommissionPct;
+  if(g !== undefined && g !== null && g !== "" && Number(g) >= 0) return Number(g);
+  return null;
+}
 function getStoreCom(){
   const own = store && store.commissionAmount;
   if(own !== undefined && own !== null && own !== "" && Number(own) >= 0) return Number(own);
@@ -499,7 +507,7 @@ async function confirmCustomerOrder(id,p,mins){
  if(orders[id])return;
  let pv={};try{const sn=await get(ref(db,"customerOrderPrivate/"+id));if(sn.exists())pv=sn.val()}catch(e){console.warn("cust private",e);say("تعذر قراءة رقم الزبون (قواعد Firebase)",1)}
  const pm=Math.max(1,Math.min(120,Number(mins)||15));
- const com=getStoreCom(),fee=Number(co.deliveryFee)||0,now=Date.now();
+ const cpct=getCustPct(),com=cpct!==null?Math.round(p*cpct/100):getStoreCom(),fee=Number(co.deliveryFee)||0,now=Date.now();
  const cl=(co.lat!=null&&co.lng!=null)?Number(co.lat).toFixed(5)+","+Number(co.lng).toFixed(5):"";
  const note="طلب من تطبيق الزبون"+(cl?" - موقع الزبون: https://www.google.com/maps?q="+cl:"");
  await update(ref(db),{

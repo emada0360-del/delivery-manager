@@ -109,7 +109,7 @@ h4 span{font-size:12.5px;color:var(--mu);font-weight:500}
  <h3 id="aT">تسجيل الدخول</h3>
  <p class="sub">اطلب من مطعمك المفضل وإحنا نوصلها لك</p>
  <input id="aN" placeholder="الاسم" hidden>
- <input id="aP" type="tel" inputmode="numeric" placeholder="رقم الهاتف" dir="ltr">
+ <input id="aP" type="tel" inputmode="numeric" maxlength="11" placeholder="رقم الهاتف (07XXXXXXXXX)" dir="ltr">
  <input id="aW" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)">
  <div class="err" id="aE"></div>
  <button id="aB" style="width:100%">دخول</button>
@@ -185,9 +185,9 @@ async function devId(){
  if(!id){try{id=localStorage.getItem("did")||"";if(!id){id="w"+Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("did",id)}}catch(e){id="w"+Date.now()}}
  return String(id).replace(/[^A-Za-z0-9_-]/g,"_");
 }
-async function isBanned(){try{return (await get(ref(db,"bannedDevices/"+await devId()))).exists()}catch(e){console.warn(e);return false}}
+async function isBanned(ph){try{const d=await devId();const r=await Promise.all([get(ref(db,"bannedDevices/"+d)),ph?get(ref(db,"bannedDevices/ph_"+ph)):null]);return r.some(x=>x&&x.exists())}catch(e){console.warn(e);return false}}
 let mLayer=null,me=null,prof=null,rests={},fees=[],orders={},loc=null,map,pin,unsubs=[];
-let reqApp=false,approved=false,adminWa="";
+let reqApp=false,approved=false,adminWa="",apFlag=false,acFlag=false,codeTries=0;
 let restsLoaded=false,filt="all",curTab="home",firstSt=true;const lastSt={};
 
 // ===== مكالمة صوتية داخل التطبيق (WebRTC + Firebase للإشارات) =====
@@ -267,7 +267,7 @@ $("aS").onclick=e=>{e.preventDefault();reg=!reg;$("aN").hidden=!reg;$("aT").text
 $("aB").onclick=async()=>{
  $("aE").textContent="";const ph=$("aP").value.replace(/\D/g,""),pw=$("aW").value,nm=$("aN").value.trim();
  try{
-  if(ph.length<10)throw Error("اكتب رقم هاتف صحيح");
+  if(!/^07\d{9}$/.test(ph))throw Error("رقم الهاتف لازم يكون 11 رقم ويبدأ بـ 07");
   if(reg&&!nm)throw Error("اكتب اسمك");
   const em="c"+ph+"@baqubah.app";
   if(reg){
@@ -287,7 +287,7 @@ $("out").onclick=()=>signOut(auth);
 onAuthStateChanged(auth,async u=>{
  unsubs.forEach(f=>f());unsubs=[];me=u;
  $("auth").hidden=!!u;$("app").hidden=!u;$("out").hidden=!u;
- if(!u){orders={};restsLoaded=false;approved=false;reqApp=false;for(const k in lastSt)delete lastSt[k];return}
+ if(!u){orders={};restsLoaded=false;approved=false;apFlag=false;acFlag=false;reqApp=false;for(const k in lastSt)delete lastSt[k];return}
  if(pendingReg)await pendingReg.catch(()=>{});
  try{
  const s=await get(ref(db,"customers/"+u.uid));prof=s.val();
@@ -299,14 +299,15 @@ onAuthStateChanged(auth,async u=>{
  }
  }catch(e){await signOut(auth);$("aE").textContent="خطأ: "+(e.message||e);return}
  const did=await devId();
- if(await isBanned()){await signOut(auth);$("aE").textContent="تم حظر هذا الجهاز من استخدام الخدمة";return}
+ if(await isBanned(prof&&prof.phone)){await signOut(auth);$("aE").textContent="تم حظر هذا الحساب أو الجهاز من استخدام الخدمة";return}
  update(ref(db,"customers/"+u.uid),{deviceId:did}).catch(()=>{});
  firstSt=true;renderMe();drawFees();
  initMap();needLoc();
  unsubs.push(onValue(ref(db,"restaurants"),s=>{rests=s.val()||{};restsLoaded=true;drawList();drawHist()}));
  unsubs.push(onValue(ref(db,"settings/requireApproval"),s=>{reqApp=s.val()===true;drawGate();drawList()}));
  unsubs.push(onValue(ref(db,"settings/adminWhatsapp"),s=>{adminWa=String(s.val()||"");drawGate()}));
- unsubs.push(onValue(ref(db,"approvedCustomers/"+u.uid),s=>{approved=s.val()===true;drawGate();drawList()}));
+ unsubs.push(onValue(ref(db,"approvedCustomers/"+u.uid),s=>{apFlag=s.val()===true;approved=apFlag||acFlag;drawGate();drawList()}));
+ unsubs.push(onValue(ref(db,"activations/"+u.uid),s=>{acFlag=s.exists();approved=apFlag||acFlag;drawGate();drawList()}));
  unsubs.push(onValue(ref(db,"settings/custFees"),s=>{fees=s.val()||[];drawFees();drawList()}));
  unsubs.push(onValue(query(ref(db,"customerOrders"),orderByChild("customerId"),equalTo(u.uid)),s=>{orders=s.val()||{};watchStatus();drawCur();drawList();drawHist()}));
 });
@@ -481,10 +482,19 @@ $("hist").onclick=e=>{
 // ---- تفعيل الحساب ----
 function drawGate(){
  const g=$("gate"),need=reqApp&&!approved;g.hidden=!need;if(!need)return;
- const msg="مرحباً، أريد تفعيل حسابي في Baqubah Delivery. الاسم: "+((prof&&prof.name)||"")+" الرقم: "+((prof&&prof.phone)||"");
+ if(g.dataset.drawn==="1"&&g.contains(document.activeElement))return;
+ const msg="مرحباً، أريد رمز تفعيل حسابي في Baqubah Delivery. الاسم: "+((prof&&prof.name)||"")+" الرقم: "+((prof&&prof.phone)||"");
  let p=adminWa.replace(/\D/g,"");if(p.startsWith("0"))p="964"+p.slice(1);
- g.innerHTML=`<div class="box" style="border:2px solid #b86e0055"><b>⏳ حسابك بانتظار التفعيل</b><p class="hint" style="margin:6px 0 10px">لحماية الخدمة نفعّل كل حساب بعد التأكد من رقمه. تواصل مع الإدارة وراح يتفعل خلال دقائق.</p>${p?`<button class="g full" id="gWa">💬 تواصل مع الإدارة عبر واتساب</button>`:'<p class="hint">سيتواصل معك فريقنا قريباً.</p>'}</div>`;
+ g.dataset.drawn="1";
+ g.innerHTML=`<div class="box" style="border:2px solid #b86e0055"><b>⏳ حسابك بانتظار التفعيل</b><p class="hint" style="margin:6px 0 10px">لحماية الخدمة ما نفعّل الحساب إلا بعد التأكد من رقمك. راسل الدعم عبر واتساب حتى يوصلك رمز التفعيل، وبعدها اكتبه هنا.</p>${p?`<button class="g full" id="gWa">💬 مراسلة الدعم للحصول على الرمز</button>`:'<p class="hint">سيتواصل معك فريقنا قريباً.</p>'}<input id="gCode" type="tel" inputmode="numeric" maxlength="6" dir="ltr" placeholder="رمز التفعيل (6 أرقام)" style="margin-top:8px"><div class="err" id="gErr"></div><button class="full" id="gGo">تفعيل الحساب</button></div>`;
  const b=$("gWa");if(b)b.onclick=()=>window.open("https://wa.me/"+p+"?text="+encodeURIComponent(msg),"_blank");
+ $("gGo").onclick=async()=>{
+  const v=$("gCode").value.replace(/\D/g,"");
+  if(v.length!==6){$("gErr").textContent="اكتب الرمز المكوّن من 6 أرقام";return}
+  if(codeTries>=5){$("gErr").textContent="محاولات كثيرة، راسل الدعم";return}
+  try{await set(ref(db,"activations/"+me.uid),v);$("gErr").textContent=""}
+  catch(e){codeTries++;$("gErr").textContent="الرمز غير صحيح"+(codeTries>=5?" — تم إيقاف المحاولات، راسل الدعم":"")}
+ };
 }
 
 // ---- إشعارات تغيّر حالة الطلب ----

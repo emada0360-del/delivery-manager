@@ -230,7 +230,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <input id="ca" type="number" min="1" placeholder="المبلغ">
 <input id="cn" placeholder="ملاحظة (اختياري)">
 <button type="button" id="cb" class="grn">تسجيل الكاش</button></div>
-<div class="box"><h3>سجل الكاش</h3><div id="fin" class="wrap"></div></div>
+<div class="box"><h3>سجل الكاش والخصومات والمكافآت</h3><div id="fin" class="wrap"></div></div>
 </section>
 
 <section id="t7" class="tab" hidden>
@@ -264,7 +264,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div id="feeRows"></div>
 <input id="custFees" type="hidden">
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="btnFeeAdd">+ إضافة فئة</button><button type="button" id="btnCustFees" class="grn">حفظ الأسعار</button></div></div>
-<div class="box"><h3>الزبائن وتفعيل الحسابات والحظر</h3><button type="button" id="btnApproveAll" class="grn" style="margin-bottom:10px">تفعيل جميع الزبائن الحاليين</button><p class="sub">الحظر يمنع الجهاز نفسه من تسجيل الدخول أو فتح حساب جديد. (يعتمد على معرّف الجهاز داخل الـAPK، وفي المتصفح على معرّف محلي أضعف.)</p><div id="custUsers" class="wrap"></div></div>
+<div class="box"><h3>الزبائن وتفعيل الحسابات والحظر</h3><button type="button" id="btnApproveAll" class="grn" style="margin-bottom:10px">تفعيل جميع الزبائن الحاليين</button><p class="sub">الزبون الجديد يظهر هنا مع رمز تفعيل عشوائي؛ اضغط «إرسال الرمز» ليفتح واتساب برسالة جاهزة فيها الرمز. الحظر يمنع الرقم والجهاز من الدخول. (يعتمد على معرّف الجهاز داخل الـAPK، وفي المتصفح على معرّف محلي أضعف.)</p><div id="custUsers" class="wrap"></div></div>
 </section>
 
 <section id="t8" class="tab" hidden>
@@ -274,11 +274,14 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <input id="set-limit" type="number" min="0" step="1000" value="15000">
 
 <label style="display:flex;align-items:center;gap:10px;margin:6px 0 14px"><input id="set-reqapp" type="checkbox" style="width:22px;height:22px;margin:0;min-height:0"> تفعيل حسابات الزبائن يدوياً (الزبون ما يطلب إلا بعد تفعيلك له)</label>
-<label>رقم واتساب الإدارة (يتواصل معه الزبون للتفعيل، مثال 07701234567)</label>
+<label>رقم واتساب الدعم (زر «مراسلة الدعم» بتطبيق الزبون يفتحه، مثال 07701234567)</label>
 <input id="set-adminwa" type="tel" dir="ltr" placeholder="07XXXXXXXXX">
 
-<label>عمولة المتجر لكل طلب (دينار)</label>
+<label>عمولة طلب المتجر الافتراضية (دينار)</label>
 <input id="set-store-commission" type="number" min="0" step="50" value="500">
+
+<label>عمولة تطبيق الزبون الافتراضية (% من سعر الطلب، اتركها فاضية لاستعمال عمولة الدينار)</label>
+<input id="set-cust-pct" type="number" min="0" max="100" step="0.5" placeholder="مثال 5">
 
 <label>عمولة السائق (% من أجرة التوصيل)</label>
 <input id="set-driver-commission" type="number" min="0" max="100" step="0.5" value="10">
@@ -356,7 +359,7 @@ const ST={preparing:"قيد التحضير",pending:"بانتظار سائق",wa
 
 $("f").innerHTML+=Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
 
-let appr={},cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
+let appr={},acts={},codes={},cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
 let showProfitFlag=false;
 
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fde8ec":"#dff5ea";m.style.color=bad?"#b0002a":"#0b7a4e";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
@@ -414,6 +417,7 @@ function fillSettings(){
  put("set-driver-commission",s.driverCommissionPercent??10);
  put("ann",s.announcement||"");
  put("set-adminwa",s.adminWhatsapp||"");
+ put("set-cust-pct",(s.custCommissionPct===undefined||s.custCommissionPct===null)?"":s.custCommissionPct);
  {const c=$("set-reqapp");if(c&&document.activeElement!==c)c.checked=s.requireApproval===true}
 }
 
@@ -428,7 +432,7 @@ function scheduleDraw(){
 }
 
 function start(){
- const src={customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customers:v=>custers=v,approvedCustomers:v=>appr=v,bannedDevices:v=>banned=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
+ const src={customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customers:v=>custers=v,approvedCustomers:v=>appr=v,activations:v=>acts=v,customerCodes:v=>codes=v,bannedDevices:v=>banned=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
  const prev={};
  for(const p in src)onValue(ref(db,p),s=>{
    const v=s.val()||{};
@@ -449,6 +453,14 @@ $("nav").onclick=e=>{const b=e.target.closest("[data-t]");if(!b)return;
 
 
 // ===== تطبيق الزبون: المطاعم + الكروة + الزونات =====
+const gen=new Set();
+const newCode=()=>String(Math.floor(100000+Math.random()*900000));
+function ensureCodes(){
+ Object.keys(custers).forEach(id=>{
+  if(codes[id]||appr[id]===true||acts[id]||gen.has(id))return;
+  gen.add(id);set(ref(db,"customerCodes/"+id),newCode()).catch(()=>gen.delete(id));
+ });
+}
 function renderCust(){
  const ae=document.activeElement;
  const sts=Object.entries(users).filter(([,u])=>u&&u.role==="store");
@@ -461,13 +473,15 @@ function renderCust(){
    <td><button type="button" data-cs="${esc(id)}" class="grn">حفظ</button></td></tr>`),"لا توجد متاجر.");
  }
  if(!feeDirty&&!(ae&&ae.closest&&ae.closest("#feeRows"))){const f=Array.isArray(settings.custFees)?settings.custFees:[];$("custFees").value=f.map(x=>x.km+":"+x.fee).join(",");renderFeeRows()}
- if(!(ae&&ae.tagName==="INPUT"))$("custUsers").innerHTML=table(["الاسم","الهاتف","الحالة","إجراءات"],Object.entries(custers).map(([id,c])=>{
-  const d=c.deviceId||"",bn=d&&banned[d],ok=appr[id]===true;
+ ensureCodes();
+ if(!(ae&&ae.tagName==="INPUT"))$("custUsers").innerHTML=table(["الاسم","الهاتف","الحالة","رمز التفعيل","إجراءات"],Object.entries(custers).sort((x,y)=>(y[1].createdAt||0)-(x[1].createdAt||0)).map(([id,c])=>{
+  const d=c.deviceId||"",bn=(d&&banned[d])||banned["ph_"+c.phone],ok=appr[id]===true||!!acts[id],code=codes[id]||"";
+  const msg="مرحباً "+(c.name||"")+"، معك دعم Baqubah Delivery. رمز تفعيل حسابك: "+code+"\nاكتبه بالتطبيق وراح يتفعل حسابك.";
   return `<tr><td><b>${esc(c.name)}</b> ${bn?'<span class="tag r">محظور</span>':''}</td><td dir="ltr">${esc(c.phone)}</td>
   <td><span class="tag ${ok?"g":"y"}">${ok?"مفعّل":"بانتظار التفعيل"}</span></td>
-  <td><div class="acts"><button type="button" data-${ok?"na":"ap"}="${esc(id)}" class="${ok?"org":"grn"}">${ok?"إيقاف التفعيل":"تفعيل"}</button>
-  <a class="tag b" target="_blank" href="${esc(waLink(c.phone,"مرحباً "+(c.name||"")+"، معك إدارة Baqubah Delivery. نتأكد من رقمك لتفعيل حسابك."))}">واتساب</a>
-  ${d?`<button type="button" data-${bn?"ub":"bn"}="${esc(id)}" class="${bn?"grn":"red"}">${bn?"فك الحظر":"حظر الجهاز"}</button>`:""}</div></td></tr>`}),"لا يوجد زبائن.");
+  <td dir="ltr"><b>${ok?"—":esc(code||"...")}</b></td>
+  <td><div class="acts">${ok?`<button type="button" data-na="${esc(id)}" class="org">إيقاف التفعيل</button>`:`<a class="tag b" target="_blank" href="${esc(waLink(c.phone,msg))}">📲 إرسال الرمز</a><button type="button" data-ap="${esc(id)}" class="grn">تفعيل مباشر</button><button type="button" data-nc="${esc(id)}" class="gray">رمز جديد</button>`}
+  <button type="button" data-${bn?"ub":"bn"}="${esc(id)}" class="${bn?"grn":"red"}">${bn?"فك الحظر":"حظر"}</button></div></td></tr>`}),"لا يوجد زبائن.");
 }
 {const _d=draw;draw=function(){_d();try{renderCust()}catch(e){console.error(e)}}}
 $("t10").addEventListener("click",e=>{
@@ -488,11 +502,12 @@ $("t10").addEventListener("click",e=>{
   if(!f.length||f.some(x=>!(x.km>0)||!(x.fee>=0)))throw new Error("الصيغة غير صحيحة، مثال: 2:3000,4:4500");
   f.sort((a,b)=>a.km-b.km);await update(ref(db),{"settings/custFees":f});feeDirty=false;say("تم حفظ الأسعار.");
  });
- if(d.bn&&confirm("حظر جهاز هذا الزبون؟"))run(async()=>{const c=custers[d.bn];await set(ref(db,"bannedDevices/"+c.deviceId),{name:c.name,phone:c.phone,at:Date.now()});say("تم حظر الجهاز.")});
+ if(d.bn&&confirm("حظر رقم وجهاز هذا الزبون؟"))run(async()=>{const c=custers[d.bn],rec={name:c.name,phone:c.phone,at:Date.now()},u={["bannedDevices/ph_"+c.phone]:rec,["approvedCustomers/"+d.bn]:null,["activations/"+d.bn]:null};if(c.deviceId)u["bannedDevices/"+c.deviceId]=rec;await update(ref(db),u);say("تم حظر الرقم والجهاز.")});
+ if(d.nc)run(async()=>{await update(ref(db),{["customerCodes/"+d.nc]:newCode(),["activations/"+d.nc]:null});say("تم إنشاء رمز جديد.")});
  if(d.ap)run(async()=>{await set(ref(db,"approvedCustomers/"+d.ap),true);say("تم تفعيل الزبون.")});
- if(d.na)run(async()=>{await set(ref(db,"approvedCustomers/"+d.na),null);say("تم إيقاف التفعيل.")});
+ if(d.na)run(async()=>{await update(ref(db),{["approvedCustomers/"+d.na]:null,["activations/"+d.na]:null,["customerCodes/"+d.na]:newCode()});say("تم إيقاف التفعيل.")});
  if(b.id==="btnApproveAll"&&confirm("تفعيل جميع الزبائن الحاليين؟"))run(async()=>{const u={};Object.keys(custers).forEach(k=>{u["approvedCustomers/"+k]=true});await update(ref(db),u);say("تم تفعيل الجميع.")});
- if(d.ub)run(async()=>{await set(ref(db,"bannedDevices/"+custers[d.ub].deviceId),null);say("تم فك الحظر.")});
+ if(d.ub)run(async()=>{const c=custers[d.ub],u={["bannedDevices/ph_"+c.phone]:null};if(c.deviceId)u["bannedDevices/"+c.deviceId]=null;await update(ref(db),u);say("تم فك الحظر.")});
 });
 
 // ===== عمر الطلب + موقع المتجر =====
@@ -595,7 +610,9 @@ const getDebt=id=>{
   const live = deliveredOrders(id).reduce((s,o)=>s+orderComm(o),0);
   const archived = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="archive").reduce((s,f)=>s+(Number(f.amount)||0),0);
   const paid = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="cash_received").reduce((s,f)=>s+(Number(f.amount)||0),0);
-  return live + archived - paid;
+  const ded = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="deduction").reduce((s,f)=>s+(Number(f.amount)||0),0);
+  const bon = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="bonus").reduce((s,f)=>s+(Number(f.amount)||0),0);
+  return live + archived + ded - bon - paid;
 };
 const archCount=id=>Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="archive").reduce((s,f)=>s+(Number(f.count)||0),0);
 const storeFee=u=>(u&&u.commissionAmount!==undefined&&u.commissionAmount!==null)?u.commissionAmount:(settings.storeCommissionFixed??500);
@@ -664,8 +681,9 @@ function draw(){
 
  const liveProfit=os.filter(o=>o.status==="delivered").reduce((s,o)=>s+orderComm(o),0);
  const archProfit=Object.values(fin).filter(f=>f&&f.type==="archive").reduce((s,f)=>s+(Number(f.amount)||0),0);
- $("platformProfit").textContent=showProfitFlag?fmt(liveProfit+archProfit)+" د.ع":"***** د.ع";
- $("profitNote").textContent=showProfitFlag?`عمولة التوصيل + عمولة المتاجر (منها ${fmt(archProfit)} من طلبات محذوفة)`:"";
+ const adjProfit=Object.values(fin).reduce((s,f)=>f&&f.type==="deduction"?s+(Number(f.amount)||0):f&&f.type==="bonus"?s-(Number(f.amount)||0):s,0);
+ $("platformProfit").textContent=showProfitFlag?fmt(liveProfit+archProfit+adjProfit)+" د.ع":"***** د.ع";
+ $("profitNote").textContent=showProfitFlag?`عمولة التوصيل + عمولة المتاجر + الخصومات − المكافآت (منها ${fmt(archProfit)} من طلبات محذوفة)`:"";
 
  drawOrders();
  drawLiveOrders();
@@ -680,17 +698,21 @@ function draw(){
   <td>${deliveredOrders(id).length+archCount(id)}</td><td>${debtTag(id)}</td>
   <td><div class="acts"><button type="button" data-ed="${esc(id)}" data-ek="driver" class="blue">تعديل</button>
   <button type="button" data-tg="${esc(id)}" class="${u.isActive===false?"grn":"org"}">${u.isActive===false?"تفعيل":"تعطيل"}</button>
+  <button type="button" data-ded="${esc(id)}" class="org">خصم</button>
+  <button type="button" data-bon="${esc(id)}" class="blue">مكافأة</button>
   <button type="button" data-zp="${esc(id)}" class="grn" ${d<=0?"disabled":""}>تصفير</button>
   <button type="button" data-del="${esc(id)}" class="red">حذف</button></div></td></tr>`}),"لا يوجد سائقون.");
 
  // لا نعيد رسم جدول المتاجر وانت تكتب المبلغ
  const ae=document.activeElement;
  if(!(ae&&ae.tagName==="INPUT"&&$("stores").contains(ae))){
- $("stores").innerHTML=table(["الاسم","رقم الدخول","الموقع","عمولة الطلب (د.ع)","تاريخ التسجيل","إجراءات"],sts.map(([id,u])=>
+ $("stores").innerHTML=table(["الاسم","رقم الدخول","الموقع","عمولة طلب المتجر (د.ع)","عمولة تطبيق الزبون (%)","تاريخ التسجيل","إجراءات"],sts.map(([id,u])=>
   `<tr><td><b>${esc(u.name)}</b></td><td dir="ltr">${esc(u.username)}</td>
   <td>${mapLink(u.mapUrl)} ${u.mapUrl?(hasLatLng(u.mapUrl)?'<span class="tag g">مقروء</span>':'<span class="tag y">غير مقروء</span>'):'<span class="tag r">لا يوجد</span>'}</td>
   <td><input class="pc" type="number" min="0" step="50" id="pc-${esc(id)}" value="${esc(storeFee(u))}">
   <button type="button" data-pc="${esc(id)}" class="grn">حفظ</button></td>
+  <td><input class="pc" type="number" min="0" max="100" step="0.5" id="cp-${esc(id)}" placeholder="افتراضي" value="${esc(u.custCommissionPct??"")}">
+  <button type="button" data-cp="${esc(id)}" class="grn">حفظ</button></td>
   <td>${tm(u.createdAt)}</td>
   <td><button type="button" data-ed="${esc(id)}" data-ek="store" class="blue">تعديل</button>
   <button type="button" data-tg="${esc(id)}" class="${u.isActive===false?"grn":"org"}">${u.isActive===false?"تفعيل":"تعطيل"}</button>
@@ -708,8 +730,8 @@ function draw(){
  $("cd").innerHTML=drs.map(([id,u])=>`<option value="${esc(id)}">${esc(u.name)} (${esc(u.username)})</option>`).join("");
  if(keep)$("cd").value=keep;
 
- $("fin").innerHTML=table(["السائق","المبلغ","ملاحظة","الوقت"],Object.values(fin).filter(f=>f&&f.type==="cash_received").sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(f=>
-  `<tr><td>${esc(f.userName)}</td><td style="color:var(--ok);font-weight:700">${fmt(f.amount)} د.ع</td>
+ $("fin").innerHTML=table(["السائق","النوع","المبلغ","ملاحظة","الوقت"],Object.values(fin).filter(f=>f&&["cash_received","deduction","bonus"].includes(f.type)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(f=>
+  `<tr><td>${esc(f.userName)}</td><td>${f.type==="deduction"?'<span class="tag r">خصم</span>':f.type==="bonus"?'<span class="tag b">مكافأة</span>':'<span class="tag g">كاش مستلم</span>'}</td><td style="color:var(--ok);font-weight:700">${fmt(f.amount)} د.ع</td>
   <td>${esc(f.note)||"—"}</td><td>${tm(f.createdAt)}</td></tr>`),"لا توجد سجلات.");
 
  $("managers").innerHTML=table(["الاسم","البريد الإلكتروني","الصلاحية","تاريخ الإنشاء"],Object.values(users).filter(u=>u&&(u.role==="store_manager"||u.role==="driver_manager")).map(u=>
@@ -797,7 +819,8 @@ $("btnSet").onclick=()=>run(async()=>{
     storeCommissionFixed:pct,
     driverCommissionPercent:drv,
     requireApproval:$("set-reqapp").checked,
-    adminWhatsapp:$("set-adminwa").value.trim()
+    adminWhatsapp:$("set-adminwa").value.trim(),
+    custCommissionPct:($("set-cust-pct").value.trim()===""?null:Math.min(100,Math.max(0,Number($("set-cust-pct").value))))
   });
   say("تم حفظ الإعدادات.");
 });
@@ -900,7 +923,7 @@ $("editForm").onsubmit=e=>{e.preventDefault();run(async()=>{
 document.addEventListener("click",e=>{
  const b=e.target.closest("button");if(!b||b.disabled||b.type==="submit")return;const d=b.dataset;
  if(d.ed){openEdit(d.ek,d.ed);return}
- if(!(d.ss||d.tg||d.ta||d.pc||d.zp||d.del))return;
+ if(!(d.ss||d.tg||d.ta||d.pc||d.cp||d.zp||d.ded||d.bon||d.del))return;
  run(async()=>{
   if(d.ss){
     if(await showToastConfirm("تغيير حالة الطلب؟")){
@@ -932,6 +955,23 @@ document.addEventListener("click",e=>{
       await update(ref(db,"users/"+d.pc),{commissionAmount:v});
       say("تم حفظ العمولة.");
     }
+  }
+  else if(d.cp){
+    const raw=document.getElementById("cp-"+d.cp).value.trim();
+    const v=raw===""?null:Number(raw);
+    if(v!==null&&!(v>=0&&v<=100))throw Error("النسبة لازم بين 0 و 100.");
+    if(await showToastConfirm(v===null?`إرجاع المتجر "${users[d.cp].name}" لعمولة تطبيق الزبون الافتراضية؟`:`حفظ عمولة تطبيق الزبون ${v}% للمتجر "${users[d.cp].name}"؟`)){
+      await update(ref(db,"users/"+d.cp),{custCommissionPct:v});
+      say("تم حفظ العمولة.");
+    }
+  }
+  else if(d.ded||d.bon){
+    const id=d.ded||d.bon,isD=!!d.ded;
+    const amount=Number(prompt((isD?"مبلغ الخصم":"مبلغ المكافأة")+" للسائق "+users[id].name+" (دينار):")||0);
+    if(!Number.isSafeInteger(amount)||amount<=0)return;
+    const note=(prompt("السبب (اختياري):")||"").trim();
+    await push(ref(db,"finance"),{type:isD?"deduction":"bonus",userId:id,userName:users[id].name,amount,note,createdAt:Date.now()});
+    say(isD?"تم تسجيل الخصم.":"تم تسجيل المكافأة.");
   }
   else if(d.zp){ await resetWallet(d.zp); }
   else if(d.del){

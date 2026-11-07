@@ -697,7 +697,7 @@ function __main(){
     if(Number(o.deliveredAt)>=t0)tp+=Math.round(Number(o.driverProfit)||0);
    }
   }
-  for(const id in finance){const f=finance[id];if(f&&f.type==="cash_received")d-=Math.round(Number(f.amount)||0)}
+  for(const id in finance){const f=finance[id];if(!f)continue;const am=Math.round(Number(f.amount)||0);if(f.type==="cash_received"||f.type==="bonus")d-=am;else if(f.type==="deduction")d+=am}
   if(d<0)d=0;debt=d;
   $("statDone").textContent=n;$("statDebt").textContent=fmt(d)+" د.ع";$("statProfit").textContent=fmt(tp)+" د.ع";
   $("warnBox").hidden=d<debtLimit;
@@ -915,6 +915,7 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
   const t0=new Date().setHours(0,0,0,0);
   const today=orders.filter(([id,o])=>Number(o.createdAt||o.acceptedAt||o.deliveredAt||0)>=t0);
   const cash=Object.values(finance).filter(f=>f&&f.type==="cash_received").reduce((a,f)=>a+Number(f.amount||0),0);
+  const dedT=Object.values(finance).filter(f=>f&&f.type==="deduction").reduce((a,f)=>a+Number(f.amount||0),0),bonT=Object.values(finance).filter(f=>f&&f.type==="bonus").reduce((a,f)=>a+Number(f.amount||0),0);
   const money=n=>fmt(n)+" د.ع";
   const statusName=o=>({pending:"بانتظار سائق",waiting_store:"بانتظار موافقة المتجر",accepted:"بالطريق للمتجر",arrived_store:"وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"}[o.status]||o.status||"غير معروف");
   const orderRows=list=>list.length?list.map(([id,o])=>`<div class="side-order"><b>طلب #${esc(id.slice(-6))}</b><br>المتجر: ${esc(o.storeName||"غير محدد")}<br>الحالة: ${esc(statusName(o))}<br>المنطقة: ${esc(o.area||"غير محددة")}<br>${o.status==="delivered"?"ربح السائق: "+money(o.driverProfit||0):""}</div>`).join(""):'<div class="side-empty">لا توجد بيانات لعرضها حالياً.</div>';
@@ -922,7 +923,7 @@ function heroOf(o){const m={waiting_store:["h-wait","بانتظار موافقة
   if(sideTab==="overview")html=`<div class="side-panel"><h3>ملخص الحساب</h3><div class="side-stat"><span>إجمالي الطلبات</span><b>${totalCount}</b></div><div class="side-stat"><span>الطلبات المكتملة</span><b>${completedCount}</b></div><div class="side-stat"><span>طلبات اليوم</span><b>${dailyCount}</b></div><div class="side-stat"><span>أرباح اليوم</span><b>${money(todayProfit)}</b></div><div class="side-stat"><span>الدين الحالي</span><b>${money(debt)}</b></div><div class="side-stat"><span>المبالغ المسددة للإدارة</span><b>${money(cash)}</b></div><div class="side-stat"><span>سقف الدين</span><b>${money(debtLimit)}</b></div><div class="side-stat"><span>حالة السائق</span><b>${isOnline?"متصل":"غير متصل"}</b></div></div>`;
   else if(sideTab==="history")html=`<div class="side-panel"><h3>حركات السائق</h3><div class="side-empty">سجل الطلبات وحالاتها حسب البيانات المسجلة في Firebase.</div>${orderRows(orders)}</div>`;
   else if(sideTab==="completed")html=`<div class="side-panel"><h3>الطلبات المكتملة (${completed.length})</h3>${orderRows(completed)}</div>`;
-  else if(sideTab==="debt")html=`<div class="side-panel"><h3>الديون والمحفظة</h3><div class="side-stat"><span>الدين الحالي المستحق</span><b>${money(debt)}</b></div><div class="side-stat"><span>عمولات المنصة المسجلة</span><b>${money(completed.reduce((a,[id,o])=>a+Number(o.platformDeliveryCommission||0),0))}</b></div><div class="side-stat"><span>عمولات المتاجر المسجلة</span><b>${money(completed.reduce((a,[id,o])=>a+Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommission||500)),0))}</b></div><div class="side-stat"><span>المبالغ المستلمة من الإدارة</span><b>${money(cash)}</b></div><div class="side-empty">تصفير الدين أو تسجيل تسديد جديد يتم من لوحة الإدارة، حتى تبقى السجلات المالية موثقة.</div></div>`;
+  else if(sideTab==="debt")html=`<div class="side-panel"><h3>الديون والمحفظة</h3><div class="side-stat"><span>الدين الحالي المستحق</span><b>${money(debt)}</b></div><div class="side-stat"><span>عمولات المنصة المسجلة</span><b>${money(completed.reduce((a,[id,o])=>a+Number(o.platformDeliveryCommission||0),0))}</b></div><div class="side-stat"><span>عمولات المتاجر المسجلة</span><b>${money(completed.reduce((a,[id,o])=>a+Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommission||500)),0))}</b></div><div class="side-stat"><span>المبالغ المستلمة من الإدارة</span><b>${money(cash)}</b></div>${dedT?`<div class="side-stat"><span>خصومات الإدارة</span><b>${money(dedT)}</b></div>`:""}${bonT?`<div class="side-stat"><span>مكافآت الإدارة</span><b>${money(bonT)}</b></div>`:""}<div class="side-empty">تصفير الدين أو تسجيل تسديد جديد يتم من لوحة الإدارة، حتى تبقى السجلات المالية موثقة.</div></div>`;
   else if(sideTab==="today")html=`<div class="side-panel"><h3>طلبات اليوم (${today.length})</h3>${orderRows(today)}</div>`;
   else html=`<div class="side-panel"><h3>كل الطلبات (${orders.length})</h3>${orderRows(orders)}</div>`;
   el.innerHTML=html;
