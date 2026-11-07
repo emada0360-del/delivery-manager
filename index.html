@@ -599,6 +599,8 @@ document.addEventListener("click",e=>{
  if(d.un){run(async()=>{if(!(await showToastConfirm("رفع الطلب من السائق وإرجاعه للانتظار؟")))return;await unassignOrder(d.un);say("تم رفع الطلب من السائق.")})}
 });
 document.addEventListener("change",e=>{
+ const sc=e.target.closest("select[data-lvc]");
+ if(sc&&sc.value){const id=sc.dataset.lvc,v=sc.value;sc.value="";if(v==="cc")run(async()=>{if(!(await showToastConfirm("إلغاء طلب الزبون؟")))return;await update(ref(db,"customerOrders/"+id),{status:"cancelled"});say("تم إلغاء طلب الزبون.")});return}
  const s=e.target.closest("select[data-lv]");if(!s||!s.value)return;const id=s.dataset.lv,v=s.value;s.value="";
  if(v==="as")openAssign(id);
  else if(v==="un")run(async()=>{if(!(await showToastConfirm("إلغاء التعيين ورفع الطلب لجميع السائقين؟")))return;await unassignOrder(id);say("تم رفع الطلب للسائقين.")});
@@ -708,6 +710,7 @@ function draw(){
   <td>${tm(u.createdAt)}</td></tr>`),"لا يوجد مسؤولون.");
 }
 
+document.addEventListener("click",e=>{const b=e.target.closest("button[data-cc]");if(!b)return;run(async()=>{if(!(await showToastConfirm("إلغاء طلب الزبون؟")))return;await update(ref(db,"customerOrders/"+b.dataset.cc),{status:"cancelled"});say("تم إلغاء طلب الزبون.")})});
 $("btnToggleProfit").onclick=()=>{showProfitFlag=!showProfitFlag;draw()};
 
 $("btnPrintAreas").onclick=()=>{
@@ -731,10 +734,10 @@ function drawLiveOrders(){
  const live=Object.entries(orders).filter(([id,o])=>o&&!["delivered","cancelled"].includes(o.status))
    .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
  const calling=Object.entries(cord).filter(([id,o])=>o&&o.status==="calling"&&!o.price&&!orders[id]&&Date.now()-(Number(o.createdAt)||0)<30*60000);
- const callHtml=calling.map(([id,o])=>`<div class="chk">📞 طلب زبون قيد الاتصال بالمتجر: <b>${esc(o.restaurantName)}</b> — توصيل ${fmt(o.deliveryFee)} د.ع — منذ <span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></div>`).join("");
- $("liveOrders").innerHTML=callHtml+table(
-   ["الطلب","المتجر","السائق","رقم السائق","الحالة","وقت الإرسال","مدة القبول","منذ الإرسال","منذ القبول","إجراءات"],
-   live.map(([id,o])=>{
+ const callRows=calling.map(([id,o])=>`<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td><span class="tag b">طلب زبون</span></td><td>${esc(o.restaurantName)}</td><td><span style="color:#94a3b8">—</span></td><td>—</td><td><span class="tag y">جارٍ الاتصال بالمتجر</span></td><td>${tm(o.createdAt)}</td><td>—</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td><td>—</td><td><select data-lvc="${esc(id)}"><option value="">اختر إجراء</option><option value="cc">إلغاء الطلب</option></select></td></tr>`);
+ $("liveOrders").innerHTML=table(
+   ["الطلب","النوع","المتجر","السائق","رقم السائق","الحالة","وقت الإرسال","مدة القبول","منذ الإرسال","منذ القبول","إجراءات"],
+   [...callRows,...live.map(([id,o])=>{
      let tagClass="y";
      if(["accepted","arrived_store","picked_up","delivering"].includes(o.status))tagClass="g";
      const dr=o.driverId?users[o.driverId]:null;
@@ -742,9 +745,9 @@ function drawLiveOrders(){
      const phone=o.driverPhone||(dr&&(dr.phone||dr.username))||"";
      const driverName=name?`<b>${esc(name)}</b>${o.driverId?chipOf(o.driverId):""}`:'<span style="color:#94a3b8">بانتظار سائق</span>';
      const driverPhone=phone?`<a href="tel:${esc(phone)}" dir="ltr">${esc(phone)}</a>`:'—';
-     return `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(o.storeName)}</td><td>${driverName}</td>
+     return `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${o.customerOrder?'<span class="tag b">طلب زبون</span>':'<span class="tag">طلب متجر</span>'}</td><td>${esc(o.storeName)}</td><td>${driverName}</td>
        <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span>${o.forcedAssign?' <span class="tag b">تعيين تلقائي</span>':''}</td><td>${tm(o.createdAt)}</td><td>${o.acceptedAt&&o.createdAt?fmtAge(o.acceptedAt-o.createdAt):"—"}</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td><td>${o.acceptedAt?`<span class="ageC" data-ts="${Number(o.acceptedAt)}"></span>`:"—"}</td><td><select data-lv="${esc(id)}"><option value="">اختر إجراء</option><option value="as">${o.driverId?"تعيين لسائق آخر":"تعيين لسائق"}</option>${o.driverId?'<option value="un">إلغاء التعيين (رفعه للسائقين)</option>':""}<option value="del">حذف الطلب</option></select></td></tr>`;
-   }),"لا توجد طلبات حية الآن."
+   })],"لا توجد طلبات حية الآن."
  );
  tickAges();
 }
@@ -754,7 +757,7 @@ function drawOrders(){
  const rows=Object.entries(orders).filter(([id,o])=>o&&(!f||o.status===f)&&[id,o.storeName,o.area,o.driverName].join(" ").toLowerCase().includes(t))
   .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0)).slice(0,100);
  $("orders").innerHTML=table(["الطلب","المتجر","المنطقة","وقت الطلب","آخر حركة","الحالة","إجراءات"],rows.map(([id,o])=>
-  `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(o.storeName)}</td><td>${esc(o.area)}</td>
+  `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(o.storeName)}${o.customerOrder?' <span class="tag b">طلب زبون</span>':''}</td><td>${esc(o.area)}</td>
   <td>${tm(o.createdAt)}</td><td>${tm(o.statusUpdatedAt||o.deliveredAt||o.updatedAt)}</td>
   <td>${ST[o.status]||esc(o.status)}${o.forcedAssign?' <span class="tag b">تلقائي</span>':''}</td>
   <td><select data-s="${esc(id)}">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${o.status===k?"selected":""}>${v}</option>`).join("")}</select>
