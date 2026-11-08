@@ -537,7 +537,7 @@ async function upRec(v){
  const rk=v.oid+"/"+v.t0;
  const b64=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]||"");r.onerror=()=>no(r.error);r.readAsDataURL(v.blob)});
  const CH=120000,n=Math.max(1,Math.ceil(b64.length/CH));
- try{for(let i=0;i<n;i+=4){const u={};for(let j=i;j<Math.min(n,i+4);j++)u["callRecData/"+rk+"/c"+j]=b64.slice(j*CH,(j+1)*CH);await update(ref(db),u)}}catch(e){throw new Error("data: "+(e.code||e.message))}
+ let j=0;try{for(;j<n;j++){await set(ref(db,"callRecData/"+rk+"/c"+j),b64.slice(j*CH,(j+1)*CH))}}catch(e){throw new Error("data c"+j+"/"+n+" "+rk+": "+(e.code||e.message))}
  try{await update(ref(db,"callLogs/"+v.oid),{storeId:uid,result:"answered",startedAt:v.t0,endedAt:v.t1,duration:Math.round((v.t1-v.t0)/1000),recording:"db:"+rk,recChunks:n,recMime:v.mt})}catch(e){throw new Error("db: "+(e.code||e.message))}
 }
 function recToast(m){try{let d=document.getElementById('recToast');if(!d){d=document.createElement('div');d.id='recToast';d.style.cssText='position:fixed;left:8px;right:8px;bottom:12px;z-index:9999;background:#b91c1c;color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;direction:rtl;word-break:break-all';d.onclick=()=>d.remove();document.body.appendChild(d)}d.textContent=m+' (اضغط للإخفاء)';setTimeout(()=>{try{d.remove()}catch(e){}},60000)}catch(e){}}
