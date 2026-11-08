@@ -266,7 +266,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div id="feeRows"></div>
 <input id="custFees" type="hidden">
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="btnFeeAdd">+ إضافة فئة</button><button type="button" id="btnCustFees" class="grn">حفظ الأسعار</button></div></div>
-<div class="box"><h3>الزبائن وتفعيل الحسابات والحظر</h3><button type="button" id="btnApproveAll" class="grn" style="margin-bottom:10px">تفعيل جميع الزبائن الحاليين</button><p class="sub">الزبون الجديد يظهر هنا مع رمز تفعيل عشوائي؛ اضغط «إرسال الرمز» ليفتح واتساب برسالة جاهزة فيها الرمز. الحظر يمنع الرقم والجهاز من الدخول. (يعتمد على معرّف الجهاز داخل الـAPK، وفي المتصفح على معرّف محلي أضعف.)</p><div id="custUsers" class="wrap"></div></div>
+<div class="box"><h3>الزبائن وتفعيل الحسابات والحظر</h3><button type="button" id="btnApproveAll" class="grn" style="margin-bottom:10px">تفعيل جميع الزبائن الحاليين</button><p class="sub">الزبون الجديد يظهر هنا مع رمز تفعيل عشوائي؛ اضغط «إرسال الرمز» ليفتح واتساب برسالة جاهزة فيها الرمز. الحظر يمنع الرقم والجهاز من الدخول. (يعتمد على معرّف الجهاز داخل الـAPK، وفي المتصفح على معرّف محلي أضعف.) زر «حذف» يزيل حساب الزبون من التطبيق وتبقى طلباته السابقة، ولا يظهر للزبون المحظور (فك الحظر أولاً).</p><div id="custUsers" class="wrap"></div></div>
 </section>
 
 <section id="t8" class="tab" hidden>
@@ -483,7 +483,7 @@ function renderCust(){
   <td><span class="tag ${ok?"g":"y"}">${ok?"مفعّل":"بانتظار التفعيل"}</span></td>
   <td dir="ltr"><b>${ok?"—":esc(code||"...")}</b></td>
   <td><div class="acts">${ok?`<button type="button" data-na="${esc(id)}" class="org">إيقاف التفعيل</button>`:`<a class="tag b" target="_blank" href="${esc(waLink(c.phone,msg))}">📲 إرسال الرمز</a><button type="button" data-ap="${esc(id)}" class="grn">تفعيل مباشر</button><button type="button" data-nc="${esc(id)}" class="gray">رمز جديد</button>`}
-  <button type="button" data-${bn?"ub":"bn"}="${esc(id)}" class="${bn?"grn":"red"}">${bn?"فك الحظر":"حظر"}</button></div></td></tr>`}),"لا يوجد زبائن.");
+  <button type="button" data-${bn?"ub":"bn"}="${esc(id)}" class="${bn?"grn":"red"}">${bn?"فك الحظر":"حظر"}</button>${bn?"":`<button type="button" data-dc="${esc(id)}" class="red">حذف</button>`}</div></td></tr>`}),"لا يوجد زبائن.");
 }
 function renderCancelReqs(){
  const rows=Object.entries(orders).filter(([id,o])=>o&&o.cancelRequest&&!o.cancelRequest.state&&!["delivered","cancelled"].includes(o.status));
@@ -515,6 +515,17 @@ $("t10").addEventListener("click",e=>{
  if(d.ap)run(async()=>{await set(ref(db,"approvedCustomers/"+d.ap),true);say("تم تفعيل الزبون.")});
  if(d.na)run(async()=>{await update(ref(db),{["approvedCustomers/"+d.na]:null,["activations/"+d.na]:null,["customerCodes/"+d.na]:newCode()});say("تم إيقاف التفعيل.")});
  if(b.id==="btnApproveAll"&&confirm("تفعيل جميع الزبائن الحاليين؟"))run(async()=>{const u={};Object.keys(custers).forEach(k=>{u["approvedCustomers/"+k]=true});await update(ref(db),u);say("تم تفعيل الجميع.")});
+ if(d.dc)run(async()=>{
+   const id=d.dc,c=custers[id];
+   if(!c)throw new Error("الزبون غير موجود.");
+   if((c.deviceId&&banned[c.deviceId])||banned["ph_"+c.phone])throw new Error("الزبون محظور. فك الحظر أولاً ثم احذفه.");
+   const now=Date.now();
+   const live=Object.values(cord).some(o=>o&&o.customerId===id&&!["delivered","cancelled"].includes(o.status)&&now-(Number(o.createdAt)||0)<6*3600e3&&!(o.status==="calling"&&now-(Number(o.createdAt)||0)>10*60*1000));
+   if(live)throw new Error("لدى الزبون طلب جارٍ. انتظر اكتماله أو ألغِه أولاً.");
+   if(!(await showToastConfirm(`حذف الزبون "${c.name||c.phone}" نهائياً؟ تبقى طلباته السابقة في السجل.`)))return;
+   await update(ref(db),{["customers/"+id]:null,["approvedCustomers/"+id]:null,["activations/"+id]:null,["customerCodes/"+id]:null});
+   say("تم حذف الزبون.");
+ });
  if(d.ub)run(async()=>{const c=custers[d.ub],u={["bannedDevices/ph_"+c.phone]:null};if(c.deviceId)u["bannedDevices/"+c.deviceId]=null;await update(ref(db),u);say("تم فك الحظر.")});
 });
 
@@ -998,7 +1009,9 @@ document.addEventListener("click",e=>{
       if(kind==="order"){
         await deleteOrdersArchived({[d.del]:orders[d.del]});
       }else{
-        await update(ref(db),{[(kind==="area"?"areas/":"users/")+d.del]:null});
+        const dl={[(kind==="area"?"areas/":"users/")+d.del]:null};
+        if(kind==="store")dl["restaurants/"+d.del]=null;
+        await update(ref(db),dl);
       }
       say("تم الحذف.");
     }

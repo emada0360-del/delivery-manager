@@ -11,109 +11,229 @@ window.notifyApp=async(t,b)=>{try{const P=window.Capacitor&&window.Capacitor.Plu
 (async()=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(P&&P.LocalNotifications)await P.LocalNotifications.requestPermissions()}catch(e){}})();
 </script>
 <style>
-:root{--bg:#f3f5f9;--s:#fff;--raised:#f1f4f8;--ink:#0f1b2a;--mu:#5f7186;--br:#d9002f;--go:#0f9a63;--amber:#b86e00;--info:#1a6fd4;--ln:#e3e8ef;--night:#0d131a;--nav:70px;--shadow:0 1px 2px #0f1b2a0d,0 8px 24px #0f1b2a12;--font:"Readex Pro",system-ui,"Segoe UI",Tahoma,Arial,sans-serif}
-@media(prefers-color-scheme:dark){:root{--bg:#0b1118;--s:#141c26;--raised:#1b2531;--ink:#eaf0f7;--mu:#93a3b6;--ln:#253244;--shadow:0 1px 2px #0006,0 8px 24px #0004}}
+:root{
+--bg:#f2f4f8;--s:#ffffff;--raised:#eef1f6;--ink:#0f1b2a;--mu:#5f7186;--ln:#e3e8ef;
+--night:#0d131a;--lc:#0d131a;
+--br:#d9002f;--go:#0f9a63;--amber:#b86e00;--info:#1a6fd4;
+--br-soft:#d9002f14;--go-soft:#0f9a6318;--amber-soft:#b86e0018;--info-soft:#1a6fd418;
+--nav:70px;--r-lg:22px;
+--shadow:0 1px 2px #0f1b2a0a,0 8px 24px #0f1b2a10;
+--font:"Readex Pro",system-ui,"Segoe UI",Tahoma,Arial,sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1118;--s:#141c26;--raised:#1b2531;--ink:#eaf0f7;--mu:#93a3b6;--ln:#253244;--lc:#1a2634;--go:#2ecc8f;--amber:#f0a73a;--info:#5aa2ff;--br:#ee2a52;--br-soft:#ee2a5222;--go-soft:#2ecc8f1f;--amber-soft:#f0a73a1f;--info-soft:#5aa2ff1f;--shadow:0 1px 2px #0006,0 8px 24px #0004}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
-body{font-family:var(--font);font-size:15px;line-height:1.6;background:var(--bg);color:var(--ink)}
+body{font-family:var(--font);font-size:15px;line-height:1.6;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
 [hidden]{display:none!important}
-header{background:var(--night);color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;display:flex;align-items:center;position:sticky;top:0;z-index:5}
-.hb{display:flex;align-items:center;gap:10px}
-.logo{width:38px;height:38px;border-radius:12px;background:var(--br);display:grid;place-items:center;font-size:20px}
-header h2{margin:0;font-size:16px;font-weight:700;line-height:1.2}
-header small{color:#9fb0c3;font-size:12px}
-button{border:0;border-radius:14px;padding:13px 16px;background:var(--br);color:#fff;font:700 15px var(--font);cursor:pointer;transition:transform .12s,filter .15s}
+.ic{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- أساسيات ---------- */
+button{border:0;border-radius:14px;padding:13px 16px;background:var(--br);color:#fff;font:700 15px var(--font);cursor:pointer;transition:transform .12s,filter .15s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
 button:active{transform:scale(.97);filter:brightness(.93)}
-button.g{background:var(--go)}button.l{background:var(--raised);color:var(--ink)}button:disabled{opacity:.45;cursor:not-allowed}
+button.g{background:var(--go);color:#fff}
+button.l{background:var(--raised);color:var(--ink)}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none}
 button.full{width:100%;margin-bottom:8px}
-input{width:100%;height:50px;padding:0 14px;border:1.5px solid var(--ln);border-radius:14px;font:inherit;color:var(--ink);margin:0 0 10px;background:var(--raised);outline:none}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--info);outline-offset:2px}
+input{width:100%;height:50px;padding:0 14px;border:1.5px solid var(--ln);border-radius:14px;font:inherit;color:var(--ink);margin:0 0 10px;background:var(--raised);outline:none;transition:border-color .15s}
 input:focus{border-color:var(--info)}
-main{max-width:560px;margin:auto;padding:12px 12px calc(var(--nav) + 22px + env(safe-area-inset-bottom,0px))}
-.box{background:var(--s);border-radius:20px;padding:16px;margin:0 0 12px;box-shadow:var(--shadow)}
+input::placeholder{color:var(--mu);opacity:.8}
+.box{background:var(--s);border-radius:var(--r-lg);padding:16px;margin:0 0 12px;box-shadow:var(--shadow)}
 .hint{color:var(--mu);font-size:12.5px;margin:8px 0 0}.hint.c{text-align:center}
 .mu{color:var(--mu);font-size:12.5px;display:block}
-h4{margin:16px 4px 10px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.err{color:var(--br);font-weight:700;margin:2px 0 8px;min-height:20px;text-align:center;font-size:14px}
+h4{margin:20px 4px 10px;font-size:15px;font-weight:700;display:flex;align-items:baseline;gap:8px}
 h4 span{font-size:12.5px;color:var(--mu);font-weight:500}
 
-#auth{max-width:420px;margin:7vh auto 0;width:calc(100% - 24px);padding:22px}
-#auth h3{margin:0 0 4px;font-size:21px;text-align:center}
-#auth .sub{text-align:center;color:var(--mu);font-size:13px;margin:0 0 16px}
-.err{color:var(--br);font-weight:700;margin:4px 0 8px;min-height:20px;text-align:center;font-size:14px}
+/* ---------- الهيدر ---------- */
+header{background:var(--night);color:#fff;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 14px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
+.logo{width:42px;height:42px;border-radius:14px;background:var(--br);display:grid;place-items:center;color:#fff;flex:none}
+.logo .ic{width:24px;height:24px}
+.ht{min-width:0}
+.ht small{display:block;color:#8fa2b7;font-size:11.5px;line-height:1.3}
+header h2{margin:0;font-size:17px;font-weight:700;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.authing header{display:none}
+main{max-width:560px;margin:auto;padding:14px 14px calc(var(--nav) + 24px + env(safe-area-inset-bottom,0px))}
 
-.loc{display:flex;align-items:center;gap:10px;padding:12px 14px}
-.loc .pin{width:40px;height:40px;border-radius:50%;background:#0f9a6320;display:grid;place-items:center;font-size:19px;flex:none}
-.loc .t{flex:1;min-width:0}.loc .t b{display:block;font-size:14px}.loc .t span{font-size:12.5px;color:var(--mu)}
-.loc button{padding:8px 14px;font-size:13px}
-.search{position:relative;margin-bottom:10px}
-.search span{position:absolute;inset-inline-start:14px;top:13px;font-size:16px;opacity:.6}
-.search input{margin:0;padding-inline-start:42px;background:var(--s);box-shadow:var(--shadow);border-color:transparent}
-.fcs{display:flex;gap:8px;margin-bottom:10px}
-.fc{padding:8px 16px;font-size:13px;border-radius:999px;background:var(--s);color:var(--mu);box-shadow:var(--shadow)}
-.fc.on{background:var(--ink);color:var(--bg)}
-.fees{background:var(--s);border-radius:18px;padding:12px 14px;margin-bottom:6px;box-shadow:var(--shadow)}
-.fees b{font-size:13px}
-.fr{display:flex;gap:8px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}
+/* ---------- تسجيل الدخول ---------- */
+#auth{max-width:420px;margin:0 auto;padding:calc(32px + env(safe-area-inset-top,0px)) 18px 28px;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;justify-content:center}
+.a-hero{text-align:center;margin-bottom:22px}
+.a-hero .logo{width:68px;height:68px;border-radius:22px;margin:0 auto 14px}
+.a-hero .logo .ic{width:36px;height:36px}
+.a-hero h1{margin:0;font-size:24px;font-weight:700;line-height:1.3}
+.a-hero p{margin:6px 0 0;color:var(--mu);font-size:14px}
+.a-card{background:var(--s);border-radius:26px;padding:20px;box-shadow:var(--shadow)}
+.a-card h3{margin:0 0 14px;font-size:19px}
+.a-card .sw{text-align:center;margin:12px 0 0}
+.a-card .sw a{color:var(--br);font-weight:600;text-decoration:none}
+
+/* ---------- الرئيسية ---------- */
+.loc{display:flex;align-items:center;gap:12px;padding:11px 12px 11px 14px}
+.loc .pin{width:42px;height:42px;border-radius:14px;background:var(--go-soft);color:var(--go);display:grid;place-items:center;flex:none}
+.loc .t{flex:1;min-width:0}
+.loc .t small{display:block;font-size:12px;color:var(--mu);line-height:1.4}
+.loc .t b{display:block;font-size:14.5px;font-weight:600;line-height:1.4}
+.loc button{padding:9px 14px;font-size:13px;border-radius:12px}
+.search{position:relative;margin-bottom:12px}
+.search .ic{position:absolute;inset-inline-start:14px;top:50%;transform:translateY(-50%);color:var(--mu);pointer-events:none}
+.search input{margin:0;padding-inline-start:44px;background:var(--s);box-shadow:var(--shadow);border-color:transparent}
+.seg{display:flex;gap:4px;background:var(--raised);padding:4px;border-radius:15px;margin-bottom:12px}
+.fc{flex:1;padding:9px 10px;font-size:13.5px;border-radius:11px;background:transparent;color:var(--mu);font-weight:600}
+.fc.on{background:var(--s);color:var(--ink);box-shadow:var(--shadow)}
+.fees{background:var(--s);border-radius:var(--r-lg);padding:12px 14px;margin-bottom:6px;box-shadow:var(--shadow)}
+.fees-h{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:13px}
+.fees-h b{font-weight:600}
+.fees-h .ic{width:18px;height:18px}
+.fr{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
 .fr::-webkit-scrollbar{display:none}
-.fr span{flex:none;background:var(--raised);border-radius:12px;padding:6px 12px;font-size:12px;color:var(--mu);text-align:center;line-height:1.4}
-.fr em{display:block;font-style:normal;color:var(--go);font-weight:700;font-size:13px}
+.fr span{flex:none;min-width:80px;background:var(--raised);border-radius:12px;padding:7px 12px;text-align:center;line-height:1.35}
+.fr i{display:block;font-style:normal;font-size:12px;color:var(--mu)}
+.fr em{display:block;font-style:normal;color:var(--ink);font-weight:700;font-size:14.5px;font-variant-numeric:tabular-nums}
 
-.rc{background:var(--s);border-radius:20px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.rc{background:var(--s);border-radius:var(--r-lg);padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
 .rh{display:flex;gap:12px;align-items:center}
-.av{width:50px;height:50px;border-radius:16px;color:#fff;display:grid;place-items:center;font-size:21px;font-weight:700;flex:none}
-.av.big{width:76px;height:76px;border-radius:50%;font-size:32px;margin:0 auto 10px;background:var(--info)}
-.rn{flex:1;min-width:0}.rn b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rn span{font-size:12.5px;color:var(--mu)}
-.fee{flex:none;text-align:center;background:#0f9a6318;color:var(--go);border-radius:14px;padding:6px 12px;font-weight:700;font-size:15px;line-height:1.3}
-.fee small{display:block;font-weight:500;font-size:11px;opacity:.85}
-.fee.off{background:#b86e0018;color:var(--amber);font-size:13px}
-.why{font-size:12.5px;color:var(--amber);margin-top:8px}
+.av{width:52px;height:52px;border-radius:16px;color:#fff;display:grid;place-items:center;font-size:22px;font-weight:700;flex:none}
+.av.sm{width:42px;height:42px;border-radius:13px;font-size:18px}
+.av.big{width:80px;height:80px;border-radius:50%;font-size:34px;margin:0 auto 10px;background:var(--br)}
+.rn{flex:1;min-width:0}
+.rn b{display:block;font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dist{display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--mu);margin-top:1px}
+.dist .ic{width:14px;height:14px}
+.fee{flex:none;text-align:center;background:var(--go-soft);color:var(--go);border-radius:14px;padding:6px 12px;font-weight:700;font-size:16px;line-height:1.25;font-variant-numeric:tabular-nums}
+.fee small{display:block;font-weight:500;font-size:11px;opacity:.9}
+.fee.off{background:var(--amber-soft);color:var(--amber);font-size:13px;padding:9px 12px}
+.rc.off .av{filter:grayscale(.55);opacity:.7}
 .ra{display:flex;gap:8px;margin-top:12px}
-.ra .main{flex:1}.ra .sm{flex:0 0 48px;padding:13px 0;font-size:17px}
+.ra .main{flex:1;height:48px}
+.ra .sm{flex:0 0 50px;height:48px;padding:0}
+.why{font-size:12.5px;color:var(--amber);margin-top:10px}
 
-.empty{text-align:center;color:var(--mu);padding:34px 10px}.empty div{font-size:40px;margin-bottom:6px}.empty b{display:block;color:var(--ink);font-size:16px}.empty span{font-size:13px}
-.me{text-align:center}.me b{display:block;font-size:19px}.me span{color:var(--mu);font-size:14px}
+.empty{text-align:center;color:var(--mu);padding:34px 12px}
+.eic{width:64px;height:64px;border-radius:50%;background:var(--raised);display:grid;place-items:center;margin:0 auto 12px;color:var(--mu)}
+.eic .ic{width:28px;height:28px}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:2px}
+.empty span{font-size:13px}
+.sk{height:132px;border-radius:var(--r-lg);margin-bottom:12px;background:linear-gradient(90deg,var(--s) 25%,var(--raised) 50%,var(--s) 75%);background-size:200% 100%;animation:sh 1.4s linear infinite}
+@keyframes sh{to{background-position:-200% 0}}
 
-.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
-.top b{font-size:16px;display:block}
-.badge{padding:4px 12px;border-radius:99px;font-size:12.5px;font-weight:700;background:#0f9a6320;color:var(--go);white-space:nowrap}
-.badge.c{background:#d9002f1c;color:var(--br)}.badge.w{background:#b86e0020;color:var(--amber)}.badge.i{background:#1a6fd420;color:var(--info)}
-.live{border:2px solid #0f9a6355}
-.steps{display:grid;grid-template-columns:repeat(4,1fr);margin:6px 0 12px;position:relative}
-.steps::before{content:"";position:absolute;top:12px;inset-inline:12.5%;height:3px;background:var(--ln);border-radius:3px}
-.st{position:relative;text-align:center;font-size:11.5px;color:var(--mu);font-weight:500}
-.st i{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--ln);margin:0 auto 5px;font-style:normal;font-weight:700;font-size:12px;box-shadow:0 0 0 4px var(--s)}
-.st.d i{background:var(--go);color:#fff}.st.n i{background:var(--s);color:var(--go);box-shadow:0 0 0 4px var(--s),inset 0 0 0 2.5px var(--go)}
-.st.d,.st.n{color:var(--ink)}
-.row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--ln);font-size:14px;color:var(--mu)}
-.row b{color:var(--ink)}.row:last-of-type{border-bottom:0}
-.row.tot b{font-size:18px;color:var(--go)}
-.acts{display:flex;gap:8px;margin-top:12px}
-.acts .main{flex:1}.acts .sm{flex:0 0 auto}
-.ho .l.full{margin:10px 0 0}
+/* ---------- حالات الطلب ---------- */
+.badge{padding:4px 12px;border-radius:99px;font-size:12.5px;font-weight:700;background:var(--go-soft);color:var(--go);white-space:nowrap;flex:none}
+.badge.c{background:var(--br-soft);color:var(--br)}
+.badge.w{background:var(--amber-soft);color:var(--amber)}
+.badge.i{background:var(--info-soft);color:var(--info)}
+.row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--ln);font-size:14px;color:var(--mu)}
+.row b{color:var(--ink);font-variant-numeric:tabular-nums}
+.rows .row:last-child{border-bottom:0}
+.row.tot b{font-size:17px;color:var(--go)}
 
-#bnav{position:fixed;bottom:0;inset-inline:0;z-index:10;background:var(--s);border-top:1px solid var(--ln);display:flex;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 20px #0f1b2a0f}
-#bnav button{flex:1;background:none;color:var(--mu);padding:6px 4px;font-size:12px;font-weight:600;border-radius:12px;position:relative;display:flex;flex-direction:column;align-items:center;gap:0;line-height:1.5}
-#bnav button i{font-style:normal;font-size:21px}
+/* بطاقة الطلب الحالي: داكنة ومميزة، تحمل مسار التوصيل */
+.live-card{background:var(--lc);color:#fff;border-radius:26px;padding:16px;margin-bottom:14px;box-shadow:0 12px 30px #0d131a38}
+.lc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.lc-top small{display:block;color:#8fa2b7;font-size:12px;line-height:1.4}
+.lc-top b{display:block;font-size:18px;font-weight:700;line-height:1.35}
+.live-card .badge{background:#ffffff1a;color:#fff}
+.live-card .badge.c{background:#ff4d6d33;color:#ffa3b4}
+.live-card .badge.w{background:#ffb02e2e;color:#ffd08a}
+.route{--p:0;list-style:none;margin:18px 0 14px;padding:0;position:relative;display:grid;grid-template-columns:repeat(4,1fr)}
+.route::before,.route::after{content:"";position:absolute;top:19px;inset-inline-start:12.5%;height:3px;border-radius:3px}
+.route::before{width:75%;background:#ffffff24}
+.route::after{width:calc(var(--p)*75%);background:#2ecc8f;transition:width .6s}
+.route li{position:relative;z-index:1;text-align:center;font-size:11.5px;color:#8fa2b7;font-weight:500;line-height:1.35;padding:0 2px}
+.route li i{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--lc);border:2px solid #ffffff30;margin:0 auto 7px;color:#8fa2b7}
+.route li i .ic{width:19px;height:19px}
+.route li.d i{background:#2ecc8f;border-color:#2ecc8f;color:#06281b}
+.route li.n i{border-color:#fff;color:#fff;animation:ring 2.2s ease-out infinite}
+.route li.d,.route li.n{color:#fff}
+@keyframes ring{0%{box-shadow:0 0 0 0 #ffffff59}70%,100%{box-shadow:0 0 0 10px #ffffff00}}
+.lnote{font-size:13px;color:#b9c6d6;margin:0 0 12px;line-height:1.7}
+.acts{display:flex;gap:8px;margin:0 0 12px}
+.acts .main{flex:1}
+.acts .sm{flex:0 0 auto}
+.live-card button.l{background:#ffffff1a;color:#fff}
+.lrows{background:#ffffff0f;border-radius:16px;padding:4px 14px}
+.lrows .row{color:#a9b8c9;border-bottom-color:#ffffff24}
+.lrows .row b{color:#fff}
+.lrows .row:last-child{border-bottom:0}
+.lrows .row.tot b{color:#2ecc8f;font-size:19px}
+.lhint{font-size:12.5px;color:#8fa2b7;margin:10px 2px 0}
+
+/* ---------- طلباتي ---------- */
+.oc{background:var(--s);border-radius:var(--r-lg);padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.oc-h{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.oc .l.full{margin:10px 0 0}
+
+/* ---------- حسابي ---------- */
+.me-card{text-align:center;padding:22px 16px;margin-bottom:12px}
+.me-card b{display:block;font-size:19px}
+.me-card span{color:var(--mu);font-size:14px}
+.mlist{background:var(--s);border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden}
+.mi{width:100%;background:transparent;color:var(--ink);border-radius:0;padding:13px 14px;justify-content:flex-start;gap:12px;font-weight:600;border-bottom:1px solid var(--ln);text-align:start}
+.mi:last-child{border-bottom:0}
+.mi-ic{width:38px;height:38px;border-radius:12px;background:var(--raised);display:grid;place-items:center;flex:none}
+.mi-t{flex:1;text-align:start;line-height:1.4}
+.mi-t small{display:block;font-weight:400;font-size:12px;color:var(--mu)}
+.mi .chev{width:18px;height:18px;color:var(--mu)}
+.mi.danger{color:var(--br)}
+.mi.danger .mi-ic{background:var(--br-soft);color:var(--br)}
+
+/* ---------- التنقل السفلي ---------- */
+#bnav{position:fixed;bottom:0;inset-inline:0;z-index:10;background:var(--s);border-top:1px solid var(--ln);display:flex;padding:6px 10px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 20px #0f1b2a0d}
+#bnav button{flex:1;background:none;color:var(--mu);padding:4px;font-size:11.5px;font-weight:600;border-radius:14px;position:relative;flex-direction:column;gap:2px;line-height:1.4}
+#bnav .pill{display:grid;place-items:center;width:56px;height:30px;border-radius:15px;transition:background .2s}
 #bnav button.on{color:var(--br)}
-#bnav em{position:absolute;top:0;inset-inline-start:calc(50% + 6px);background:var(--br);color:#fff;font-style:normal;font-size:11px;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 4px}
+#bnav button.on .pill{background:var(--br-soft)}
+#bnav em{position:absolute;top:0;inset-inline-start:calc(50% + 10px);background:var(--br);color:#fff;font-style:normal;font-size:11px;min-width:18px;height:18px;border-radius:9px;display:grid;place-items:center;padding:0 4px}
+
 #toast{position:fixed;top:calc(64px + env(safe-area-inset-top,0px));inset-inline:16px;max-width:520px;margin:0 auto;z-index:30;background:var(--night);color:#fff;padding:13px 16px;border-radius:16px;font-weight:600;text-align:center;box-shadow:0 10px 30px #0f1b2a44;opacity:0;transform:translateY(-12px);pointer-events:none;transition:.25s}
-#toast.show{opacity:1;transform:none}#toast.bad{background:var(--br)}
+#toast.show{opacity:1;transform:none}
+#toast.bad{background:var(--br)}
+
+/* ---------- تحديد الموقع والمنيو ---------- */
+#locGate{position:fixed;inset:0;z-index:99999;background:var(--night);color:#fff;display:flex;flex-direction:column;padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px));gap:12px}
+#locGate h3{margin:0;font-size:18px;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px}
+#gmap{flex:1;min-height:240px;border-radius:20px;overflow:hidden}
+#gHint{text-align:center;color:#c9d4e0;font-size:14px;line-height:1.7}
+#locGate button{width:100%}
+#locGate button.l{background:#243142;color:#fff}
 #menuM{position:fixed;inset:0;background:var(--s);z-index:20;display:flex;flex-direction:column}
 #menuM iframe{flex:1;border:0;width:100%}
-#menuM .bar{display:flex;gap:8px;padding:10px;background:var(--night)}#menuM .bar>*{flex:1}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+#menuM .bar{display:flex;gap:8px;padding:calc(10px + env(safe-area-inset-top,0px)) 10px 10px;background:var(--night)}
+#menuM .bar>*{flex:1}
+#menuM .bar .l{background:#243142;color:#fff}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style></head><body>
-<header><div class="hb"><div class="logo">🛵</div><div><h2>Baqubah Delivery</h2><small id="hello">توصيل سريع لباب بيتك</small></div></div></header>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></symbol>
+<symbol id="i-receipt" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></symbol>
+<symbol id="i-scooter" viewBox="0 0 24 24"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h5l-2.5-9H8"/><path d="M13.5 8H17l2 6"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></symbol>
+<symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 4H5v16h5"/><path d="M15 8l4 4-4 4M19 12H9"/></symbol>
+<symbol id="i-store" viewBox="0 0 24 24"><path d="M4 9l1.5-5h13L20 9"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9"/><path d="M5 12v8h14v-8"/></symbol>
+<symbol id="i-bowl" viewBox="0 0 24 24"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 4c0 1.5 1.5 1.5 1.5 3M13 4c0 1.5 1.5 1.5 1.5 3"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+</defs></svg>
 
-<section id="auth" class="box" hidden>
- <h3 id="aT">تسجيل الدخول</h3>
- <p class="sub">اطلب من مطعمك المفضل وإحنا نوصلها لك</p>
- <input id="aN" placeholder="الاسم" hidden>
- <input id="aP" type="tel" inputmode="numeric" maxlength="11" placeholder="رقم الهاتف (07XXXXXXXXX)" dir="ltr">
- <input id="aW" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)">
- <div class="err" id="aE"></div>
- <button id="aB" style="width:100%">دخول</button>
- <p style="text-align:center;margin:14px 0 0"><a href="#" id="aS" style="color:var(--br);font-weight:600">ليس لديك حساب؟ إنشاء حساب</a></p>
+<header><div class="logo"><svg class="ic"><use href="#i-scooter"/></svg></div><div class="ht"><small>Baqubah Delivery</small><h2 id="hello">توصيل سريع لباب بيتك</h2></div></header>
+
+<section id="auth" hidden>
+ <div class="a-hero"><div class="logo"><svg class="ic"><use href="#i-scooter"/></svg></div><h1>Baqubah Delivery</h1><p>اطلب من مطعمك المفضل وإحنا نوصلها لك</p></div>
+ <div class="a-card">
+  <h3 id="aT">تسجيل الدخول</h3>
+  <input id="aN" placeholder="الاسم" hidden>
+  <input id="aP" type="tel" inputmode="numeric" maxlength="11" placeholder="رقم الهاتف (07XXXXXXXXX)" dir="ltr">
+  <input id="aW" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)">
+  <div class="err" id="aE"></div>
+  <button id="aB" style="width:100%">دخول</button>
+  <p class="sw"><a href="#" id="aS">ليس لديك حساب؟ إنشاء حساب</a></p>
+ </div>
 </section>
 
 <div id="app" hidden>
@@ -122,13 +242,13 @@ h4 span{font-size:12.5px;color:var(--mu);font-weight:500}
 
  <section id="p-home">
   <div class="loc box">
-   <div class="pin">📍</div>
-   <div class="t"><b>موقع التوصيل</b><span id="locS">جارٍ تحديد موقعك...</span></div>
-   <button class="l" id="locEdit">تحديث</button>
+   <div class="pin"><svg class="ic"><use href="#i-pin"/></svg></div>
+   <div class="t"><small>التوصيل إلى</small><b id="locS">جارٍ تحديد موقعك...</b></div>
+   <button class="l" id="locEdit"><svg class="ic" style="width:16px;height:16px"><use href="#i-refresh"/></svg>تحديث</button>
   </div>
   <div id="gate" hidden></div>
-  <div class="search"><span>🔍</span><input id="q" placeholder="ابحث عن مطعم" autocomplete="off"></div>
-  <div class="fcs"><button class="fc on" data-f="all">الكل</button><button class="fc" data-f="ok">المتاح لموقعي</button></div>
+  <div class="search"><svg class="ic"><use href="#i-search"/></svg><input id="q" placeholder="ابحث عن مطعم" autocomplete="off"></div>
+  <div class="seg"><button class="fc on" data-f="all">الكل</button><button class="fc" data-f="ok">المتاح لموقعي</button></div>
   <div id="feesBar"></div>
   <h4>المطاعم <span id="cnt"></span></h4>
   <div id="list"></div>
@@ -140,29 +260,29 @@ h4 span{font-size:12.5px;color:var(--mu);font-weight:500}
  </section>
 
  <section id="p-me" hidden>
-  <div class="box me"><div class="av big" id="meAv">؟</div><b id="meName"></b><span id="mePh" dir="ltr"></span></div>
-  <div class="box">
-   <button class="l full" id="meLoc">📍 تحديث موقعي</button>
-   <button class="l full" id="meFees">💰 أسعار التوصيل حسب البعد</button>
-   <button class="full" id="out">تسجيل الخروج</button>
+  <div class="box me-card"><div class="av big" id="meAv">؟</div><b id="meName"></b><span id="mePh" dir="ltr"></span></div>
+  <div class="mlist">
+   <button class="mi" id="meLoc"><span class="mi-ic"><svg class="ic"><use href="#i-pin"/></svg></span><span class="mi-t">تحديث موقعي<small>يُستخدم لحساب أجرة التوصيل</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+   <button class="mi" id="meFees"><span class="mi-ic"><svg class="ic"><use href="#i-tag"/></svg></span><span class="mi-t">أسعار التوصيل<small>حسب بعدك عن المطعم</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+   <button class="mi danger" id="out"><span class="mi-ic"><svg class="ic"><use href="#i-logout"/></svg></span><span class="mi-t">تسجيل الخروج</span></button>
   </div>
   <p class="hint c">Baqubah Delivery · تطبيق الزبون</p>
  </section>
 </main>
 <nav id="bnav">
- <button id="n-home" class="on" data-t="home"><i>🏠</i>الرئيسية</button>
- <button id="n-orders" data-t="orders"><i>🧾</i>طلباتي<em id="nBadge" hidden>0</em></button>
- <button id="n-me" data-t="me"><i>👤</i>حسابي</button>
+ <button id="n-home" class="on" data-t="home"><span class="pill"><svg class="ic"><use href="#i-home"/></svg></span>الرئيسية</button>
+ <button id="n-orders" data-t="orders"><span class="pill"><svg class="ic"><use href="#i-receipt"/></svg></span>طلباتي<em id="nBadge" hidden>0</em></button>
+ <button id="n-me" data-t="me"><span class="pill"><svg class="ic"><use href="#i-user"/></svg></span>حسابي</button>
 </nav>
 </div>
 <div id="toast"></div>
 
-<div id="locGate" hidden style="position:fixed;inset:0;z-index:99999;background:#0d131a;color:#fff;display:flex;flex-direction:column;padding:14px;gap:10px">
- <b style="font-size:18px;text-align:center">📍 تحديد موقعك تلقائياً</b>
- <div id="gmap" style="flex:1;min-height:240px;border-radius:16px;overflow:hidden"></div>
- <div id="gHint" style="text-align:center;color:#c9d4e0;font-size:14px;line-height:1.6">جارٍ تحديد موقعك تلقائياً...</div>
- <button id="gGps" class="l" style="width:100%;background:#243142;color:#fff">🔄 إعادة تحديد موقعي</button>
- <button id="gOk" class="g" style="width:100%" disabled>استخدام هذا الموقع مؤقتاً</button>
+<div id="locGate" hidden>
+ <h3><svg class="ic"><use href="#i-pin"/></svg>تحديد موقع التوصيل</h3>
+ <div id="gmap"></div>
+ <div id="gHint">جارٍ تحديد موقعك تلقائياً...</div>
+ <button id="gGps" class="l"><svg class="ic"><use href="#i-refresh"/></svg>إعادة تحديد موقعي</button>
+ <button id="gOk" class="g" disabled>استخدام هذا الموقع مؤقتاً</button>
 </div>
 <div id="menuM" hidden><div class="bar"><button class="l" id="mx">رجوع</button><button id="mo">فتح في المتصفح</button></div><iframe id="mf" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe></div>
 
@@ -175,6 +295,9 @@ const cfg={apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",authDomain:"baqubah-
 const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
 const $=id=>document.getElementById(id),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt=n=>Number(n||0).toLocaleString("en-US");
+const ICON=n=>`<svg class="ic" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const eic=(n,t,s)=>`<div class="empty"><div class="eic">${ICON(n)}</div><b>${t}</b>${s?`<span>${s}</span>`:""}</div>`;
+const skel=()=>'<div class="sk"></div><div class="sk"></div><div class="sk"></div>';
 const safeUrl=u=>{const v=String(u||"").trim();return /^https?:\/\/[^\s"'<>]+$/i.test(v)?v:""};
 const ST={calling:"جارٍ الاتصال بالمطعم",preparing:"قيد التحضير",ready:"جاهز - بانتظار السائق",pending:"جاهز - بانتظار سائق",waiting_store:"السائق بالطريق للمطعم",accepted:"السائق بالطريق للمطعم",arrived_store:"السائق وصل للمطعم",picked_up:"بالطريق إليك",delivering:"بالطريق إليك",delivered:"تم التسليم",cancelled:"ملغي"};
 const STAGE={calling:0,preparing:1,ready:1,pending:1,waiting_store:2,accepted:2,arrived_store:2,picked_up:3,delivering:3,delivered:4};
@@ -288,7 +411,7 @@ $("aB").onclick=async()=>{
 $("out").onclick=()=>signOut(auth);
 onAuthStateChanged(auth,async u=>{
  unsubs.forEach(f=>f());unsubs=[];me=u;
- $("auth").hidden=!!u;$("app").hidden=!u;$("out").hidden=!u;
+ $("auth").hidden=!!u;$("app").hidden=!u;$("out").hidden=!u;document.body.classList.toggle("authing",!u);
  if(!u){orders={};restsLoaded=false;approved=false;apFlag=false;acFlag=false;reqApp=false;for(const k in lastSt)delete lastSt[k];return}
  if(pendingReg)await pendingReg.catch(()=>{});
  try{
@@ -296,8 +419,9 @@ onAuthStateChanged(auth,async u=>{
  if(!prof){
   const role=(await get(ref(db,"users/"+u.uid+"/role"))).val();
   if(role){await signOut(auth);$("aE").textContent="هذا حساب موظف وليس زبون. افتح صفحة الزبون من متصفح آخر";return}
-  prof={name:"زبون",phone:(u.email||"").replace(/\D/g,""),createdAt:Date.now()};
-  await set(ref(db,"customers/"+u.uid),prof);
+  await signOut(auth);$("aE").textContent="هذا الحساب غير موجود أو تم حذفه من الإدارة. أنشئ حساباً جديداً.";
+  if(!reg)$("aS").click();
+  return;
  }
  }catch(e){await signOut(auth);$("aE").textContent="خطأ: "+(e.message||e);return}
  const did=await devId();
@@ -310,8 +434,14 @@ onAuthStateChanged(auth,async u=>{
  unsubs.push(onValue(ref(db,"settings/adminWhatsapp"),s=>{adminWa=String(s.val()||"");drawGate()}));
  unsubs.push(onValue(ref(db,"approvedCustomers/"+u.uid),s=>{apFlag=s.val()===true;approved=apFlag||acFlag;drawGate();drawList()}));
  unsubs.push(onValue(ref(db,"activations/"+u.uid),s=>{acFlag=s.exists();approved=apFlag||acFlag;drawGate();drawList()}));
- unsubs.push(onValue(ref(db,"settings/custFees"),s=>{fees=s.val()||[];drawFees();drawList()}));
+ unsubs.push(onValue(ref(db,"settings/custFees"),s=>{const v=s.val();fees=Array.isArray(v)?v.filter(Boolean):Object.values(v||{});drawFees();drawList()}));
  unsubs.push(onValue(query(ref(db,"customerOrders"),orderByChild("customerId"),equalTo(u.uid)),s=>{orders=s.val()||{};watchStatus();drawCur();drawList();drawHist()}));
+ unsubs.push(onValue(ref(db,"customers/"+u.uid),s=>{
+  if(s.exists()){prof=s.val();renderMe();return}
+  if(pendingReg||!prof)return;
+  prof=null;
+  signOut(auth).then(()=>{$("aE").textContent="تم حذف هذا الحساب من قبل الإدارة.";if(!reg)$("aS").click()});
+ }));
 });
 
 // ---- الخارطة والموقع ----
@@ -418,22 +548,26 @@ function renderMe(){
 }
 function drawFees(){
  const f=[...fees].sort((a,b)=>a.km-b.km);
- $("feesBar").innerHTML=f.length?`<div class="fees"><b>🛵 أسعار التوصيل حسب بعدك عن المطعم</b><div class="fr">${f.map(x=>`<span>حتى ${esc(x.km)} كم<em>${fmt(x.fee)}</em></span>`).join("")}</div></div>`:"";
+ $("feesBar").innerHTML=f.length?`<div class="fees"><div class="fees-h">${ICON("tag")}<b>أجرة التوصيل حسب بعدك عن المطعم</b></div><div class="fr">${f.map(x=>`<span><i>حتى ${esc(x.km)} كم</i><em>${fmt(x.fee)}</em></span>`).join("")}</div></div>`:"";
 }
 function drawList(){
  drawMapLayers();
  const blocked=reqApp&&!approved,busy=Object.values(orders).some(isLive),qs=($("q").value||"").trim().toLowerCase();
- let items=Object.entries(rests).filter(([,r])=>r.isOpen!==false).map(([id,r])=>({id,r,q:quote(r)}));
+ let items=Object.entries(rests).filter(([,r])=>r&&r.isOpen!==false).map(([id,r])=>({id,r,q:quote(r)}));
  if(qs)items=items.filter(x=>String(x.r.name||"").toLowerCase().includes(qs));
  if(filt==="ok")items=items.filter(x=>x.q.ok);
  items.sort((a,b)=>(b.q.ok-a.q.ok)||((a.q.km||99)-(b.q.km||99)));
  $("cnt").textContent=items.length?"("+items.length+")":"";
- if(!restsLoaded){$("list").innerHTML='<div class="empty"><div>⏳</div><b>جارٍ التحميل...</b></div>';return}
- $("list").innerHTML=items.map(({id,r,q})=>`<div class="rc" id="rc-${esc(id)}"><div class="rh"><div class="av" style="background:${colOf(r.name)}">${esc((r.name||"؟").trim().charAt(0))}</div>
-  <div class="rn"><b>${esc(r.name)}</b><span>${q.ok?"📍 يبعد "+q.km.toFixed(1)+" كم عنك":"📍 "+esc(q.why)}</span></div>
+ if(!restsLoaded){$("list").innerHTML=skel();return}
+ $("list").innerHTML=items.map(({id,r,q})=>{
+  const nm=String(r.name||"؟").trim();
+  const extra=(r.menuUrl?`<button class="l sm" data-m="${esc(id)}" aria-label="المنيو">${ICON("list")}</button>`:"")+(r.mapUrl?`<button class="l sm" data-g="${esc(id)}" aria-label="الخريطة">${ICON("map")}</button>`:"");
+  const call=q.ok?`<button class="g main" data-c="${esc(id)}" ${!busy&&!blocked?"":"disabled"}>${ICON("phone")}اطلب بالاتصال</button>`:"";
+  return `<article class="rc ${q.ok?"":"off"}" id="rc-${esc(id)}"><div class="rh"><div class="av" style="background:${colOf(r.name)}">${esc(nm.charAt(0))}</div>
+  <div class="rn"><b>${esc(r.name)}</b><span class="dist">${ICON("pin")}${q.ok?"يبعد "+q.km.toFixed(1)+" كم عنك":esc(q.why)}</span></div>
   ${q.ok?`<div class="fee">${fmt(q.fee)}<small>د.ع توصيل</small></div>`:`<div class="fee off">غير متاح</div>`}</div>
-  <div class="ra"><button class="g main" data-c="${esc(id)}" ${q.ok&&!busy&&!blocked?"":"disabled"}>📞 اطلب بالاتصال</button>${r.menuUrl?`<button class="l sm" data-m="${esc(id)}" aria-label="المنيو">📋</button>`:""}${r.mapUrl?`<button class="l sm" data-g="${esc(id)}" aria-label="الخريطة">🗺️</button>`:""}</div>
-  ${busy&&q.ok?'<div class="why">لديك طلب جارٍ، انتظر اكتماله لتطلب مجدداً.</div>':""}</div>`).join("")||`<div class="empty"><div>🍽️</div><b>${qs||filt==="ok"?"لا توجد نتائج":"لا توجد مطاعم حالياً"}</b><span>${filt==="ok"?"جرّب «الكل» أو حدّث موقعك":""}</span></div>`;
+  ${call||extra?`<div class="ra">${call}${extra}</div>`:""}
+  ${busy&&q.ok?'<div class="why">لديك طلب جارٍ، انتظر اكتماله لتطلب مجدداً.</div>':""}</article>`}).join("")||eic("bowl",qs||filt==="ok"?"لا توجد نتائج":"لا توجد مطاعم حالياً",filt==="ok"?"جرّب «الكل» أو حدّث موقعك":"");
 }
 $("list").onclick=async e=>{
  const b=e.target.closest("button");if(!b)return;
@@ -469,12 +603,12 @@ function drawHist(){
  $("hist").innerHTML=rows.length?rows.map(([id,o])=>{
   const price=Number(o.price)||0,fee=Number(o.deliveryFee)||0,expired=o.status==="calling"&&!isLive(o);
   const bc=o.status==="delivered"?"":(o.status==="cancelled"||expired?"c":(["accepted","arrived_store","picked_up","delivering"].includes(o.status)?"i":"w"));
-  return `<div class="box ho"><div class="top"><div><b>${esc(o.restaurantName)}</b><span class="mu">${ago(Number(o.createdAt)||0)} · #${esc(id.slice(-5))}</span></div><span class="badge ${bc}">${expired?"لم يكتمل":(ST[o.status]||esc(o.status))}</span></div>
-  <div class="row"><span>سعر الطلب</span><b>${price?fmt(price)+" د.ع":"—"}</b></div>
+  return `<article class="oc"><div class="oc-h"><div class="av sm" style="background:${colOf(o.restaurantName)}">${esc(String(o.restaurantName||"؟").trim().charAt(0))}</div><div class="rn"><b>${esc(o.restaurantName)}</b><span class="mu">${ago(Number(o.createdAt)||0)} · <bdi dir="ltr">#${esc(id.slice(-5))}</bdi></span></div><span class="badge ${bc}">${expired?"لم يكتمل":(ST[o.status]||esc(o.status))}</span></div>
+  <div class="rows"><div class="row"><span>سعر الطلب</span><b>${price?fmt(price)+" د.ع":"—"}</b></div>
   <div class="row"><span>أجرة التوصيل</span><b>${fmt(fee)} د.ع</b></div>
-  <div class="row tot"><span>المجموع</span><b>${price?fmt(price+fee)+" د.ع":"—"}</b></div>
-  ${(DONE.includes(o.status)||expired)&&rests[o.restaurantId]?`<button class="l full" data-again="${esc(o.restaurantId)}">🔁 اطلب مجدداً</button>`:""}</div>`}).join(""):
-  '<div class="empty"><div>🧾</div><b>ما عندك طلبات بعد</b><span>اطلب من أي مطعم وراح يظهر هنا</span></div>';
+  <div class="row tot"><span>المجموع</span><b>${price?fmt(price+fee)+" د.ع":"—"}</b></div></div>
+  ${(DONE.includes(o.status)||expired)&&rests[o.restaurantId]?`<button class="l full" data-again="${esc(o.restaurantId)}">${ICON("refresh")}اطلب مجدداً</button>`:""}</article>`}).join(""):
+  eic("receipt","ما عندك طلبات بعد","اطلب من أي مطعم وراح يظهر هنا");
 }
 $("hist").onclick=e=>{
  const b=e.target.closest("[data-again]");if(!b)return;
@@ -518,13 +652,16 @@ function drawCur(){
  $("cur").hidden=!show||curTab==="me";if(!show)return;
  const [id,o]=act,price=Number(o.price)||0,stage=STAGE[o.status]??1,fee=Number(o.deliveryFee)||0;
  const bc=o.status==="cancelled"?"c":(o.status==="calling"?"w":"");
- const steps=["التحضير","السائق للمطعم","بالطريق إليك","التسليم"].map((n,k)=>`<div class="st ${stage>k+1?"d":stage===k+1?"n":""}"><i>${stage>k+1?"✓":k+1}</i>${n}</div>`).join("");
- $("cur").innerHTML=`<div class="box ${isLive(o)?"live":""}"><div class="top"><div><span class="mu">طلبك الحالي</span><b>${esc(o.restaurantName)}</b></div><span class="badge ${bc}">${ST[o.status]||esc(o.status)}</span></div>
- ${o.status==="cancelled"?"":`<div class="steps">${steps}</div>`}
- ${o.status==="calling"&&!price?`<p class="hint" style="margin:0 0 10px">بعد المكالمة سيسجّل المطعم سعر طلبك.</p><div class="acts"><button class="g main" data-redial="${esc(id)}">📞 إعادة الاتصال</button><button class="l sm" data-cancel="${esc(id)}">إلغاء</button></div>`:""}
- <div class="row"><span>سعر الطلب</span><b>${price?fmt(price)+" د.ع"+(o.priceFixed?" (مُصحَّح، كان "+fmt(o.priceOld)+")":""):"بانتظار المطعم"}</b></div>
+ const delivered=o.status==="delivered";
+ const names=["التحضير","السائق للمطعم","بالطريق إليك","التسليم"],ics=["store","scooter","pin","home"];
+ const route=names.map((n,k)=>{const c=(stage>k+1||delivered)?"d":stage===k+1?"n":"";return `<li class="${c}"><i>${ICON(c==="d"?"check":ics[k])}</i>${n}</li>`}).join("");
+ const p=delivered?1:Math.min(1,Math.max(0,(stage-1)/3));
+ $("cur").innerHTML=`<div class="live-card"><div class="lc-top"><div><small>طلبك الحالي</small><b>${esc(o.restaurantName)}</b></div><span class="badge ${bc}">${ST[o.status]||esc(o.status)}</span></div>
+ ${o.status==="cancelled"?"":`<ol class="route" style="--p:${p}">${route}</ol>`}
+ ${o.status==="calling"&&!price?`<p class="lnote">بعد المكالمة سيسجّل المطعم سعر طلبك.</p><div class="acts"><button class="g main" data-redial="${esc(id)}">${ICON("phone")}إعادة الاتصال</button><button class="l sm" data-cancel="${esc(id)}">إلغاء</button></div>`:""}
+ <div class="lrows"><div class="row"><span>سعر الطلب</span><b>${price?fmt(price)+" د.ع"+(o.priceFixed?" (مُصحَّح، كان "+fmt(o.priceOld)+")":""):"بانتظار المطعم"}</b></div>
  <div class="row"><span>أجرة التوصيل</span><b>${fmt(fee)} د.ع</b></div>
- <div class="row tot"><span>المجموع</span><b>${price?fmt(price+fee)+" د.ع":"—"}</b></div>
- ${isLive(o)&&price?'<p class="hint">لإلغاء الطلب بعد تحديد السعر تواصل مع الإدارة.</p>':""}</div>`;
+ <div class="row tot"><span>المجموع</span><b>${price?fmt(price+fee)+" د.ع":"—"}</b></div></div>
+ ${isLive(o)&&price?'<p class="lhint">لإلغاء الطلب بعد تحديد السعر تواصل مع الإدارة.</p>':""}</div>`;
 }
 </script></body></html>

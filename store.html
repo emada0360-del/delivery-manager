@@ -198,6 +198,10 @@ input,select,textarea{height:40px;padding:0 12px;border-radius:11px;margin:3px 0
 #createBox .summary-box{padding:2px 12px;margin:2px 0 8px;border-radius:13px}
 #btnCreate{min-height:46px;font-size:15.5px}
 #activeEmpty{padding:24px 10px;font-size:14px}
+/* زر الإجراء أسفل البطاقة دائماً */
+#activeOrders .card{display:flex;flex-direction:column}
+#activeOrders .card>*{flex:none}
+#activeOrders .card .actions{margin-top:auto}
 </style>
 </head>
 <body>
@@ -221,7 +225,7 @@ input,select,textarea{height:40px;padding:0 12px;border-radius:11px;margin:3px 0
 <div id="msg"></div>
 <div id="announcement" class="box" hidden></div>
 
-<nav id="tabs"><button type="button" data-t="prep" class="on">تحضير <b class="c-pend" id="nPrep">0</b></button><button type="button" data-t="acc">جارية <b class="c-acc" id="nAcc">0</b></button><button type="button" data-t="done">السجل <b class="c-done" id="nDone">0</b></button><button type="button" data-t="new" aria-label="طلب جديد"><span class="plusIc">+</span></button>
+<nav id="tabs"><button type="button" data-t="prep" class="on">تحضير <b class="c-pend" id="nPrep">0</b></button><button type="button" data-t="acc">جارية <b class="c-acc" id="nAcc">0</b></button><button type="button" data-t="done">السجل <b class="c-done" id="nDone">0</b></button><button type="button" data-t="new" aria-label="طلب جديد"><span class="plusIc">+</span></button></nav>
 <div id="activeEmpty" class="box">لا توجد طلبات</div>
 <div id="activeContainer" hidden>
   <h3>الطلبات النشطة</h3>
