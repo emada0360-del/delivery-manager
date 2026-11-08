@@ -128,7 +128,7 @@ public class StoreCallPlugin extends Plugin {
         nm.notify(NOTIFICATION_ID, n);
     }
 
-    private static boolean startTone(Context c) {
+    private static synchronized boolean startTone(Context c) {
         if (player != null) return true;
         Uri u = RingtoneManager.getActualDefaultRingtoneUri(c, RingtoneManager.TYPE_RINGTONE);
         if (u == null) u = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
@@ -164,14 +164,12 @@ public class StoreCallPlugin extends Plugin {
         return true;
     }
 
-    private static void stopAll(Context c) {
+    private static synchronized void stopAll(Context c) {
         handler.removeCallbacks(autoStop);
-        try {
-            if (player != null) {
-                player.stop();
-                player.release();
-            }
-        } catch (Exception e) {}
+        if (player != null) {
+            try { player.stop(); } catch (Exception e) {}
+            try { player.release(); } catch (Exception e) {}
+        }
         player = null;
         if (c == null) return;
         try {
