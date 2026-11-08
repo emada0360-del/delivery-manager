@@ -420,12 +420,9 @@ setInterval(tick,1000);
 // ===== مكالمة صوتية داخل التطبيق (WebRTC + Firebase للإشارات) =====
 // بيانات TURN من Metered (حساب baqubah-delivery)
 async function iceServers(){
- const u="0f46505186311035bcd6abe4",c="jOQQDrOES5mQfiH7";
- return [{urls:"stun:stun.relay.metered.ca:80"},{urls:"stun:stun.l.google.com:19302"},
-  {urls:"turn:global.relay.metered.ca:80",username:u,credential:c},
-  {urls:"turn:global.relay.metered.ca:80?transport=tcp",username:u,credential:c},
-  {urls:"turn:global.relay.metered.ca:443",username:u,credential:c},
-  {urls:"turns:global.relay.metered.ca:443?transport=tcp",username:u,credential:c}];
+ const EX_U="000000002109565717",EX_P="9KWEX2Wj/WDdKMDTubxNjONG1RM=";
+ const ex=[{urls:"turn:free.expressturn.com:3478",username:EX_U,credential:EX_P},{urls:"turn:free.expressturn.com:3478?transport=tcp",username:EX_U,credential:EX_P}];
+ return [...ex,{urls:"stun:free.expressturn.com:3478"},{urls:"stun:stun.l.google.com:19302"}];
 }
 let call=null,onCallEnd=()=>{};
 let callTick=null,callWL=null,nearNow=false,proxOn=false,proxSensor=null,nativeLis=false;
