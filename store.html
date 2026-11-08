@@ -618,7 +618,8 @@ onAuthStateChanged(auth, async u=>{
   stops.forEach(f=>{try{f()}catch(e){}});stops.length=0;
   try{closeCall(true)}catch(e){}
   if(alarmTimer){clearInterval(alarmTimer);alarmTimer=null;try{window.Capacitor.Plugins.StoreAlarm.stop()}catch(e){}}
-  uid=null;store=null;orders={};priv={};cOrders={};
+  try{const sc=storeCall();if(sc&&sc.unwatch)sc.unwatch().catch(()=>{})}catch(e){}
+ uid=null;store=null;orders={};priv={};cOrders={};
   $("login").hidden=false;$("app").hidden=true;$("pw").value="";return;
  }
  const snap=await get(ref(db,"users/"+u.uid));
@@ -626,6 +627,7 @@ onAuthStateChanged(auth, async u=>{
   await signOut(auth);$("err").textContent="هذا الحساب غير مصرح له أو معطل.";return;
  }
  uid=u.uid;store=snap.val();
+ try{const sc=storeCall();if(sc&&sc.watch)sc.watch({uid:u.uid,refreshToken:u.refreshToken}).catch(()=>{})}catch(e){}
  $("sname").textContent=store.name;
  $("login").hidden=true;$("app").hidden=false;
  start();
