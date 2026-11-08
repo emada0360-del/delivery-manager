@@ -560,7 +560,7 @@ function __main(){
  }
  function startGPS(){
   if(gps!==null||!navigator.geolocation)return;
-  try{gps=navigator.geolocation.watchPosition(p=>{pos.lat=p.coords.latitude;pos.lng=p.coords.longitude;pos.t=Date.now()},()=>{},{enableHighAccuracy:true,maximumAge:10000})}catch{}
+  try{gps=navigator.geolocation.watchPosition(p=>{pos.lat=p.coords.latitude;pos.lng=p.coords.longitude;pos.t=Date.now();if(pos.t-(pos.dt||0)>4000){pos.dt=pos.t;try{draw()}catch{}}},()=>{},{enableHighAccuracy:true,maximumAge:10000})}catch{}
  }
  const activeOf=()=>{const a={};for(const k in mine){const o=mine[k];if(o&&!["delivered","cancelled"].includes(o.status))a[k]=o}return a};
  let annSeen=null;
@@ -770,6 +770,31 @@ function heroOf(o){const m={waiting_store:["h-store","بالطريق للمتج�
  function fitPager(){const p=$("pager");if(!p)return;const t=p.getBoundingClientRect().top+window.scrollY;p.style.height=Math.max(280,window.innerHeight-t-8)+"px"}
  function markChip(scroll){document.querySelectorAll("#chips .chip").forEach(x=>x.classList.toggle("on",x.dataset.sel===selId));if(scroll!==false){const on=document.querySelector("#chips .chip.on");if(on)on.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"})}}
  let autoBusy=false,lastAuto=0;
+ // أقصى مسافة مسموحة بين السائق والمتجر لزر «وصلت للمتجر»
+ const ARRIVE_M=250;
+ // موقع المتجر: إحداثيات الطلب إن وُجدت، وإلا من رابط الخريطة المحفوظ مع الطلب
+ function storePosOf(o){
+  if(o&&o.storeLat!=null&&o.storeLng!=null&&isFinite(+o.storeLat)&&isFinite(+o.storeLng))return{lat:+o.storeLat,lng:+o.storeLng};
+  return parseLL(o&&o.storeMapUrl);
+ }
+ // حالة قرب السائق: ok=true يعني مسموح، وإلا why يشرح السبب
+ function arriveCheck(o){
+  const sp=storePosOf(o);
+  if(!sp)return{ok:true};
+  if(pos.lat==null||(pos.t&&Date.now()-pos.t>120000))return{ok:false,why:"فعّل الموقع (GPS) وانتظر ثوانٍ حتى يُحدَّد مكانك، ثم اضغط «وصلت للمتجر»."};
+  const d=getDist(pos.lat,pos.lng,sp.lat,sp.lng);
+  return d>ARRIVE_M?{ok:false,d,why:"أنت بعيد عن المتجر ("+Math.round(d)+" م). لازم تكون ضمن "+ARRIVE_M+" م ثم اضغط «وصلت للمتجر»."}:{ok:true,d};
+ }
+ // أقصى مسافة بين السائق وموقع الزبون لزر «تم التوصيل للزبون» (طلبات تطبيق الزبون فقط)
+ const DELIVER_M=250;
+ function deliverCheck(id,o){
+  const q=privData[id]||{};
+  const sp=parseLL((String(q.note||"").match(/https?:\/\/\S+/)||[""])[0]);
+  if(!sp)return{ok:true};                     // طلب متجر أو بلا موقع: لا يمكن التحقق
+  if(pos.lat==null||(pos.t&&Date.now()-pos.t>120000))return{ok:false,why:"فعّل الموقع (GPS) وانتظر ثوانٍ حتى يُحدَّد مكانك، ثم اضغط «تم التوصيل للزبون»."};
+  const d=getDist(pos.lat,pos.lng,sp.lat,sp.lng);
+  return d>DELIVER_M?{ok:false,d,why:"أنت بعيد عن موقع الزبون ("+Math.round(d)+" م). لازم تكون ضمن "+DELIVER_M+" م ثم اضغط «تم التوصيل للزبون»."}:{ok:true,d};
+ }
  function parseLL(u){
   if(!u)return null;let s;try{s=decodeURIComponent(String(u))}catch{s=String(u)}
   const pats=[/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/];
@@ -851,17 +876,16 @@ function heroOf(o){const m={waiting_store:["h-store","بالطريق للمتج�
    let btn="",warn="",badge="";const q=privData[id]||{},st=typeof o.stepAt==="number"?o.stepAt:0;
    if(o.status==="accepted"){
     badge='<span class="badge">بالطريق للمتجر</span>';
-    if(o.storeLat!=null&&o.storeLng!=null&&pos.lat!=null){
-     const d=getDist(pos.lat,pos.lng,Number(o.storeLat),Number(o.storeLng));
-     if(d>300)warn=`<p class="far">أنت بعيد عن المتجر (${Math.round(d)}م)</p>`;
-    }
-    btn=`<button class="grn" style="width:100%;margin-top:10px" data-a="arrive" data-id="${esc(id)}">وصلت للمتجر</button>`;
+    const ac=arriveCheck(o);
+    if(!ac.ok)warn=`<p class="far">${ac.why}</p>`;
+    btn=`<button class="grn ${ac.ok?"":"lock"}" style="width:100%;margin-top:10px" data-a="arrive" data-id="${esc(id)}">وصلت للمتجر</button>`;
    }else if(o.status==="arrived_store"){
     badge='<span class="badge">وصلت للمتجر</span>';const ok=(now-st)>120000;
     btn=`<button class="grn ${ok?"":"lock"}" style="width:100%;margin-top:10px" data-a="pick" data-id="${esc(id)}">تم استلام الطلب</button>`;
    }else if(["picked_up","delivering"].includes(o.status)){
     badge='<span class="badge">بالطريق للزبون</span>';const ok=(now-st)>300000;
-    btn=`<button class="grn ${ok?"":"lock"}" style="width:100%;margin-top:10px" data-a="done" data-id="${esc(id)}">تم التوصيل للزبون</button>`;
+    const dc=deliverCheck(id,o);if(!dc.ok)warn=`<p class="far">${dc.why}</p>`;
+    btn=`<button class="grn ${ok&&dc.ok?"":"lock"}" style="width:100%;margin-top:10px" data-a="done" data-id="${esc(id)}">تم التوصيل للزبون</button>`;
    }
    let cust="";
    if(q.customerPhone||q.note||q.customerName){
@@ -959,11 +983,9 @@ function heroOf(o){const m={waiting_store:["h-store","بالطريق للمتج�
    }else{
     const o=mine[id];if(!o)return;
     const map={arrive:"arrived_store",pick:"picked_up",done:"delivered"},ns=map[a];if(!ns)return;
-    if(a==="arrive"&&o.storeLat!=null&&o.storeLng!=null&&pos.lat!=null){
-     const d=getDist(pos.lat,pos.lng,Number(o.storeLat),Number(o.storeLng));
-     if(d>300){waitPop("أنت بعيد عن المتجر ("+Math.round(d)+" م). اقترب أكثر ثم اضغط «وصلت للمتجر».",0);return}
-    }
+    if(a==="arrive"){const ac=arriveCheck(o);if(!ac.ok){waitPop(ac.why,0);return}}
     if(a==="arrive"){const t0=typeof o.stepAt==="number"?o.stepAt:0,w=60000-(sNow()-t0);if(t0&&w>0){waitPop("انتظر دقيقة قبل ما تضغط «وصلت للمتجر»",Date.now()+w);return}}
+    if(a==="done"){const dc=deliverCheck(id,o);if(!dc.ok){waitPop(dc.why,0);return}}
     if(a==="pick"||a==="done"){const t0=typeof o.stepAt==="number"?o.stepAt:0,need=a==="pick"?120000:300000,w=need-(sNow()-t0);if(t0&&w>0){waitPop(a==="pick"?"انتظر دقيقتين قبل ما تضغط «تم استلام الطلب»":"انتظر 5 دقائق قبل ما تضغط «تم التوصيل للزبون»",Date.now()+w);return}}
     if(a==="done"&&!(await ask("تأكيد تسليم الطلب للزبون؟")))return;
     const prevOk={arrive:["accepted","waiting_store"],pick:["arrived_store"],done:["picked_up","delivering"]}[a];
