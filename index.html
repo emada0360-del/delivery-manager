@@ -149,6 +149,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <button type="button" data-t="t6">المالية</button>
 <button type="button" data-t="t7">المسؤولون</button>
 <button type="button" data-t="t10">الزبائن</button>
+<button type="button" data-t="t11">تسجيلات المكالمات</button>
 <button type="button" data-t="t8">الإعدادات</button>
 </nav>
 <div id="msg"></div>
@@ -269,6 +270,14 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div class="box"><h3>الزبائن وتفعيل الحسابات والحظر</h3><button type="button" id="btnApproveAll" class="grn" style="margin-bottom:10px">تفعيل جميع الزبائن الحاليين</button><p class="sub">الزبون الجديد يظهر هنا مع رمز تفعيل عشوائي؛ اضغط «إرسال الرمز» ليفتح واتساب برسالة جاهزة فيها الرمز. الحظر يمنع الرقم والجهاز من الدخول. (يعتمد على معرّف الجهاز داخل الـAPK، وفي المتصفح على معرّف محلي أضعف.) زر «حذف» يزيل حساب الزبون من التطبيق وتبقى طلباته السابقة، ولا يظهر للزبون المحظور (فك الحظر أولاً).</p><div id="custUsers" class="wrap"></div></div>
 </section>
 
+<section id="t11" class="tab" hidden>
+<div class="box"><h3>تسجيلات المكالمات بين المتجر والزبون</h3>
+<p class="sub">كل مكالمة يُرد عليها تُسجَّل تلقائياً. المكالمات المرفوضة تُلغي الطلب تلقائياً وتظهر هنا بدون تسجيل صوتي.</p>
+<label style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><input type="checkbox" id="clOnlyCanc"> إظهار طلبات الزبائن الملغاة فقط</label>
+<audio id="clAudio" controls style="width:100%;margin-bottom:10px;display:none"></audio>
+<div id="callLogs" class="wrap"></div></div>
+</section>
+
 <section id="t8" class="tab" hidden>
 <div class="box">
 <h3>إعدادات عامة والعمولات</h3>
@@ -339,6 +348,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <script type="module">
 import {initializeApp,deleteApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,signOut,createUserWithEmailAndPassword,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import {getStorage,ref as sRef,getDownloadURL} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-storage.js";
 import {getDatabase,ref,set,update,push,onValue,get,runTransaction} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 
 const cfg = {
@@ -351,7 +361,7 @@ const cfg = {
   appId: "1:450084520701:web:719e2040338540ce36f494"
 };
 
-const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
+const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app),storage=getStorage(app);
 const $=id=>document.getElementById(id);
 const waLink=(ph,txt)=>{let p=String(ph||"").replace(/\D/g,"");if(p.startsWith("0"))p="964"+p.slice(1);return "https://wa.me/"+p+(txt?"?text="+encodeURIComponent(txt):"")};
 const fmt=n=>Number(n||0).toLocaleString("en-US");
@@ -361,7 +371,7 @@ const ST={preparing:"قيد التحضير (بانتظار جاهز من الم�
 
 $("f").innerHTML+=Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
 
-let appr={},acts={},codes={},cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
+let clogs={},appr={},acts={},codes={},cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
 let showProfitFlag=false;
 
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fde8ec":"#dff5ea";m.style.color=bad?"#b0002a":"#0b7a4e";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
@@ -434,7 +444,7 @@ function scheduleDraw(){
 }
 
 function start(){
- const src={customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customers:v=>custers=v,approvedCustomers:v=>appr=v,activations:v=>acts=v,customerCodes:v=>codes=v,bannedDevices:v=>banned=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
+ const src={callLogs:v=>clogs=v,customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customers:v=>custers=v,approvedCustomers:v=>appr=v,activations:v=>acts=v,customerCodes:v=>codes=v,bannedDevices:v=>banned=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
  const prev={};
  for(const p in src)onValue(ref(db,p),s=>{
    const v=s.val()||{};
@@ -687,6 +697,24 @@ document.addEventListener("click",e=>{
  const x=e.target.closest("[data-fx]");if(x&&x.parentElement.classList.contains("feeRow")){x.parentElement.remove();feeDirty=true}
 });
 
+const CRES={answered:'<span class="tag g">تم الرد</span>',rejected:'<span class="tag r">رفضها المتجر</span>'};
+function drawCalls(){
+ const onlyC=$("clOnlyCanc")&&$("clOnlyCanc").checked;
+ const rows=Object.entries(clogs).filter(([id,l])=>l&&(!onlyC||(cord[id]&&cord[id].status==="cancelled")))
+  .sort((a,b)=>(b[1].startedAt||b[1].at||0)-(a[1].startedAt||a[1].at||0)).slice(0,200);
+ $("callLogs").innerHTML=table(["الطلب","المتجر","نتيجة المكالمة","حالة طلب الزبون","سبب الإلغاء","المدة","الوقت","التسجيل"],rows.map(([id,l])=>{
+  const st=(users[l.storeId]||{}).name||(cord[id]&&cord[id].restaurantName)||"";
+  const co=cord[id],cs=co?(co.status==="cancelled"?'<span class="tag r">ملغى'+(co.cancelReason==="store_rejected_call"?" (رفض المكالمة)":"")+'</span>':esc(ST[co.status]||co.status)):"—";
+  const dur=l.duration?Math.floor(l.duration/60)+":"+String(l.duration%60).padStart(2,"0"):"—";
+  const rec=(l.recording&&l.recording!=="pending")?`<button type="button" data-play="${esc(l.recording)}">▶ استماع</button>`:(l.result==="answered"?'<span class="tag y">قيد الرفع أو لم يُسجَّل</span>':"—");
+  const why=(co&&co.cancelReasonText)||l.cancelReasonText||"";
+  return `<tr${(co&&co.status==="cancelled"&&l.result==="answered")?' style="background:#fff5f6"':""}><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(st)}</td><td>${CRES[l.result]||esc(l.result||"")}</td><td>${cs}</td><td>${why?esc(why):"—"}</td><td>${dur}</td><td>${tm(l.startedAt||l.at)}</td><td>${rec}</td></tr>`;
+ }),"لا توجد مكالمات مسجّلة.");
+}
+document.addEventListener("click",e=>{const b=e.target.closest("button[data-play]");if(!b)return;run(async()=>{
+ b.disabled=true;try{const url=await getDownloadURL(sRef(storage,b.dataset.play));const a=$("clAudio");a.style.display="block";a.src=url;await a.play().catch(()=>{});a.scrollIntoView({block:"nearest"})}finally{b.disabled=false}
+})});
+document.addEventListener("change",e=>{if(e.target&&e.target.id==="clOnlyCanc")drawCalls()});
 function draw(){
  const os=Object.values(orders).filter(Boolean),drs=list("driver"),sts=list("store");
  $("s1").textContent=fmt(os.length);
@@ -703,6 +731,7 @@ function draw(){
 
  drawOrders();
  drawLiveOrders();
+ drawCalls();
  syncCust();
  checkForced();
 

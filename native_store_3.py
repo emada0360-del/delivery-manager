@@ -244,6 +244,7 @@ public class StoreWatcher {
             if (ring <= 0 || now - ring >= RING_WINDOW_MS) continue;
             String key = id + ring;
             synchronized (rung) { if (!rung.add(key)) continue; }
+            if (System.currentTimeMillis() < StoreCallPlugin.busyUntil) continue;
             try { StoreCallPlugin.ringNow(app, "__TITLE__", "__BODY__"); } catch (Exception e) {}
         }
     }
@@ -258,7 +259,17 @@ p = pp.read_text(encoding="utf-8")
 if "ringNow" not in p:
     anchor = "    @PluginMethod\n    public void stop(PluginCall call) {"
     need(anchor in p, "ما لقيت stop() داخل StoreCallPlugin.java")
-    add = '''    // يُستدعى من StoreWatcher (بدون WebView)
+    add = '''    // المتجر مشغول (بمكالمة): يمنع رنين الإشعار الأصلي لمكالمة ثانية
+    public static volatile long busyUntil = 0L;
+
+    @PluginMethod
+    public void setBusy(PluginCall call) {
+        boolean b = Boolean.TRUE.equals(call.getBoolean("busy", false));
+        busyUntil = b ? System.currentTimeMillis() + 8000L : 0L;
+        call.resolve();
+    }
+
+    // يُستدعى من StoreWatcher (بدون WebView)
     public static void ringNow(Context c, String title, String body) {
         appCtx = c.getApplicationContext();
         try { showNotification(appCtx, title, body); } catch (Exception e) {}
@@ -279,6 +290,28 @@ if "ringNow" not in p:
 
 '''
     p = p.replace(anchor, add + anchor, 1)
+    pp.write_text(p, encoding="utf-8")
+
+# ---------------------------------------------------------------- زر السبيكر (AudioManager)
+p = pp.read_text(encoding="utf-8")
+if "void speaker" not in p:
+    anchor = "    @PluginMethod\n    public void stop(PluginCall call) {"
+    need(anchor in p, "ما لقيت stop() داخل StoreCallPlugin.java")
+    spk = '''    @PluginMethod
+    public void speaker(PluginCall call) {
+        try {
+            boolean on = Boolean.TRUE.equals(call.getBoolean("on", false));
+            android.media.AudioManager am = (android.media.AudioManager) getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
+            if (am != null) {
+                am.setMode(android.media.AudioManager.MODE_IN_COMMUNICATION);
+                am.setSpeakerphoneOn(on);
+            }
+        } catch (Exception e) {}
+        call.resolve();
+    }
+
+'''
+    p = p.replace(anchor, spk + anchor, 1)
     pp.write_text(p, encoding="utf-8")
 
 # ---------------------------------------------------------------- Service patch (يستأنف المستمع بعد إعادة تشغيل الخدمة)
