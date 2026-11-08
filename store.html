@@ -518,7 +518,7 @@ function startRec(c){try{
  const rt=c.pc.getReceivers().map(r=>r.track).find(t=>t&&t.kind==="audio");
  if(rt)ac.createMediaStreamSource(new MediaStream([rt])).connect(dest);
  const mt=["audio/webm;codecs=opus","audio/webm","audio/mp4"].find(t=>MediaRecorder.isTypeSupported(t))||"";
- const mr=new MediaRecorder(dest.stream,mt?{mimeType:mt,audioBitsPerSecond:32000}:{audioBitsPerSecond:32000});
+ const mr=new MediaRecorder(dest.stream,mt?{mimeType:mt,audioBitsPerSecond:16000}:{audioBitsPerSecond:16000});
  const ch=[];mr.ondataavailable=e=>{if(e.data&&e.data.size)ch.push(e.data)};
  c.rec={mr,ch,ac,t0:Date.now(),mt:mr.mimeType||mt||"audio/webm"};
  mr.start(5000);
@@ -534,13 +534,16 @@ async function idbPut(v){try{const d=await idb();d.transaction("q","readwrite").
 async function idbDel(k){try{const d=await idb();d.transaction("q","readwrite").objectStore("q").delete(k)}catch(e){}}
 async function idbAll(){try{const d=await idb();return await new Promise(ok=>{const q=d.transaction("q").objectStore("q").getAll();q.onsuccess=()=>ok(q.result||[]);q.onerror=()=>ok([])})}catch(e){return[]}}
 async function upRec(v){
- const ext=v.mt.includes("mp4")?"m4a":"webm",path=`callRecordings/${v.oid}_${v.t0}.${ext}`;
- try{await uploadBytes(sRef(storage,path),v.blob,{contentType:v.mt})}catch(e){throw new Error("storage: "+(e.code||e.message))}
- try{await update(ref(db,"callLogs/"+v.oid),{storeId:uid,result:"answered",startedAt:v.t0,endedAt:v.t1,duration:Math.round((v.t1-v.t0)/1000),recording:path})}catch(e){throw new Error("db: "+(e.code||e.message))}
+ const rk=v.oid+"_"+v.t0;
+ const b64=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]||"");r.onerror=()=>no(r.error);r.readAsDataURL(v.blob)});
+ const CH=120000,n=Math.max(1,Math.ceil(b64.length/CH));
+ try{for(let i=0;i<n;i+=4){const u={};for(let j=i;j<Math.min(n,i+4);j++)u["callRecData/"+rk+"/c"+j]=b64.slice(j*CH,(j+1)*CH);await update(ref(db),u)}}catch(e){throw new Error("data: "+(e.code||e.message))}
+ try{await update(ref(db,"callLogs/"+v.oid),{storeId:uid,result:"answered",startedAt:v.t0,endedAt:v.t1,duration:Math.round((v.t1-v.t0)/1000),recording:"db:"+rk,recChunks:n,recMime:v.mt})}catch(e){throw new Error("db: "+(e.code||e.message))}
 }
 function recToast(m){try{let d=document.getElementById('recToast');if(!d){d=document.createElement('div');d.id='recToast';d.style.cssText='position:fixed;left:8px;right:8px;bottom:12px;z-index:9999;background:#b91c1c;color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;direction:rtl;word-break:break-all';d.onclick=()=>d.remove();document.body.appendChild(d)}d.textContent=m+' (اضغط للإخفاء)';setTimeout(()=>{try{d.remove()}catch(e){}},60000)}catch(e){}}
 function recFail(oid,t0,t1,why){update(ref(db,"callLogs/"+oid),{storeId:uid,result:"answered",startedAt:t0,endedAt:t1,duration:Math.round((t1-t0)/1000),recError:String(why).slice(0,120)}).catch(()=>{})}
 async function saveRec(oid,blob,mt,t0,t1){let lastErr=null;
+ if(blob.size>2500000){recFail(oid,t0,t1,"too-long");return}
  const v={k:oid+"_"+t0,oid,blob,mt,t0,t1};
  await idbPut(v);
  for(let i=0;i<3;i++){try{await upRec(v);await idbDel(v.k);return}catch(e){lastErr=e;await new Promise(r=>setTimeout(r,3000*(i+1)))}}

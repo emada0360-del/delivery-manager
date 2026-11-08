@@ -713,7 +713,7 @@ function drawCalls(){
   const st=(users[l.storeId]||{}).name||(cord[id]&&cord[id].restaurantName)||"";
   const co=cord[id],cs=co?(co.status==="cancelled"?'<span class="tag r">ملغى'+(co.cancelReason==="store_rejected_call"?" (رفض المكالمة)":"")+'</span>':esc(ST[co.status]||co.status)):"—";
   const dur=l.duration?Math.floor(l.duration/60)+":"+String(l.duration%60).padStart(2,"0"):"—";
-  const rec=(l.recording&&l.recording!=="pending")?`<button type="button" data-play="${esc(l.recording)}">▶ استماع</button>`:(l.result==="answered"?'<span class="tag y">'+(l.recError?'تعذّر: '+esc(String(l.recError)):'قيد الرفع أو لم يُسجَّل')+'</span>':"—");
+  const rec=l.recording==="expired"?'<span class="tag">انتهت مدة الحفظ</span>':l.recording==="deleted"?'<span class="tag">تم حذف التسجيل</span>':(l.recording&&l.recording!=="pending")?`<button type="button" data-play="${esc(l.recording)}" data-mt="${esc(l.recMime||"")}">▶ استماع</button>${String(l.recording).startsWith("db:")?` <button type="button" data-recdel="${esc(id)}" style="background:#b0002a">حذف</button>`:""}`:(l.result==="answered"?'<span class="tag y">'+(l.recError?'تعذّر: '+esc(String(l.recError)):'قيد الرفع أو لم يُسجَّل')+'</span>':"—");
   const why=(co&&co.cancelReasonText)||l.cancelReasonText||"";
   const cid=co&&co.customerId,c=cid?custers[cid]:null,s=cid?stat[cid]:null;
   const bn=c&&((c.deviceId&&banned[c.deviceId])||banned["ph_"+c.phone]);
@@ -722,6 +722,7 @@ function drawCalls(){
   const hot=(s&&s.n>=3)||(co&&co.status==="cancelled"&&l.result==="answered");
   return `<tr${hot?' style="background:#fff5f6"':""}><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${cu}</td><td>${esc(st)}</td><td>${CRES[l.result]||esc(l.result||"")}</td><td>${cs}</td><td>${why?esc(why):"—"}</td><td>${dur}</td><td>${tm(l.startedAt||l.at)}</td><td>${rec}</td><td>${act}</td></tr>`;
  }),"لا توجد مكالمات مطابقة.");
+ if(Object.keys(clogs).length)cleanRecs();
 }
 document.addEventListener("input",e=>{if(e.target&&e.target.id==="clSearch")drawCalls()});
 document.addEventListener("click",e=>{const b=e.target.closest("button[data-clban],button[data-clunban]");if(!b)return;
@@ -731,8 +732,26 @@ document.addEventListener("click",e=>{const b=e.target.closest("button[data-clba
  else run(async()=>{const u={["bannedDevices/ph_"+c.phone]:null};if(c.deviceId)u["bannedDevices/"+c.deviceId]=null;await update(ref(db),u);say("تم فك الحظر.");setTimeout(drawCalls,600)});
 });
 document.addEventListener("click",e=>{const b=e.target.closest("button[data-play]");if(!b)return;run(async()=>{
- b.disabled=true;try{const url=await getDownloadURL(sRef(storage,b.dataset.play));const a=$("clAudio");a.style.display="block";a.src=url;await a.play().catch(()=>{});a.scrollIntoView({block:"nearest"})}finally{b.disabled=false}
+ b.disabled=true;try{
+  const p=b.dataset.play,a=$("clAudio");let url;
+  if(p.startsWith("db:")){
+   const s=await get(ref(db,"callRecData/"+p.slice(3)));const val=s.val();if(!val)throw new Error("التسجيل غير موجود أو انتهت مدة حفظه");
+   const parts=Object.keys(val).sort((x,y)=>parseInt(x.slice(1))-parseInt(y.slice(1))).map(k=>val[k]);
+   const bin=atob(parts.join("")),arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);
+   const mt=(b.dataset.mt||"audio/webm").split(";")[0];url=URL.createObjectURL(new Blob([arr],{type:mt}));
+  }else url=await getDownloadURL(sRef(storage,p));
+  a.style.display="block";a.src=url;await a.play().catch(()=>{});a.scrollIntoView({block:"nearest"});
+ }finally{b.disabled=false}
 })});
+document.addEventListener("click",e=>{const b=e.target.closest("button[data-recdel]");if(!b)return;
+ const id=b.dataset.recdel,l=clogs[id];if(!l||typeof l.recording!=="string"||!l.recording.startsWith("db:"))return;
+ if(!confirm("حذف هذا التسجيل نهائياً من قاعدة البيانات؟ (سجل المكالمة يبقى)"))return;
+ run(async()=>{b.disabled=true;try{await update(ref(db),{["callRecData/"+l.recording.slice(3)]:null,["callLogs/"+id+"/recording"]:"deleted"});const a=$("clAudio");if(a&&!a.paused){a.pause();a.removeAttribute("src");a.style.display="none"}say("تم حذف التسجيل.");setTimeout(drawCalls,500)}finally{b.disabled=false}})});
+// حذف التسجيلات الأقدم من 14 يوماً للبقاء ضمن الحصة المجانية
+let _recClean=false;
+function cleanRecs(){if(_recClean)return;_recClean=true;try{const lim=Date.now()-14*864e5,u={};let n=0;
+ for(const [id,l] of Object.entries(clogs)){if(n>=30)break;if(l&&typeof l.recording==="string"&&l.recording.startsWith("db:")&&(l.startedAt||l.at||0)<lim){u["callRecData/"+l.recording.slice(3)]=null;u["callLogs/"+id+"/recording"]="expired";n++}}
+ if(n)update(ref(db),u).catch(()=>{})}catch(e){}}
 document.addEventListener("change",e=>{if(e.target&&e.target.id==="clOnlyCanc")drawCalls()});
 function draw(){
  const os=Object.values(orders).filter(Boolean),drs=list("driver"),sts=list("store");
