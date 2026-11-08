@@ -465,7 +465,7 @@ function ring(on){
   try{if(ringAu){ringAu.pause();ringAu.currentTime=0}}catch(e){}
   try{navigator.vibrate&&navigator.vibrate(0)}catch(e){}
   try{ringWL&&ringWL.release();ringWL=null}catch(e){}
-  if(sc){try{sc.stop().catch(()=>{})}catch(e){}}
+  if(sc){try{sc.stop().catch(()=>{});setTimeout(()=>{try{sc.stop().catch(()=>{})}catch(e){}},800)}catch(e){}}
   ringNotify(false);return}
  // المسار الأصلي (APK): نغمة رنين الهاتف + إشعار ملء الشاشة فوق القفل
  if(sc){
@@ -505,9 +505,9 @@ async function rejectCall(id){
  set(ref(db,`calls/${id}/ended`),now).catch(()=>{});
  update(ref(db,"callLogs/"+id),{storeId:uid,result:"rejected",at:now,cancelled:true,cancelReasonText:"المطعم مشغول",cancelledAt:now}).catch(()=>{});
 }
-let spk=false;
+let spk=true;
 function setSpk(v){spk=!!v;try{const sc=storeCall();if(sc&&sc.speaker)sc.speaker({on:spk}).catch(()=>{})}catch(e){}}
-function connectedUI(){ui('متصل 🔊<div style="font-size:13px;color:#ff8a8a;margin-top:6px">🔴 هذه المكالمة مسجّلة</div>',[[spk?"🔊 السماعة: تشغيل":"📱 السماعة: إيقاف",()=>{setSpk(!spk);connectedUI()},"#2563eb"],["إنهاء",hangup]])}
+function connectedUI(){ui('متصل — '+(spk?'مكبر الصوت 🔊':'سماعة الهاتف 📱')+'<div style="font-size:13px;color:#ff8a8a;margin-top:6px">🔴 هذه المكالمة مسجّلة</div>',[[spk?"📱 حوّل لسماعة الهاتف":"🔊 حوّل لمكبر الصوت",()=>{setSpk(!spk);connectedUI()},"#2563eb"],["إنهاء",hangup]])}
 // ---- تسجيل المكالمة (إجباري): صوت المتجر + الزبون في ملف واحد ----
 function startRec(c){try{
  if(c.rec||!window.MediaRecorder)return;
@@ -553,7 +553,7 @@ async function openCall(oid,role){
  pc.ontrack=e=>{au.srcObject=e.streams[0];au.play().catch(()=>{})};
  const mine=role==="c"?"cC":"rC",theirs=role==="c"?"rC":"cC";
  pc.onicecandidate=e=>{if(e.candidate)push(ref(db,`calls/${oid}/${mine}`),e.candidate.toJSON())};
- pc.onconnectionstatechange=()=>{if(pc.connectionState==="connected"){connectedUI();if(role==="r")startRec(c)}if(pc.connectionState==="failed"){ui("تعذر الاتصال بسبب الشبكة",[["إغلاق",hangup]])}};
+ pc.onconnectionstatechange=()=>{if(pc.connectionState==="connected"){setSpk(spk);connectedUI();if(role==="r")startRec(c)}if(pc.connectionState==="failed"){ui("تعذر الاتصال بسبب الشبكة",[["إغلاق",hangup]])}};
  c.un.push(onChildAdded(ref(db,`calls/${oid}/${theirs}`),s=>addC(c,s.val())));
  c.un.push(onValue(ref(db,`calls/${oid}/ended`),s=>{if(s.val())closeCall()}));
  return c;
@@ -587,7 +587,7 @@ function hangup(){if(call)set(ref(db,`calls/${call.oid}/ended`),Date.now()).catc
 function closeCall(quiet){
  curRing=null;ring(false);ui("");
  if(!call)return;const c=call;call=null;
- stopRec(c);if(spk)setSpk(false);
+ stopRec(c);spk=true;try{const sc=storeCall();if(sc&&sc.endCall)sc.endCall().catch(()=>{})}catch(e){}
  c.un.forEach(f=>{try{f()}catch(e){}});c.stream.getTracks().forEach(t=>t.stop());try{c.pc.close()}catch(e){}
  if(!quiet)onCallEnd(c);
 }

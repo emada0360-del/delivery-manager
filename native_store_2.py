@@ -58,7 +58,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 @CapacitorPlugin(name = "StoreCall")
 public class StoreCallPlugin extends Plugin {
-    private static final String CHANNEL_ID = "store_incoming_call";
+    private static final String CHANNEL_ID = "store_incoming_call_v2";
     private static final int NOTIFICATION_ID = 8810;
     private static final long MAX_RING_MS = 45000L;
 
@@ -101,6 +101,7 @@ public class StoreCallPlugin extends Plugin {
         NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
         if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL_ID) == null) {
+            try { nm.deleteNotificationChannel("store_incoming_call"); } catch (Exception e) {}
             NotificationChannel ch = new NotificationChannel(CHANNEL_ID, "Incoming calls", NotificationManager.IMPORTANCE_HIGH);
             ch.setSound(null, null);          // الصوت نشغّله بأنفسنا (نغمة الرنين)
             ch.enableVibration(false);        // والاهتزاز كذلك

@@ -261,6 +261,7 @@ if "ringNow" not in p:
     need(anchor in p, "ما لقيت stop() داخل StoreCallPlugin.java")
     add = '''    // المتجر مشغول (بمكالمة): يمنع رنين الإشعار الأصلي لمكالمة ثانية
     public static volatile long busyUntil = 0L;
+    public static volatile long suppressUntil = 0L;
 
     @PluginMethod
     public void setBusy(PluginCall call) {
@@ -271,6 +272,7 @@ if "ringNow" not in p:
 
     // يُستدعى من StoreWatcher (بدون WebView)
     public static void ringNow(Context c, String title, String body) {
+        if (System.currentTimeMillis() < suppressUntil) return;
         appCtx = c.getApplicationContext();
         try { showNotification(appCtx, title, body); } catch (Exception e) {}
         try { startTone(appCtx); } catch (Exception e) {}
@@ -290,23 +292,56 @@ if "ringNow" not in p:
 
 '''
     p = p.replace(anchor, add + anchor, 1)
+    p = p.replace("    public void stop(PluginCall call) {\n        stopAll(", "    public void stop(PluginCall call) {\n        suppressUntil = System.currentTimeMillis() + 4000L;\n        stopAll(", 1)
     pp.write_text(p, encoding="utf-8")
 
 # ---------------------------------------------------------------- زر السبيكر (AudioManager)
 p = pp.read_text(encoding="utf-8")
-if "void speaker" not in p:
+if "void endCall" not in p:
     anchor = "    @PluginMethod\n    public void stop(PluginCall call) {"
     need(anchor in p, "ما لقيت stop() داخل StoreCallPlugin.java")
-    spk = '''    @PluginMethod
-    public void speaker(PluginCall call) {
+    spk = '''    // توجيه صوت المكالمة: مكبر الصوت أو سماعة الهاتف (الأذن)
+    private static void routeAudio(Context c, boolean speakerOn) {
         try {
-            boolean on = Boolean.TRUE.equals(call.getBoolean("on", false));
-            android.media.AudioManager am = (android.media.AudioManager) getContext().getSystemService(android.content.Context.AUDIO_SERVICE);
-            if (am != null) {
-                am.setMode(android.media.AudioManager.MODE_IN_COMMUNICATION);
-                am.setSpeakerphoneOn(on);
+            android.media.AudioManager am = (android.media.AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
+            if (am == null) return;
+            am.setMode(android.media.AudioManager.MODE_IN_COMMUNICATION);
+            boolean done = false;
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                int want = speakerOn ? android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER : android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE;
+                for (android.media.AudioDeviceInfo d : am.getAvailableCommunicationDevices()) {
+                    if (d.getType() == want) { done = am.setCommunicationDevice(d); break; }
+                }
             }
+            if (!done) am.setSpeakerphoneOn(speakerOn);
         } catch (Exception e) {}
+    }
+
+    private static void resetAudio(Context c) {
+        try {
+            android.media.AudioManager am = (android.media.AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
+            if (am == null) return;
+            if (android.os.Build.VERSION.SDK_INT >= 31) am.clearCommunicationDevice();
+            am.setSpeakerphoneOn(false);
+            am.setMode(android.media.AudioManager.MODE_NORMAL);
+        } catch (Exception e) {}
+    }
+
+    @PluginMethod
+    public void speaker(PluginCall call) {
+        final boolean on = Boolean.TRUE.equals(call.getBoolean("on", false));
+        final Context c = getContext().getApplicationContext();
+        routeAudio(c, on);
+        // الـWebView أحياناً يرجّع التوجيه بعد ثواني، فنعيد التطبيق
+        final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+        h.postDelayed(new Runnable() { public void run() { routeAudio(c, on); } }, 400);
+        h.postDelayed(new Runnable() { public void run() { routeAudio(c, on); } }, 1500);
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void endCall(PluginCall call) {
+        resetAudio(getContext().getApplicationContext());
         call.resolve();
     }
 
