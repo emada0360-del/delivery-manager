@@ -417,11 +417,14 @@ jobs:
       - name: Store background reliability
         if: matrix.role == 'store'
         run: |
-          if [ ! -f native_store_1.py ]; then
-            echo "Missing file in repo root: native_store_1.py"
-            exit 1
-          fi
+          for f in native_store_1.py native_store_2.py; do
+            if [ ! -f "$f" ]; then
+              echo "Missing file in repo root: $f"
+              exit 1
+            fi
+          done
           python3 native_store_1.py
+          python3 native_store_2.py
 
       - name: Build APK
         run: |
