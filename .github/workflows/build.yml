@@ -2,6 +2,10 @@ name: Build APK
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - 'native_*.py'
+      - '.github/workflows/**'
 
 jobs:
   build:
@@ -399,6 +403,50 @@ jobs:
               }
               """)
           PY
+
+      - name: Customer call audio plugin
+        if: matrix.role == 'customer'
+        run: |
+          d=app/android/app/src/main/java/com/baqubah/customer
+          mkdir -p "$d"
+          cat > "$d/CallAudioPlugin.java" <<'EOF'
+          package com.baqubah.customer;
+
+          import android.content.Context;
+          import android.media.AudioManager;
+          import com.getcapacitor.Plugin;
+          import com.getcapacitor.PluginCall;
+          import com.getcapacitor.PluginMethod;
+          import com.getcapacitor.annotation.CapacitorPlugin;
+
+          @CapacitorPlugin(name = "CallAudio")
+          public class CallAudioPlugin extends Plugin {
+              @PluginMethod
+              public void speaker(PluginCall call) {
+                  boolean on = call.getBoolean("on", false);
+                  AudioManager am = (AudioManager) getContext().getSystemService(Context.AUDIO_SERVICE);
+                  if (am != null) {
+                      am.setMode(on ? AudioManager.MODE_IN_COMMUNICATION : AudioManager.MODE_NORMAL);
+                      am.setSpeakerphoneOn(on);
+                  }
+                  call.resolve();
+              }
+          }
+          EOF
+          cat > "$d/MainActivity.java" <<'EOF'
+          package com.baqubah.customer;
+
+          import android.os.Bundle;
+          import com.getcapacitor.BridgeActivity;
+
+          public class MainActivity extends BridgeActivity {
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  registerPlugin(CallAudioPlugin.class);
+                  super.onCreate(savedInstanceState);
+              }
+          }
+          EOF
 
       - name: Driver background reliability
         if: matrix.role == 'driver'
