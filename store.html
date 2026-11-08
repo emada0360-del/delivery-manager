@@ -283,7 +283,7 @@ const cfg = {
   messagingSenderId: "450084520701",
   appId: "1:450084520701:web:719e2040338540ce36f494"
 };
-const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app),storage=getStorage(app);
+const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app),storage=getStorage(app);try{storage.maxUploadRetryTime=25000;storage.maxOperationRetryTime=15000}catch(e){}
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -523,10 +523,10 @@ function startRec(c){try{
  c.rec={mr,ch,ac,t0:Date.now(),mt:mr.mimeType||mt||"audio/webm"};
  mr.start(5000);
  update(ref(db,"callLogs/"+c.oid),{storeId:uid,result:"answered",startedAt:c.rec.t0,recording:"pending"}).catch(()=>{});
-}catch(e){c.rec=null}}
+}catch(e){c.rec=null;try{recToast("فشل بدء التسجيل: "+(e&&e.message||e))}catch(x){}}}
 function stopRec(c){
  const r=c.rec;if(!r)return;c.rec=null;
- const fin=()=>{try{r.ac.close()}catch(e){}const blob=new Blob(r.ch,{type:r.mt});if(blob.size>0)saveRec(c.oid,blob,r.mt,r.t0,Date.now());else recFail(c.oid,r.t0,Date.now(),"empty")};
+ const fin=()=>{try{r.ac.close()}catch(e){}const blob=new Blob(r.ch,{type:r.mt});if(blob.size>0)saveRec(c.oid,blob,r.mt,r.t0,Date.now());else{recFail(c.oid,r.t0,Date.now(),"empty");recToast("التسجيل طلع فارغ")}};
  try{if(r.mr.state!=="inactive"){r.mr.onstop=fin;r.mr.stop()}else fin()}catch(e){fin()}
 }
 function idb(){return new Promise((ok,no)=>{const q=indexedDB.open("storeRec",1);q.onupgradeneeded=()=>q.result.createObjectStore("q",{keyPath:"k"});q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)})}
@@ -535,15 +535,16 @@ async function idbDel(k){try{const d=await idb();d.transaction("q","readwrite").
 async function idbAll(){try{const d=await idb();return await new Promise(ok=>{const q=d.transaction("q").objectStore("q").getAll();q.onsuccess=()=>ok(q.result||[]);q.onerror=()=>ok([])})}catch(e){return[]}}
 async function upRec(v){
  const ext=v.mt.includes("mp4")?"m4a":"webm",path=`callRecordings/${v.oid}_${v.t0}.${ext}`;
- await uploadBytes(sRef(storage,path),v.blob,{contentType:v.mt});
- await update(ref(db,"callLogs/"+v.oid),{storeId:uid,result:"answered",startedAt:v.t0,endedAt:v.t1,duration:Math.round((v.t1-v.t0)/1000),recording:path});
+ try{await uploadBytes(sRef(storage,path),v.blob,{contentType:v.mt})}catch(e){throw new Error("storage: "+(e.code||e.message))}
+ try{await update(ref(db,"callLogs/"+v.oid),{storeId:uid,result:"answered",startedAt:v.t0,endedAt:v.t1,duration:Math.round((v.t1-v.t0)/1000),recording:path})}catch(e){throw new Error("db: "+(e.code||e.message))}
 }
+function recToast(m){try{let d=document.getElementById('recToast');if(!d){d=document.createElement('div');d.id='recToast';d.style.cssText='position:fixed;left:8px;right:8px;bottom:12px;z-index:9999;background:#b91c1c;color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;direction:rtl;word-break:break-all';d.onclick=()=>d.remove();document.body.appendChild(d)}d.textContent=m+' (اضغط للإخفاء)';setTimeout(()=>{try{d.remove()}catch(e){}},60000)}catch(e){}}
 function recFail(oid,t0,t1,why){update(ref(db,"callLogs/"+oid),{storeId:uid,result:"answered",startedAt:t0,endedAt:t1,duration:Math.round((t1-t0)/1000),recError:String(why).slice(0,120)}).catch(()=>{})}
 async function saveRec(oid,blob,mt,t0,t1){let lastErr=null;
  const v={k:oid+"_"+t0,oid,blob,mt,t0,t1};
  await idbPut(v);
  for(let i=0;i<3;i++){try{await upRec(v);await idbDel(v.k);return}catch(e){lastErr=e;await new Promise(r=>setTimeout(r,3000*(i+1)))}}
- recFail(oid,t0,t1,(lastErr&&(lastErr.code||lastErr.message))||"upload");
+ {const why=(lastErr&&(lastErr.code||lastErr.message))||"upload";recFail(oid,t0,t1,why);recToast("فشل رفع تسجيل المكالمة — "+why)}
 }
 async function flushRecs(){for(const v of await idbAll()){try{await upRec(v);await idbDel(v.k)}catch(e){}}}
 function addC(c,x){if(c.pc.remoteDescription)c.pc.addIceCandidate(x).catch(()=>{});else c.q.push(x)}

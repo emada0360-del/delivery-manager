@@ -273,7 +273,8 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <section id="t11" class="tab" hidden>
 <div class="box"><h3>تسجيلات المكالمات بين المتجر والزبون</h3>
 <p class="sub">كل مكالمة يُرد عليها تُسجَّل تلقائياً. المكالمات المرفوضة تُلغي الطلب تلقائياً وتظهر هنا بدون تسجيل صوتي.</p>
-<label style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><input type="checkbox" id="clOnlyCanc"> إظهار طلبات الزبائن الملغاة فقط</label>
+<input type="search" id="clSearch" placeholder="ابحث برقم الطلب أو اسم الزبون أو رقمه" autocomplete="off" style="margin:0 0 10px">
+<label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:13px"><input type="checkbox" id="clOnlyCanc" style="width:18px;height:18px;min-height:0;margin:0;flex:none;accent-color:#0d131a"> إظهار طلبات الزبائن الملغاة فقط</label>
 <audio id="clAudio" controls style="width:100%;margin-bottom:10px;display:none"></audio>
 <div id="callLogs" class="wrap"></div></div>
 </section>
@@ -700,18 +701,35 @@ document.addEventListener("click",e=>{
 
 const CRES={answered:'<span class="tag g">تم الرد</span>',rejected:'<span class="tag r">رفضها المتجر</span>'};
 function drawCalls(){
+ const nd=s=>String(s||"").replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g,"");
  const onlyC=$("clOnlyCanc")&&$("clOnlyCanc").checked;
- const rows=Object.entries(clogs).filter(([id,l])=>l&&(!onlyC||(cord[id]&&cord[id].status==="cancelled")))
-  .sort((a,b)=>(b[1].startedAt||b[1].at||0)-(a[1].startedAt||a[1].at||0)).slice(0,200);
- $("callLogs").innerHTML=table(["الطلب","المتجر","نتيجة المكالمة","حالة طلب الزبون","سبب الإلغاء","المدة","الوقت","التسجيل"],rows.map(([id,l])=>{
+ const q=(($("clSearch")&&$("clSearch").value)||"").trim().toLowerCase().replace(/^#/,""),qd=nd(q);
+ const now=Date.now(),stat={};
+ for(const [id,l] of Object.entries(clogs)){const o=cord[id];if(!l||!o||!o.customerId)continue;if(now-(l.startedAt||l.at||0)>864e5)continue;const s=stat[o.customerId]||(stat[o.customerId]={n:0,c:0});s.n++;if(o.status==="cancelled")s.c++}
+ let all=Object.entries(clogs).filter(([id,l])=>l&&(!onlyC||(cord[id]&&cord[id].status==="cancelled")));
+ if(q)all=all.filter(([id])=>{const o=cord[id]||{},c=custers[o.customerId]||{};return id.toLowerCase().includes(q)||String(c.name||"").toLowerCase().includes(q)||(qd.length>=3&&nd(c.phone).includes(qd))});
+ const rows=all.sort((a,b)=>(b[1].startedAt||b[1].at||0)-(a[1].startedAt||a[1].at||0)).slice(0,q?500:200);
+ $("callLogs").innerHTML=table(["الطلب","الزبون","المتجر","نتيجة المكالمة","حالة طلب الزبون","سبب الإلغاء","المدة","الوقت","التسجيل","إجراء"],rows.map(([id,l])=>{
   const st=(users[l.storeId]||{}).name||(cord[id]&&cord[id].restaurantName)||"";
   const co=cord[id],cs=co?(co.status==="cancelled"?'<span class="tag r">ملغى'+(co.cancelReason==="store_rejected_call"?" (رفض المكالمة)":"")+'</span>':esc(ST[co.status]||co.status)):"—";
   const dur=l.duration?Math.floor(l.duration/60)+":"+String(l.duration%60).padStart(2,"0"):"—";
   const rec=(l.recording&&l.recording!=="pending")?`<button type="button" data-play="${esc(l.recording)}">▶ استماع</button>`:(l.result==="answered"?'<span class="tag y">'+(l.recError?'تعذّر: '+esc(String(l.recError)):'قيد الرفع أو لم يُسجَّل')+'</span>':"—");
   const why=(co&&co.cancelReasonText)||l.cancelReasonText||"";
-  return `<tr${(co&&co.status==="cancelled"&&l.result==="answered")?' style="background:#fff5f6"':""}><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(st)}</td><td>${CRES[l.result]||esc(l.result||"")}</td><td>${cs}</td><td>${why?esc(why):"—"}</td><td>${dur}</td><td>${tm(l.startedAt||l.at)}</td><td>${rec}</td></tr>`;
- }),"لا توجد مكالمات مسجّلة.");
+  const cid=co&&co.customerId,c=cid?custers[cid]:null,s=cid?stat[cid]:null;
+  const bn=c&&((c.deviceId&&banned[c.deviceId])||banned["ph_"+c.phone]);
+  const cu=c?`<b>${esc(c.name)}</b>${bn?' <span class="tag r">محظور</span>':''}<br><span dir="ltr">${esc(c.phone)}</span>${s?`<br><small>مكالماته خلال 24 ساعة: ${s.n} · ملغاة: ${s.c}</small>`:''}`:"—";
+  const act=c?(bn?`<button type="button" data-clunban="${esc(cid)}">فك الحظر</button>`:`<button type="button" data-clban="${esc(cid)}" style="background:#b0002a">حظر</button>`):"—";
+  const hot=(s&&s.n>=3)||(co&&co.status==="cancelled"&&l.result==="answered");
+  return `<tr${hot?' style="background:#fff5f6"':""}><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${cu}</td><td>${esc(st)}</td><td>${CRES[l.result]||esc(l.result||"")}</td><td>${cs}</td><td>${why?esc(why):"—"}</td><td>${dur}</td><td>${tm(l.startedAt||l.at)}</td><td>${rec}</td><td>${act}</td></tr>`;
+ }),"لا توجد مكالمات مطابقة.");
 }
+document.addEventListener("input",e=>{if(e.target&&e.target.id==="clSearch")drawCalls()});
+document.addEventListener("click",e=>{const b=e.target.closest("button[data-clban],button[data-clunban]");if(!b)return;
+ const id=b.dataset.clban||b.dataset.clunban,c=custers[id];if(!c){say("بيانات الزبون غير موجودة",1);return}
+ if(b.dataset.clban){if(!confirm("حظر "+(c.name||"")+" ("+(c.phone||"")+") من التطبيق؟"))return;
+  run(async()=>{const rec={name:c.name,phone:c.phone,at:Date.now()},u={["bannedDevices/ph_"+c.phone]:rec,["approvedCustomers/"+id]:null,["activations/"+id]:null};if(c.deviceId)u["bannedDevices/"+c.deviceId]=rec;await update(ref(db),u);say("تم حظر الزبون.");setTimeout(drawCalls,600)})}
+ else run(async()=>{const u={["bannedDevices/ph_"+c.phone]:null};if(c.deviceId)u["bannedDevices/"+c.deviceId]=null;await update(ref(db),u);say("تم فك الحظر.");setTimeout(drawCalls,600)});
+});
 document.addEventListener("click",e=>{const b=e.target.closest("button[data-play]");if(!b)return;run(async()=>{
  b.disabled=true;try{const url=await getDownloadURL(sRef(storage,b.dataset.play));const a=$("clAudio");a.style.display="block";a.src=url;await a.play().catch(()=>{});a.scrollIntoView({block:"nearest"})}finally{b.disabled=false}
 })});
