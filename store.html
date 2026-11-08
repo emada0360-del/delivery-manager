@@ -10,8 +10,8 @@
 <title>Baqubah Delivery | المتجر</title>
 <!-- 🔔 كود إشعارات التطبيق -->
 <script>
-window.notifyApp=async(t,b)=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P||!P.LocalNotifications)return;await P.LocalNotifications.createChannel({id:'orders',name:'Orders',importance:5,sound:'default',vibration:true});await P.LocalNotifications.schedule({notifications:[{id:Math.floor(Math.random()*2e9),title:t,body:b,channelId:'orders'}]});}catch(e){}};
-(async()=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P)return;await P.LocalNotifications.requestPermissions();if(P.BackgroundMode){await P.BackgroundMode.enable();}}catch(e){}})();
+window.notifyApp=async(t,b,nid)=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P||!P.LocalNotifications)return;await P.LocalNotifications.createChannel({id:'orders',name:'Orders',importance:5,sound:'default',vibration:true});await P.LocalNotifications.schedule({notifications:[{id:nid||Math.floor(Math.random()*2e9),title:t,body:b,channelId:'orders'}]});}catch(e){}};
+(async()=>{try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P)return;await P.LocalNotifications.requestPermissions();if(P.BackgroundMode){await P.BackgroundMode.enable();try{await P.BackgroundMode.disableWebViewOptimizations()}catch(e){}}}catch(e){}})();
 </script>
 <style>
 :root{
@@ -202,6 +202,12 @@ input,select,textarea{height:40px;padding:0 12px;border-radius:11px;margin:3px 0
 #activeOrders .card{display:flex;flex-direction:column}
 #activeOrders .card>*{flex:none}
 #activeOrders .card .actions{margin-top:auto}
+.ringAv{width:132px;height:132px;border-radius:50%;background:#0f9a63;display:grid;place-items:center;animation:rpulse 1.6s ease-out infinite}
+@keyframes rpulse{0%{box-shadow:0 0 0 0 #0f9a6388}100%{box-shadow:0 0 0 46px #0f9a6300}}
+.rcb{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:14px;font-weight:600}
+.rbtn{width:76px;height:76px;border-radius:50%;border:0;display:grid;place-items:center;color:#fff;padding:0;cursor:pointer}
+.rbtn.yes{background:#0f9a63}.rbtn.no{background:#d9002f}
+@media(prefers-reduced-motion:reduce){.ringAv{animation:none}}
 </style>
 </head>
 <body>
@@ -427,11 +433,68 @@ function ui(t,btns){
  d.innerHTML=`<div style="font-size:54px">📞</div><div>${t}</div><div style="display:flex;gap:12px">${(btns||[]).map((b,i)=>`<button data-i="${i}" style="border:0;border-radius:14px;padding:14px 26px;font:700 17px inherit;color:#fff;background:${b[2]||"#d9002f"}">${b[0]}</button>`).join("")}</div>`;
  d.onclick=e=>{const b=e.target.closest("button");if(b)btns[b.dataset.i][1]()};
 }
-let ringT=null;
+// ===== نغمة الاتصال الواردة (تتكرر حتى الرد أو الرفض) =====
+let ringT=null,ringAu=null,ringVibT=null,ringNotT=null,ringWL=null,ringUrl=null;
+function ringWav(){
+ // نغمة اتصال: مجموعتان من خمس نغمات سريعة ثم صمت قصير، تُولَّد داخل التطبيق
+ const sr=16000,n=Math.floor(sr*3.2),pcm=new Int16Array(n);
+ const seq=[[0,659],[.18,784],[.36,659],[.54,784],[.72,1047],[1.6,659],[1.78,784],[1.96,659],[2.14,784],[2.32,1047]];
+ for(const [t0,f] of seq){const s=Math.floor(t0*sr),L=Math.floor(.5*sr);
+  for(let i=0;i<L&&s+i<n;i++){const x=i/sr,env=Math.exp(-4.5*x)*Math.min(1,i/160);
+   const v=pcm[s+i]+Math.round(11000*env*(Math.sin(6.2832*f*x)+.35*Math.sin(6.2832*f*2*x)));
+   pcm[s+i]=Math.max(-32000,Math.min(32000,v))}}
+ const buf=new ArrayBuffer(44+n*2),v=new DataView(buf);
+ const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+ w(0,"RIFF");v.setUint32(4,36+n*2,true);w(8,"WAVEfmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+ v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,n*2,true);
+ for(let i=0;i<n;i++)v.setInt16(44+i*2,pcm[i],true);
+ return URL.createObjectURL(new Blob([buf],{type:"audio/wav"}));
+}
+function ringPrime(){try{if(!ringAu){ringUrl=ringUrl||ringWav();ringAu=new Audio(ringUrl);ringAu.loop=true;ringAu.preload="auto"}}catch(e){}}
+// أول لمسة من المستخدم تهيّئ الصوت حتى يُسمح بتشغيله لاحقاً بدون لمس
+document.addEventListener("pointerdown",function f(){ringPrime();try{ringAu.muted=true;ringAu.play().then(()=>{ringAu.pause();ringAu.currentTime=0;ringAu.muted=false}).catch(()=>{ringAu.muted=false})}catch(e){}document.removeEventListener("pointerdown",f)},{once:true});
+const bgMode=()=>{try{return window.Capacitor.Plugins.BackgroundMode||null}catch(e){return null}};
+function ringNotify(on){try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P||!P.LocalNotifications)return;
+ if(on)window.notifyApp("📞 مكالمة من زبون","اضغط للرد",7001);else P.LocalNotifications.cancel({notifications:[{id:7001}]}).catch(()=>{})}catch(e){}}
+const storeCall=()=>{try{return window.Capacitor.Plugins.StoreCall||null}catch(e){return null}};
 function ring(on){
- clearInterval(ringT);if(!on)return;
- const beep=()=>{try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=.4;o.connect(g);g.connect(a.destination);o.start();setTimeout(()=>{o.stop();a.close()},400)}catch(e){}if(navigator.vibrate)navigator.vibrate(300)};
- beep();ringT=setInterval(beep,1200);
+ clearInterval(ringT);clearInterval(ringVibT);clearInterval(ringNotT);ringT=ringVibT=ringNotT=null;
+ const sc=storeCall();
+ if(!on){
+  try{if(ringAu){ringAu.pause();ringAu.currentTime=0}}catch(e){}
+  try{navigator.vibrate&&navigator.vibrate(0)}catch(e){}
+  try{ringWL&&ringWL.release();ringWL=null}catch(e){}
+  if(sc){try{sc.stop().catch(()=>{})}catch(e){}}
+  ringNotify(false);return}
+ // المسار الأصلي (APK): نغمة رنين الهاتف + إشعار ملء الشاشة فوق القفل
+ if(sc){
+  let started=false;
+  try{sc.ring({title:"📞 مكالمة من زبون",body:"اضغط للرد"}).then(r=>{started=true;if(r&&r.ok===false)jsRing()}).catch(()=>{if(!started)jsRing()})}catch(e){jsRing();return}
+  return}
+ jsRing();
+}
+// المسار الاحتياطي (متصفح أو APK قديم): نغمة داخل الصفحة + اهتزاز + إشعار محلي
+function jsRing(){
+ const bg=bgMode();if(bg){try{bg.wakeUp&&bg.wakeUp();bg.unlock&&bg.unlock();bg.moveToForeground&&bg.moveToForeground()}catch(e){}}
+ try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>ringWL=l).catch(()=>{})}catch(e){}
+ ringPrime();
+ const fallback=()=>{const beep=()=>{try{const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.frequency.value=880;g.gain.value=.4;o.connect(g);g.connect(a.destination);o.start();setTimeout(()=>{o.stop();a.close()},400)}catch(e){}};beep();ringT=setInterval(beep,1200)};
+ try{ringAu.currentTime=0;ringAu.volume=1;const pr=ringAu.play();if(pr&&pr.catch)pr.catch(fallback)}catch(e){fallback()}
+ const vib=()=>{try{navigator.vibrate&&navigator.vibrate([700,400,700,400])}catch(e){}};vib();ringVibT=setInterval(vib,3000);
+ ringNotify(true);ringNotT=setInterval(()=>ringNotify(true),6000);
+}
+// شاشة المكالمة الواردة (تشبه شاشة اتصال الهاتف)
+function showIncoming(id){
+ let d=document.getElementById("callUI");
+ if(!d){d=document.createElement("div");d.id="callUI";document.body.appendChild(d)}
+ d.style.cssText="position:fixed;inset:0;background:#0d131a;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:space-between;color:#fff;text-align:center;padding:calc(72px + env(safe-area-inset-top,0px)) 24px calc(64px + env(safe-area-inset-bottom,0px))";
+ const ph='<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>';
+ d.innerHTML=`<div><div style="font-size:14px;font-weight:500;color:#8fa2b7">مكالمة واردة من تطبيق الزبون</div><div style="font-size:28px;font-weight:700;margin-top:6px">زبون يتصل بالمطعم</div><div style="font-size:15px;color:#8fa2b7;margin-top:4px">طلب #${esc(id.slice(-5))}</div></div>
+ <div class="ringAv">${ph.replace('width="34" height="34"','width="58" height="58"')}</div>
+ <div style="display:flex;gap:64px;justify-content:center"><div class="rcb"><button data-k="yes" class="rbtn yes" aria-label="رد">${ph}</button><span>رد</span></div><div class="rcb"><button data-k="no" class="rbtn no" aria-label="رفض"><span style="display:grid;transform:rotate(135deg)">${ph}</span></button><span>رفض</span></div></div>`;
+ d.onclick=e=>{const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.k==="yes")answerCall(id);
+  else{ring(false);ui("");set(ref(db,`calls/${id}/ended`),Date.now()).catch(()=>{})}};
 }
 function addC(c,x){if(c.pc.remoteDescription)c.pc.addIceCandidate(x).catch(()=>{});else c.q.push(x)}
 function flush(c){c.q.splice(0).forEach(x=>c.pc.addIceCandidate(x).catch(()=>{}))}
@@ -489,8 +552,7 @@ function cq(){
  if(!b){b=document.createElement("div");b.id="cqBar";b.style.cssText="margin:6px 0";document.getElementById("tabs").after(b);b.onclick=e=>{const x=e.target.closest("[data-pr]");if(x)priceUI(x.dataset.pr)}}
  b.innerHTML=need.map(([id])=>`<button data-pr="${id}" style="width:100%;margin-bottom:6px;background:#0f9a63">📞 طلب زبون جديد #${id.slice(-5)} — اضغط لكتابة السعر</button>`).join("");
  const r=need.find(([id,o])=>o.ring&&!call&&ringing!==id+o.ring&&Date.now()-o.ring<45000);
- if(r){const [id,o]=r;ringing=id+o.ring;ring(true);try{window.notifyApp&&window.notifyApp("📞 زبون يتصل","اضغط للرد")}catch(e){}
-  ui("زبون يتصل بالمطعم",[["رد",()=>answerCall(id),"#0f9a63"],["رفض",()=>{ring(false);ui("")}]]);
+ if(r){const [id,o]=r;ringing=id+o.ring;ring(true);showIncoming(id);
   setTimeout(()=>{if(!call){ring(false);if(document.getElementById("callUI"))ui("")}},45000);}
 }
 async function confirmCustomerOrder(id,p,mins){
