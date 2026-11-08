@@ -382,7 +382,7 @@ function __set(base){
    s.onerror=function(){if(!failed){failed=true;clearTimeout(t);rej(new Error('فشل تحميل '+base(n)))}};
    document.head.appendChild(s);
   });
-  t=setTimeout(function(){if(!failed&&loaded<3){failed=true;rej(new Error('انتهت المهلة'))}},90000);
+  t=setTimeout(function(){if(!failed&&loaded<3){failed=true;rej(new Error('انتهت المهلة'))}},10000);
  });
 }
 function __load(){
@@ -551,9 +551,9 @@ function __main(){
  });
 
  function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on)clear()}
- function clear(){
+ function clear(keep){
   stops.forEach(f=>{try{f()}catch{}});
-  stops=[];pend={};mine={};finance={};privData={};seenAv=null;prevMine=null;pendLoaded=false;
+  stops=[];pend={};mine={};finance={};privData={};if(!keep){seenAv=null;prevMine=null}pendLoaded=false;
   if(tick){clearInterval(tick);tick=null}
   if(presenceTick){clearInterval(presenceTick);presenceTick=null}
   if(gps!==null&&navigator.geolocation){try{navigator.geolocation.clearWatch(gps)}catch{}gps=null}
@@ -612,8 +612,8 @@ function __main(){
  }
  const eh=e=>say("خطأ تحميل البيانات: "+(e&&(e.code||e.message)||e));
 
- function start(){
-  clear();startGPS();
+ function start(keep){
+  clear(keep);startGPS();
   const pr=ref(db,"presence/"+uid);
   stops.push(onValue(ref(db,".info/serverTimeOffset"),s=>{srvOff=Number(s.val())||0},()=>{}));
   stops.push(onValue(ref(db,".info/connected"),s=>{
@@ -674,7 +674,7 @@ function __main(){
   const now=Date.now();
   if(now-lastResumeReconnect<7000)return;
   lastResumeReconnect=now;
-  try{start();}catch(e){console.warn("Resume reconnect failed:",e);}
+  try{start(true);}catch(e){console.warn("Resume reconnect failed:",e);}
  }
  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")resumeConnection();});
  window.addEventListener("focus",resumeConnection);
@@ -691,12 +691,12 @@ function __main(){
    const o=mine[id];
    if(o&&o.status==="delivered"){
     n++;
-    const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommission||500));
+    const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommissionFixed??settings.storeCommission??500));
     d+=Math.round(Number(o.platformDeliveryCommission)||0)+Math.round(sc);
     if(Number(o.deliveredAt)>=t0)tp+=Math.round(Number(o.driverProfit)||0);
    }
   }
-  for(const id in finance){const f=finance[id];if(!f)continue;const am=Math.round(Number(f.amount)||0);if(f.type==="cash_received"||f.type==="bonus")d-=am;else if(f.type==="deduction")d+=am}
+  for(const id in finance){const f=finance[id];if(!f)continue;const am=Math.round(Number(f.amount)||0);if(f.type==="cash_received"||f.type==="bonus")d-=am;else if(f.type==="deduction"||f.type==="archive"){d+=am;if(f.type==="archive")n+=Number(f.count)||0}}
   if(d<0)d=0;debt=d;
   $("statDone").textContent=n;$("statDebt").textContent=fmt(d)+" د.ع";$("statProfit").textContent=fmt(tp)+" د.ع";
   $("warnBox").hidden=d<debtLimit;
@@ -704,16 +704,17 @@ function __main(){
   renderSide();
  }
  function ui(){
-  const act=hasActive(),btn=$("btnStatus");
-  if(debt>=debtLimit&&!act){isOnline=false;btn.className="status-btn blocked";$("statusTxt").textContent="محظور (تجاوزت سقف الدين)";return}
-  if(act){isOnline=true;btn.className="status-btn on";$("statusTxt").textContent="متصل (لديك طلب نشط)";return}
-  if(isOnline){btn.className="status-btn on";$("statusTxt").textContent="متصل (متاح للطلبات)"}
+  const act=hasActive(),btn=$("btnStatus"),blocked=debt>=debtLimit&&!act;
+  if(blocked)isOnline=false;else if(act)isOnline=true;
+  if(blocked){btn.className="status-btn blocked";$("statusTxt").textContent="محظور (تجاوزت سقف الدين)"}
+  else if(act){btn.className="status-btn on";$("statusTxt").textContent="متصل (لديك طلب نشط)"}
+  else if(isOnline){btn.className="status-btn on";$("statusTxt").textContent="متصل (متاح للطلبات)"}
   else{btn.className="status-btn off";$("statusTxt").textContent="غير متصل (مغلق)"}
-  const hs=$("headerStatus");if(hs)hs.textContent=hasActive()?"لديك طلب قيد التنفيذ":(isOnline?"متصل — بانتظار طلب":"غير متصل");
-  const sb=$("sideStatus"),st=$("sideStatusTxt");if(sb&&st){sb.className="status-btn "+(debt>=debtLimit&&!hasActive()?"blocked":(isOnline?"on":"off"));st.textContent=debt>=debtLimit&&!hasActive()?"المحفظة متوقفة":(isOnline?"متصل — استقبال الطلبات":"غير متصل — اضغط للاتصال");}
+  const hs=$("headerStatus");if(hs)hs.textContent=act?"لديك طلب قيد التنفيذ":(blocked?"محظور (تجاوزت سقف الدين)":(isOnline?"متصل — بانتظار طلب":"غير متصل"));
+  const sb=$("sideStatus"),st=$("sideStatusTxt");if(sb&&st){sb.className="status-btn "+(blocked?"blocked":(isOnline?"on":"off"));st.textContent=blocked?"المحفظة متوقفة":(isOnline?"متصل — استقبال الطلبات":"غير متصل — اضغط للاتصال");}
  }
  function finBox(o){
-  const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommission||500));
+  const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommissionFixed??settings.storeCommission??500));
   const fee=Number(o.deliveryFee)||0,pc=Math.round(fee*PC()),payStore=Math.round((Number(o.itemPrice)||0)-sc),collect=Math.round(Number(o.customerTotal)||0),profit=Math.round(fee-pc);
   return `<div class="fin-box">
    <div class="fin-row f-pay"><span>تدفع للمتجر:</span><b>${fmt(payStore)} د.ع</b></div>
@@ -721,7 +722,7 @@ function __main(){
    <div class="fin-row f-profit"><span>ربحك الصافي (الكروة):</span><b>${fmt(profit)} د.ع</b></div>
   </div>
   <div class="debt-box">
-   <div class="fin-row" style="margin-bottom:5px"><span>عمولة المنصة (10%):</span><b>${fmt(pc)} د.ع</b></div>
+   <div class="fin-row" style="margin-bottom:5px"><span>عمولة المنصة (${+(PC()*100).toFixed(1)}%):</span><b>${fmt(pc)} د.ع</b></div>
    <div class="fin-row" style="margin-bottom:5px"><span>عمولة المتجر (ثابتة):</span><b>${fmt(sc)} د.ع</b></div>
    <div class="fin-row"><span>سيضاف لدينك:</span><b>${fmt(pc+sc)} د.ع</b></div>
   </div>`;
@@ -945,7 +946,7 @@ function heroOf(o){const m={waiting_store:["h-store","بالطريق للمتج�
   if(sideTab==="overview")html=`<div class="side-panel"><h3>ملخص الحساب</h3><div class="side-stat"><span>إجمالي الطلبات</span><b>${totalCount}</b></div><div class="side-stat"><span>الطلبات المكتملة</span><b>${completedCount}</b></div><div class="side-stat"><span>طلبات اليوم</span><b>${dailyCount}</b></div><div class="side-stat"><span>أرباح اليوم</span><b>${money(todayProfit)}</b></div><div class="side-stat"><span>الدين الحالي</span><b>${money(debt)}</b></div><div class="side-stat"><span>المبالغ المسددة للإدارة</span><b>${money(cash)}</b></div><div class="side-stat"><span>سقف الدين</span><b>${money(debtLimit)}</b></div><div class="side-stat"><span>حالة السائق</span><b>${isOnline?"متصل":"غير متصل"}</b></div></div>`;
   else if(sideTab==="history")html=`<div class="side-panel"><h3>حركات السائق</h3><div class="side-empty">سجل الطلبات وحالاتها حسب البيانات المسجلة في Firebase.</div>${orderRows(orders)}</div>`;
   else if(sideTab==="completed")html=`<div class="side-panel"><h3>الطلبات المكتملة (${completed.length})</h3>${orderRows(completed)}</div>`;
-  else if(sideTab==="debt")html=`<div class="side-panel"><h3>الديون والمحفظة</h3><div class="side-stat"><span>الدين الحالي المستحق</span><b>${money(debt)}</b></div><div class="side-stat"><span>عمولات المنصة المسجلة</span><b>${money(completed.reduce((a,[id,o])=>a+Number(o.platformDeliveryCommission||0),0))}</b></div><div class="side-stat"><span>عمولات المتاجر المسجلة</span><b>${money(completed.reduce((a,[id,o])=>a+Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommission||500)),0))}</b></div><div class="side-stat"><span>المبالغ المستلمة من الإدارة</span><b>${money(cash)}</b></div>${dedT?`<div class="side-stat"><span>خصومات الإدارة</span><b>${money(dedT)}</b></div>`:""}${bonT?`<div class="side-stat"><span>مكافآت الإدارة</span><b>${money(bonT)}</b></div>`:""}<div class="side-empty">تصفير الدين أو تسجيل تسديد جديد يتم من لوحة الإدارة، حتى تبقى السجلات المالية موثقة.</div></div>`;
+  else if(sideTab==="debt")html=`<div class="side-panel"><h3>الديون والمحفظة</h3><div class="side-stat"><span>الدين الحالي المستحق</span><b>${money(debt)}</b></div><div class="side-stat"><span>عمولات المنصة المسجلة</span><b>${money(completed.reduce((a,[id,o])=>a+Number(o.platformDeliveryCommission||0),0))}</b></div><div class="side-stat"><span>عمولات المتاجر المسجلة</span><b>${money(completed.reduce((a,[id,o])=>a+Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommissionFixed??settings.storeCommission??500)),0))}</b></div><div class="side-stat"><span>المبالغ المسددة للإدارة</span><b>${money(cash)}</b></div>${dedT?`<div class="side-stat"><span>خصومات الإدارة</span><b>${money(dedT)}</b></div>`:""}${bonT?`<div class="side-stat"><span>مكافآت الإدارة</span><b>${money(bonT)}</b></div>`:""}<div class="side-empty">تصفير الدين أو تسجيل تسديد جديد يتم من لوحة الإدارة، حتى تبقى السجلات المالية موثقة.</div></div>`;
   else if(sideTab==="today")html=`<div class="side-panel"><h3>طلبات اليوم (${today.length})</h3>${orderRows(today)}</div>`;
   else html=`<div class="side-panel"><h3>كل الطلبات (${orders.length})</h3>${orderRows(orders)}</div>`;
   el.innerHTML=html;

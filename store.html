@@ -602,7 +602,7 @@ function cq(){
  const need=Object.entries(cOrders).filter(([id,o])=>o.status==="calling"&&!o.price&&!orders[id]&&Date.now()-(Number(o.createdAt)||0)<30*60000);
  let b=document.getElementById("cqBar");
  if(!b){b=document.createElement("div");b.id="cqBar";b.style.cssText="margin:6px 0";document.getElementById("tabs").after(b);b.onclick=e=>{const x=e.target.closest("[data-pr]");if(x)decideUI(x.dataset.pr)}}
- b.innerHTML=need.map(([id])=>`<button data-pr="${id}" style="width:100%;margin-bottom:6px;background:#0f9a63">📞 طلب زبون #${id.slice(-5)} — اضغط للتحضير أو الإلغاء</button>`).join("");
+ b.innerHTML=need.map(([id])=>`<button data-pr="${esc(id)}" style="width:100%;margin-bottom:6px;background:#0f9a63">📞 طلب زبون #${esc(id.slice(-5))} — اضغط للتحضير أو الإلغاء</button>`).join("");
  for(const [id,o] of need){
   if(!o.ring||Date.now()-o.ring>=45000)continue;
   const key=id+o.ring;if(handled.has(key))continue;

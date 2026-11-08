@@ -290,7 +290,7 @@ main{max-width:560px;margin:auto;padding:14px 14px calc(var(--nav) + 24px + env(
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
 import {getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
-import {getDatabase,goOnline,goOffline,ref,set,update,push,onValue,onChildAdded,get,query,orderByChild,equalTo} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import {getDatabase,serverTimestamp,goOnline,goOffline,ref,set,update,push,onValue,onChildAdded,get,query,orderByChild,equalTo} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 const cfg={apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",authDomain:"baqubah-delivery-e729e.firebaseapp.com",databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",projectId:"baqubah-delivery-e729e",storageBucket:"baqubah-delivery-e729e.firebasestorage.app",messagingSenderId:"450084520701",appId:"1:450084520701:web:719e2040338540ce36f494"};
 const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
 const $=id=>document.getElementById(id),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -368,7 +368,7 @@ async function dial(oid){
   await set(ref(db,`calls/${oid}/offer`),{type:o.type,sdp:o.sdp});
    c.un.push(onValue(ref(db,`calls/${oid}/busy`),s=>{if(s.val())onBusy(oid)}));
   c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(a&&!c.pc.remoteDescription){await c.pc.setRemoteDescription(a);flush(c)}}));
-  await update(ref(db,"customerOrders/"+oid),{ring:Date.now()});
+  await update(ref(db,"customerOrders/"+oid),{ring:serverTimestamp()});
   setTimeout(()=>{if(call&&call.oid===oid&&call.pc.connectionState!=="connected")hangup()},45000);
  }catch(e){closeCall(true);alert("تعذر بدء المكالمة: "+(e.name==="NotAllowedError"?"اسمح باستخدام المايكروفون":e.message))}
 }
@@ -606,7 +606,7 @@ $("cur").onclick=async e=>{
  if(b.dataset.cancel&&orders[b.dataset.cancel]&&orders[b.dataset.cancel].callAnswered){toast("تم الرد على مكالمتك، لا يمكن إلغاء الطلب",1);return}
  if(b.dataset.cancel&&confirm("إلغاء الطلب؟"))update(ref(db,"customerOrders/"+b.dataset.cancel),{status:"cancelled"}).catch(()=>toast("تعذر الإلغاء، تواصل مع الإدارة",1));
 };
-document.addEventListener("visibilitychange",()=>{if(document.hidden){if(!call)goOffline(db)}else goOnline(db)});
+document.addEventListener("visibilitychange",()=>{if(document.hidden){if(!call&&!Object.values(orders).some(isLive))goOffline(db)}else goOnline(db)});
 $("mx").onclick=()=>{$("menuM").hidden=true;$("mf").src="about:blank"};
 setInterval(()=>{if(me){drawCur();drawList();drawHist()}},60000);
 

@@ -518,6 +518,7 @@ $("t10").addEventListener("click",e=>{
   syncFees();
   const f=$("custFees").value.split(",").map(x=>x.trim()).filter(Boolean).map(x=>{const[k,v]=x.split(":");return{km:Number(k),fee:Number(v)}});
   if(!f.length||f.some(x=>!(x.km>0)||!(x.fee>=0)))throw new Error("الصيغة غير صحيحة، مثال: 2:3000,4:4500");
+  if(f.length>5)throw new Error("الحد الأقصى 5 فئات أسعار (حسب قواعد Firebase).");
   f.sort((a,b)=>a.km-b.km);await update(ref(db),{"settings/custFees":f});feeDirty=false;say("تم حفظ الأسعار.");
  });
  if(d.bn&&confirm("حظر رقم وجهاز هذا الزبون؟"))run(async()=>{const c=custers[d.bn],rec={name:c.name,phone:c.phone,at:Date.now()},u={["bannedDevices/ph_"+c.phone]:rec,["approvedCustomers/"+d.bn]:null,["activations/"+d.bn]:null};if(c.deviceId)u["bannedDevices/"+c.deviceId]=rec;await update(ref(db),u);say("تم حظر الرقم والجهاز.")});
@@ -976,7 +977,8 @@ document.addEventListener("click",e=>{
       const st=document.querySelector(`select[data-s="${CSS.escape(d.ss)}"]`).value;
       const now=Date.now();
       const upd={status:st,statusUpdatedAt:now};
-      if(st==="delivered")upd.deliveredAt=now;
+      if(st==="delivered"){upd.deliveredAt=now;const oo=orders[d.ss]||{};
+        if(oo.driverId&&oo.platformDeliveryCommission===undefined){const fee=Number(oo.deliveryFee)||0,pc=Math.round(fee*(Number(settings.driverCommissionPercent??10)/100));upd.platformDeliveryCommission=pc;upd.driverProfit=fee-pc}}
       await update(ref(db,"orders/"+d.ss),upd);
       say("تم التحديث.");
     }
@@ -984,7 +986,9 @@ document.addEventListener("click",e=>{
   else if(d.tg){
     const u=users[d.tg];
     if(await showToastConfirm(`${u.isActive===false?"تفعيل":"تعطيل"} الحساب "${u.name}"؟`)){
-      await update(ref(db,"users/"+d.tg),{isActive:u.isActive===false});say("تم التحديث.");
+      const up={["users/"+d.tg+"/isActive"]:u.isActive===false};
+      if(u.role==="store"&&u.custVisible)up["restaurants/"+d.tg+"/isOpen"]=(u.isActive===false);
+      await update(ref(db),up);say("تم التحديث.");
     }
   }
   else if(d.ta){
