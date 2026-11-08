@@ -324,17 +324,132 @@ async function iceServers(){
   {urls:"turns:global.relay.metered.ca:443?transport=tcp",username:u,credential:c}];
 }
 let call=null,onCallEnd=()=>{};
-let spk=false;
+let spk=false,callName="",callTick=null,wl=null,nearNow=false,proxOn=false,proxSensor=null,nativeLis=false;
 const callAudio=()=>{try{return window.Capacitor.Plugins.CallAudio||null}catch(e){return null}};
-function setSpk(v){spk=!!v;try{const p=callAudio();if(p&&p.speaker)p.speaker({on:spk}).catch(()=>{})}catch(e){}}
-const REC_NOTE='<div style="font-size:13px;color:#ff8a8a;margin-top:6px">🔴 هذه المكالمة مسجّلة</div>';
-function connectedUI(){ui("متصل 🔊"+REC_NOTE,[[spk?"🔊 السماعة: تشغيل":"📱 السماعة: إيقاف",()=>{setSpk(!spk);connectedUI()},"#2563eb"],["إنهاء",hangup]])}
+const REC_NOTE="";
+// ---- مسار الصوت: سماعة الأذن (افتراضي) أو مكبر الصوت ----
+function setSpk(v){spk=!!v;try{const p=callAudio();if(p&&p.speaker)p.speaker({on:spk}).catch(()=>{})}catch(e){}syncProx()}
+// ---- حساس القرب: يطفّي الشاشة ويمنع اللمس لما الجوال على الأذن ----
+function blackout(on){
+ let b=document.getElementById("callBlack");
+ if(!on){b&&b.remove();return}
+ if(b)return;
+ b=document.createElement("div");b.id="callBlack";b.style.cssText="position:fixed;inset:0;background:#000;z-index:100000;touch-action:none";
+ ["touchstart","touchmove","touchend","pointerdown","click"].forEach(t=>b.addEventListener(t,e=>{e.preventDefault();e.stopPropagation()},{passive:false}));
+ document.body.appendChild(b);
+}
+function onNear(n){
+ nearNow=!!n;
+ blackout(proxOn&&nearNow&&!spk);
+ if(proxOn&&nearNow&&!spk)releaseWL();else if(call&&call.connected)acquireWL();
+}
+const _dp=e=>onNear(e.value!=null&&e.max!=null?e.value<e.max:e.value<5),_up=e=>onNear(e.near);
+function startWebProx(){
+ try{if(window.ProximitySensor&&!proxSensor){proxSensor=new ProximitySensor({frequency:5});proxSensor.onreading=()=>onNear(proxSensor.near);proxSensor.start()}}catch(e){}
+ try{window.addEventListener("deviceproximity",_dp);window.addEventListener("userproximity",_up)}catch(e){}
+}
+function stopWebProx(){
+ try{if(proxSensor){proxSensor.stop();proxSensor=null}}catch(e){}
+ try{window.removeEventListener("deviceproximity",_dp);window.removeEventListener("userproximity",_up)}catch(e){}
+}
+function hookNative(){
+ if(nativeLis)return;const p=callAudio();
+ if(p&&p.addListener){nativeLis=true;try{p.addListener("proximity",e=>onNear(e&&e.near))}catch(x){}}
+}
+function syncProx(){
+ const want=!!(call&&call.connected)&&!spk;
+ if(want!==proxOn){
+  proxOn=want;
+  try{const p=callAudio();if(p&&p.proximity)p.proximity({on:want}).catch(()=>{})}catch(e){}
+  if(want)startWebProx();else{stopWebProx();nearNow=false}
+ }
+ blackout(proxOn&&nearNow&&!spk);
+}
+async function acquireWL(){try{if(navigator.wakeLock&&!wl){wl=await navigator.wakeLock.request("screen");wl.addEventListener("release",()=>{wl=null})}}catch(e){}}
+function releaseWL(){try{wl&&wl.release()}catch(e){}wl=null}
+// ---- واجهة المكالمة ----
+const fmtT=s=>String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+const IC_SPK=on=>`<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 9.5h3.2l4.8-3.8v12.6l-4.8-3.8H3.5z" fill="currentColor"/>${on?'<path d="M15 9.2a4 4 0 0 1 0 5.6"/><path d="M17.8 6.6a7.8 7.8 0 0 1 0 10.8"/>':'<path d="M15 10.2a2.6 2.6 0 0 1 0 3.6"/>'}</svg>`;
+const IC_END=`<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 14.2c.9-2.3 4.6-3.7 8.8-3.7s7.9 1.4 8.8 3.7"/><path d="M3.2 14.2v2.4M20.8 14.2v2.4"/></svg>`;
+function callCss(){
+ if(document.getElementById("callCss"))return;
+ const s=document.createElement("style");s.id="callCss";
+ s.textContent=`.cs{position:fixed;inset:0;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:calc(26px + env(safe-area-inset-top,0px)) 24px calc(34px + env(safe-area-inset-bottom,0px));background:#0a0f16;color:#fff;font-family:var(--font);overflow:hidden;text-align:center;-webkit-user-select:none;user-select:none}
+.cs>*{position:relative}
+.cs .cs-glow{position:absolute;width:130vw;height:130vw;max-width:880px;max-height:880px;top:-34%;left:50%;transform:translateX(-50%);background:var(--c,#d9002f);opacity:.24;filter:blur(90px);border-radius:50%;pointer-events:none}
+.cs-top{min-height:36px}
+.cs-rec{display:inline-flex;align-items:center;gap:8px;padding:7px 15px;border-radius:99px;background:#ffffff14;font-size:12.5px;font-weight:500;color:#ffd0d8}
+.cs-rec i{width:8px;height:8px;border-radius:50%;background:#ff3b5c;animation:csBlink 1.4s infinite}
+.cs-mid{display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:-5vh}
+.cs-av{position:relative;width:120px;height:120px;border-radius:50%;background:var(--c,#d9002f);display:grid;place-items:center;font-size:50px;font-weight:700;box-shadow:0 14px 44px #0009}
+.cs-av b{position:absolute;inset:0;border-radius:50%;border:2px solid #ffffff66;opacity:0;animation:csRing 2.6s ease-out infinite}
+.cs-av b+b{animation-delay:1.3s}
+.cs.live .cs-av b{animation:none}
+.cs-name{font-size:25px;font-weight:700;margin-top:6px}
+.cs-st{font-size:16px;color:#b8c4d3;font-weight:500;min-height:48px;display:flex;align-items:center;justify-content:center}
+.cs.live .cs-st{font-size:40px;font-weight:600;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:2px;direction:ltr}
+.dots::after{content:"";animation:csDots 1.4s steps(1) infinite}
+.cs-bot{display:flex;gap:38px;align-items:flex-start;justify-content:center}
+.cs .cs-b{background:none;padding:0;border:0;border-radius:0;display:flex;flex-direction:column;align-items:center;gap:10px;color:#cfd8e3;font:500 13px var(--font)}
+.cs-ic{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:#ffffff1c;border:1px solid #ffffff26;transition:background .2s,color .2s,transform .15s}
+.cs-b.on .cs-ic{background:#fff;color:#0a0f16}
+.cs-b.end .cs-ic{background:#e5173f;border-color:#e5173f;color:#fff;box-shadow:0 10px 28px #e5173f66}
+.cs-b:active .cs-ic{transform:scale(.93)}
+.cs-b em{font-style:normal}
+.cs.msg{justify-content:center;gap:34px}
+.cs.msg .cs-mid{margin-top:0}
+.cs-msg{font-size:19px;font-weight:600;line-height:1.8}
+.cs-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.cs .cs-pill{border:0;border-radius:99px;padding:14px 28px;font:600 16px var(--font);color:#fff}
+@keyframes csRing{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.9);opacity:0}}
+@keyframes csBlink{50%{opacity:.25}}
+@keyframes csDots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}`;
+ document.head.appendChild(s);
+}
+function callScreen(){
+ callCss();
+ const nm=callName||"المتجر",live=!!(call&&call.t0);
+ let d=document.getElementById("callUI");
+ if(!d||d.dataset.mode!=="call"){
+  if(d)d.remove();
+  d=document.createElement("div");d.id="callUI";d.dataset.mode="call";d.className="cs";
+  d.innerHTML=`<div class="cs-glow"></div>
+<div class="cs-top"><span class="cs-rec"><i></i>هذه المكالمة مسجّلة</span></div>
+<div class="cs-mid"><div class="cs-av"><span id="csLet"></span><b></b><b></b></div><div class="cs-name" id="csName"></div><div class="cs-st" id="csSt"></div></div>
+<div class="cs-bot"><button type="button" class="cs-b" id="csSpk"><span class="cs-ic" id="csSpkIc"></span><em>مكبر الصوت</em></button><button type="button" class="cs-b end" id="csEnd"><span class="cs-ic">${IC_END}</span><em>إنهاء</em></button></div>`;
+  document.body.appendChild(d);
+  d.querySelector("#csSpk").onclick=()=>{setSpk(!spk);callScreen()};
+  d.querySelector("#csEnd").onclick=hangup;
+ }
+ try{d.style.setProperty("--c",typeof colOf==="function"?colOf(nm):"#d9002f")}catch(e){}
+ d.querySelector("#csLet").textContent=String(nm).trim().charAt(0)||"؟";
+ d.querySelector("#csName").textContent=nm;
+ d.classList.toggle("live",live);
+ const st=d.querySelector("#csSt");
+ if(live){if(!st.querySelector("#csTm"))st.innerHTML='<span id="csTm"></span>';st.querySelector("#csTm").textContent=fmtT(Math.floor((Date.now()-call.t0)/1000))}
+ else st.innerHTML='جارٍ الاتصال<span class="dots"></span>';
+ d.querySelector("#csSpk").classList.toggle("on",spk);
+ d.querySelector("#csSpkIc").innerHTML=IC_SPK(spk);
+}
+function stopTick(){clearInterval(callTick);callTick=null}
+function connectedUI(){
+ if(!call)return;
+ if(!call.t0)call.t0=Date.now();
+ call.connected=true;
+ callScreen();
+ stopTick();callTick=setInterval(()=>{const e=document.getElementById("csTm");if(e&&call&&call.t0)e.textContent=fmtT(Math.floor((Date.now()-call.t0)/1000))},500);
+ setSpk(spk);acquireWL();
+}
+// رسائل عامة (مشغول / فشل الاتصال ...) بنفس الشكل العصري
 function ui(t,btns){
  let d=document.getElementById("callUI");
  if(!t){d&&d.remove();return}
- if(!d){d=document.createElement("div");d.id="callUI";d.style.cssText="position:fixed;inset:0;background:#0d131aee;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;color:#fff;font:700 20px system-ui;text-align:center;padding:20px";document.body.appendChild(d)}
- d.innerHTML=`<div style="font-size:54px">📞</div><div>${t}</div><div style="display:flex;gap:12px">${(btns||[]).map((b,i)=>`<button data-i="${i}" style="border:0;border-radius:14px;padding:14px 26px;font:700 17px inherit;color:#fff;background:${b[2]||"#d9002f"}">${b[0]}</button>`).join("")}</div>`;
+ callCss();
+ if(d)d.remove();
+ d=document.createElement("div");d.id="callUI";d.dataset.mode="msg";d.className="cs msg";
+ d.innerHTML=`<div class="cs-glow"></div><div class="cs-mid"><div class="cs-av"><span style="display:grid;place-items:center">${IC_END}</span></div><div class="cs-msg">${t}</div></div><div class="cs-row">${(btns||[]).map((b,i)=>`<button type="button" class="cs-pill" data-i="${i}" style="background:${b[2]||"#e5173f"}">${b[0]}</button>`).join("")}</div>`;
  d.onclick=e=>{const b=e.target.closest("button");if(b)btns[b.dataset.i][1]()};
+ document.body.appendChild(d);
 }
 let ringT=null;
 function ring(on){
@@ -347,7 +462,7 @@ function flush(c){c.q.splice(0).forEach(x=>c.pc.addIceCandidate(x).catch(()=>{})
 async function openCall(oid,role){
  const stream=await navigator.mediaDevices.getUserMedia({audio:true});
  const pc=new RTCPeerConnection({iceServers:await iceServers()});
- const c=call={oid,role,pc,stream,un:[],q:[]};
+ const c=call={oid,role,pc,stream,un:[],q:[]};hookNative();
  stream.getTracks().forEach(t=>pc.addTrack(t,stream));
  const au=new Audio();au.autoplay=true;
  pc.ontrack=e=>{au.srcObject=e.streams[0];au.play().catch(()=>{})};
@@ -363,7 +478,7 @@ async function dial(oid){
  try{
   await set(ref(db,"calls/"+oid),null);
   const c=await openCall(oid,"c");
-  ui("جارٍ الاتصال بالمطعم..."+REC_NOTE,[["إنهاء",hangup]]);
+  callName="المتجر";callScreen();get(ref(db,"customerOrders/"+oid+"/restaurantName")).then(x=>{if(x.val()){callName=String(x.val());if(call&&call.oid===oid)callScreen()}}).catch(()=>{});
   const o=await c.pc.createOffer();await c.pc.setLocalDescription(o);
   await set(ref(db,`calls/${oid}/offer`),{type:o.type,sdp:o.sdp});
    c.un.push(onValue(ref(db,`calls/${oid}/busy`),s=>{if(s.val())onBusy(oid)}));
@@ -392,8 +507,8 @@ function onBusy(oid){
 }
 function hangup(){if(call)set(ref(db,`calls/${call.oid}/ended`),Date.now()).catch(()=>{});closeCall()}
 function closeCall(quiet){
- ring(false);ui("");
- if(!call)return;const c=call;call=null;if(spk)setSpk(false);
+ ring(false);ui("");stopTick();
+ if(!call){syncProx();releaseWL();return}const c=call;call=null;if(spk)setSpk(false);syncProx();releaseWL();
  c.un.forEach(f=>{try{f()}catch(e){}});c.stream.getTracks().forEach(t=>t.stop());try{c.pc.close()}catch(e){}
  if(!quiet)onCallEnd(c);
 }
