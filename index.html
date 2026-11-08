@@ -707,7 +707,7 @@ function drawCalls(){
   const st=(users[l.storeId]||{}).name||(cord[id]&&cord[id].restaurantName)||"";
   const co=cord[id],cs=co?(co.status==="cancelled"?'<span class="tag r">ملغى'+(co.cancelReason==="store_rejected_call"?" (رفض المكالمة)":"")+'</span>':esc(ST[co.status]||co.status)):"—";
   const dur=l.duration?Math.floor(l.duration/60)+":"+String(l.duration%60).padStart(2,"0"):"—";
-  const rec=(l.recording&&l.recording!=="pending")?`<button type="button" data-play="${esc(l.recording)}">▶ استماع</button>`:(l.result==="answered"?'<span class="tag y">قيد الرفع أو لم يُسجَّل</span>':"—");
+  const rec=(l.recording&&l.recording!=="pending")?`<button type="button" data-play="${esc(l.recording)}">▶ استماع</button>`:(l.result==="answered"?'<span class="tag y">'+(l.recError?'تعذّر: '+esc(String(l.recError)):'قيد الرفع أو لم يُسجَّل')+'</span>':"—");
   const why=(co&&co.cancelReasonText)||l.cancelReasonText||"";
   return `<tr${(co&&co.status==="cancelled"&&l.result==="answered")?' style="background:#fff5f6"':""}><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(st)}</td><td>${CRES[l.result]||esc(l.result||"")}</td><td>${cs}</td><td>${why?esc(why):"—"}</td><td>${dur}</td><td>${tm(l.startedAt||l.at)}</td><td>${rec}</td></tr>`;
  }),"لا توجد مكالمات مسجّلة.");

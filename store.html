@@ -329,7 +329,8 @@ function playBeep() {
 
 function checkReadyAlarm(list) {
     const now = Date.now();
-    const overdue = list.some(([,o]) => o && o.status === "preparing" && Number(o.prepReadyAt) && now >= Number(o.prepReadyAt));
+    let callBusy=false;try{callBusy=!!call||!!curRing}catch(e){}
+    const overdue = !callBusy && list.some(([,o]) => o && o.status === "preparing" && Number(o.prepReadyAt) && now >= Number(o.prepReadyAt));
     if (overdue) {
         if (!alarmTimer) {
             playBeep();
@@ -459,6 +460,7 @@ function ringNotify(on){try{const P=window.Capacitor&&window.Capacitor.Plugins;i
  if(on)window.notifyApp("📞 مكالمة من زبون","اضغط للرد",7001);else P.LocalNotifications.cancel({notifications:[{id:7001}]}).catch(()=>{})}catch(e){}}
 const storeCall=()=>{try{return window.Capacitor.Plugins.StoreCall||null}catch(e){return null}};
 function ring(on){
+ if(on){try{if(alarmTimer){clearInterval(alarmTimer);alarmTimer=null}window.Capacitor.Plugins.StoreAlarm.stop()}catch(e){}}
  clearInterval(ringT);clearInterval(ringVibT);clearInterval(ringNotT);ringT=ringVibT=ringNotT=null;
  const sc=storeCall();
  if(!on){
@@ -511,7 +513,7 @@ function connectedUI(){ui('متصل — '+(spk?'مكبر الصوت 🔊':'سم�
 // ---- تسجيل المكالمة (إجباري): صوت المتجر + الزبون في ملف واحد ----
 function startRec(c){try{
  if(c.rec||!window.MediaRecorder)return;
- const ac=new (window.AudioContext||window.webkitAudioContext)(),dest=ac.createMediaStreamDestination();
+ const ac=new (window.AudioContext||window.webkitAudioContext)(),dest=ac.createMediaStreamDestination();try{ac.resume()}catch(e){}
  ac.createMediaStreamSource(c.stream).connect(dest);
  const rt=c.pc.getReceivers().map(r=>r.track).find(t=>t&&t.kind==="audio");
  if(rt)ac.createMediaStreamSource(new MediaStream([rt])).connect(dest);
@@ -524,7 +526,7 @@ function startRec(c){try{
 }catch(e){c.rec=null}}
 function stopRec(c){
  const r=c.rec;if(!r)return;c.rec=null;
- const fin=()=>{try{r.ac.close()}catch(e){}const blob=new Blob(r.ch,{type:r.mt});if(blob.size>0)saveRec(c.oid,blob,r.mt,r.t0,Date.now())};
+ const fin=()=>{try{r.ac.close()}catch(e){}const blob=new Blob(r.ch,{type:r.mt});if(blob.size>0)saveRec(c.oid,blob,r.mt,r.t0,Date.now());else recFail(c.oid,r.t0,Date.now(),"empty")};
  try{if(r.mr.state!=="inactive"){r.mr.onstop=fin;r.mr.stop()}else fin()}catch(e){fin()}
 }
 function idb(){return new Promise((ok,no)=>{const q=indexedDB.open("storeRec",1);q.onupgradeneeded=()=>q.result.createObjectStore("q",{keyPath:"k"});q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)})}
@@ -536,10 +538,12 @@ async function upRec(v){
  await uploadBytes(sRef(storage,path),v.blob,{contentType:v.mt});
  await update(ref(db,"callLogs/"+v.oid),{storeId:uid,result:"answered",startedAt:v.t0,endedAt:v.t1,duration:Math.round((v.t1-v.t0)/1000),recording:path});
 }
-async function saveRec(oid,blob,mt,t0,t1){
+function recFail(oid,t0,t1,why){update(ref(db,"callLogs/"+oid),{storeId:uid,result:"answered",startedAt:t0,endedAt:t1,duration:Math.round((t1-t0)/1000),recError:String(why).slice(0,120)}).catch(()=>{})}
+async function saveRec(oid,blob,mt,t0,t1){let lastErr=null;
  const v={k:oid+"_"+t0,oid,blob,mt,t0,t1};
  await idbPut(v);
- for(let i=0;i<3;i++){try{await upRec(v);await idbDel(v.k);return}catch(e){await new Promise(r=>setTimeout(r,3000*(i+1)))}}
+ for(let i=0;i<3;i++){try{await upRec(v);await idbDel(v.k);return}catch(e){lastErr=e;await new Promise(r=>setTimeout(r,3000*(i+1)))}}
+ recFail(oid,t0,t1,(lastErr&&(lastErr.code||lastErr.message))||"upload");
 }
 async function flushRecs(){for(const v of await idbAll()){try{await upRec(v);await idbDel(v.k)}catch(e){}}}
 function addC(c,x){if(c.pc.remoteDescription)c.pc.addIceCandidate(x).catch(()=>{});else c.q.push(x)}
