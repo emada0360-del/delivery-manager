@@ -147,6 +147,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <button type="button" data-t="t4">المتاجر</button>
 <button type="button" data-t="t5">المناطق</button>
 <button type="button" data-t="t6">المالية</button>
+<button type="button" data-t="t12">أرباح المنصة</button>
 <button type="button" data-t="t7">المسؤولون</button>
 <button type="button" data-t="t10">الزبائن</button>
 <button type="button" data-t="t11">تسجيلات المكالمات</button>
@@ -234,6 +235,21 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <input id="cn" placeholder="ملاحظة (اختياري)">
 <button type="button" id="cb" class="grn">تسجيل الكاش</button></div>
 <div class="box"><h3>سجل الكاش والخصومات والمكافآت</h3><div id="fin" class="wrap"></div></div>
+</section>
+
+<section id="t12" class="tab" hidden>
+<div class="grid">
+<div class="box">صافي أرباح المنصة<strong id="pf1">—</strong></div>
+<div class="box">ديون المنصة للمتاجر الآجلة<strong id="pf2">0</strong></div>
+<div class="box">مسدَّد للمتاجر<strong id="pf3">0</strong></div>
+<div class="box">أرباح تم تصفيرها<strong id="pf4">—</strong></div>
+</div>
+<div class="box"><h3>إجراءات</h3>
+<p class="sub">التصفير يُسجَّل في السجل بالتاريخ والوقت ولا يمسح الطلبات.</p>
+<div class="row2"><button type="button" data-szall="1" class="org">تصفير ديون المتاجر</button><button type="button" data-pzero="1" class="red">تصفير الأرباح</button></div>
+<button type="button" id="btnToggleProfit2" class="gray">إظهار / إخفاء الأرباح</button></div>
+<div class="box"><h3>ديون المتاجر الآجلة</h3><div id="pfStores" class="wrap"></div></div>
+<div class="box"><h3>التفاصيل المالية (الأحدث أولاً)</h3><div id="pfLedger" class="wrap"></div></div>
 </section>
 
 <section id="t7" class="tab" hidden>
@@ -641,9 +657,53 @@ const getDebt=id=>{
   const paid = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="cash_received").reduce((s,f)=>s+(Number(f.amount)||0),0);
   const ded = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="deduction").reduce((s,f)=>s+(Number(f.amount)||0),0);
   const bon = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="bonus").reduce((s,f)=>s+(Number(f.amount)||0),0);
-  return live + archived + ded - bon - paid;
+  return live + archived + ded - bon - paid + holdDef(id);
 };
 const archCount=id=>Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="archive").reduce((s,f)=>s+(Number(f.count)||0),0);
+// ---- المتاجر الآجلة: الإدارة تدفع للمتجر كل N يوم والسائق ما يدفع له كاش ----
+const dealPay=o=>Math.max(0,Math.round((Number(o.itemPrice)||0)-(Number(o.storeCommission)||0)));
+const finSum=(id,type)=>Object.values(fin).filter(f=>f&&f.userId===id&&f.type===type).reduce((s,f)=>s+(Number(f.amount)||0),0);
+const holdDef=id=>deliveredOrders(id).filter(o=>o.storeDeferred===true).reduce((s,o)=>s+dealPay(o),0)+finSum(id,"deferred_archive");
+const storeDue=id=>Object.values(orders).filter(o=>o&&o.storeId===id&&o.storeDeferred===true&&o.status==="delivered").reduce((s,o)=>s+dealPay(o),0)+finSum(id,"store_archive")-finSum(id,"store_paid");
+const storeDueDate=(u,id)=>{const last=Math.max(0,...Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="store_paid").map(f=>Number(f.createdAt)||0));return Math.max(last,Number(u.deferSince)||0)+(Number(u.deferDays)||15)*864e5};
+let lastNet=0,lastReset=0;
+function drawProfitTab(){
+ if(!$("pfStores"))return;
+ const stores=Object.entries(users).filter(([id,u])=>u&&u.role==="store"&&(u.deferred===true||storeDue(id)!==0));
+ const totalDue=stores.reduce((s,[id])=>s+storeDue(id),0);
+ const allFin=Object.values(fin).filter(Boolean);
+ const paidAll=allFin.filter(f=>f.type==="store_paid").reduce((s,f)=>s+(Number(f.amount)||0),0);
+ $("pf1").textContent=showProfitFlag?fmt(lastNet)+" د.ع":"***** د.ع";
+ $("pf2").textContent=fmt(totalDue)+" د.ع";
+ $("pf3").textContent=fmt(paidAll)+" د.ع";
+ $("pf4").textContent=showProfitFlag?fmt(lastReset)+" د.ع":"***** د.ع";
+ $("pfStores").innerHTML=table(["المتجر","المستحق عليكم","آخر تسديد","موعد التسديد","إجراءات"],stores.map(([id,u])=>{
+  const due=storeDue(id),lp=Math.max(0,...allFin.filter(f=>f.userId===id&&f.type==="store_paid").map(f=>Number(f.createdAt)||0));
+  const dd=storeDueDate(u,id),left=Math.ceil((dd-Date.now())/864e5);
+  const st=due<=0?'<span class="tag g">لا مستحقات</span>':(left<0?`<span class="tag r">متأخر ${-left} يوم</span>`:(left===0?'<span class="tag y">اليوم</span>':`<span class="tag y">بعد ${left} يوم</span>`));
+  return `<tr><td>${esc(u.name)}${u.deferred===true?"":' <span class="tm">(الآجل موقوف)</span>'}</td><td><b>${fmt(due)} د.ع</b></td><td>${lp?tm(lp):"—"}</td><td>${tm(dd)} ${st}</td>
+  <td><div class="acts"><button type="button" data-dp="${esc(id)}" class="grn" ${due<=0?"disabled":""}>تسديد</button><button type="button" data-sz="${esc(id)}" class="org" ${due<=0?"disabled":""}>تصفير</button></div></td></tr>`}),"لا توجد متاجر آجلة. فعّل الآجل من تبويب المتاجر.");
+ const nm=id=>(users[id]&&users[id].name)||"—";
+ const rows=[];
+ for(const [id,o] of Object.entries(orders)){
+  if(o&&o.storeDeferred===true&&o.status==="delivered")rows.push({t:Number(o.deliveredAt)||Number(o.createdAt)||0,who:o.storeName||nm(o.storeId),kind:"d",amount:dealPay(o),note:`طلب #${id.slice(-6)} · سعر المنتج ${fmt(o.itemPrice)} − عمولة المنصة ${fmt(o.storeCommission)}`});
+ }
+ for(const f of allFin){
+  if(f.type==="store_paid")rows.push({t:Number(f.createdAt)||0,who:f.userName||nm(f.userId),kind:"p",amount:Number(f.amount)||0,note:f.note||"تسديد للمتجر"});
+  else if(f.type==="store_archive")rows.push({t:Number(f.createdAt)||0,who:f.userName||nm(f.userId),kind:"d",amount:Number(f.amount)||0,note:f.note||"طلبات محذوفة"});
+  else if(f.type==="profit_reset")rows.push({t:Number(f.createdAt)||0,who:"المنصة",kind:"z",amount:Number(f.amount)||0,note:f.note||"تصفير أرباح المنصة"});
+ }
+ rows.sort((a,b)=>b.t-a.t);
+ const kt={d:'<span class="tag y">دين على المنصة</span>',p:'<span class="tag g">تسديد للمتجر</span>',z:'<span class="tag b">تصفير أرباح</span>'};
+ const shown=rows.slice(0,200);
+ $("pfLedger").innerHTML=table(["الوقت والتاريخ","الجهة","النوع","المبلغ","التفاصيل"],shown.map(r=>`<tr><td>${tm(r.t)}</td><td>${esc(r.who)}</td><td>${kt[r.kind]}</td><td style="font-weight:700;color:${r.kind==="d"?"var(--brand)":"var(--ok)"}">${r.kind==="d"?"+":"−"}${fmt(r.amount)} د.ع</td><td>${esc(r.note)}</td></tr>`),"لا توجد حركات مالية بعد.")+(rows.length>200?`<p class="tm">يعرض آخر 200 حركة من ${rows.length}.</p>`:"");
+}
+const dealCell=(id,u)=>{
+ if(u.deferred!==true)return `<button type="button" data-df="${esc(id)}" class="blue">تفعيل الآجل</button>`;
+ const due=storeDue(id),left=Math.ceil((storeDueDate(u,id)-Date.now())/864e5);
+ const when=due<=0?'<span class="tm">لا مستحقات</span>':(left<0?`<span class="tag r">متأخر ${-left} يوم</span>`:(left===0?'<span class="tag y">التسديد اليوم</span>':`<span class="tm">التسديد بعد ${left} يوم</span>`));
+ return `<span class="tag y">آجل · كل ${esc(u.deferDays||15)} يوم</span><div><b>${fmt(due)} د.ع</b></div>${when}<div class="acts"><button type="button" data-dp="${esc(id)}" class="grn" ${due<=0?"disabled":""}>تسديد</button><button type="button" data-dx="${esc(id)}" class="org">إيقاف</button></div>`;
+};
 const storeFee=u=>(u&&u.commissionAmount!==undefined&&u.commissionAmount!==null)?u.commissionAmount:(settings.storeCommissionFixed??500);
 
 const table=(h,rows,empty)=>rows.length?`<table><thead><tr>${h.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>{let i=0;return r.replace(/<td(?=[\s>])/g,()=>`<td data-l="${esc(h[i++]||"")}"`)}).join("")}</tbody></table>`:`<p class="empty">${empty}</p>`;
@@ -653,7 +713,7 @@ const mapLink=url=>{if(!url)return "—";const u=String(url).trim();return /^htt
 async function deleteOrdersArchived(map){
  const ids=Object.keys(map||{});
  if(!ids.length)return 0;
- const upd={},agg={};
+ const upd={},agg={},aggD={},aggS={};
  for(const id of ids){
   const o=map[id];
   upd["orders/"+id]=null;
@@ -664,6 +724,7 @@ async function deleteOrdersArchived(map){
   if(o&&o.status==="delivered"){
    const c=orderComm(o);
    const k=o.driverId||"_none";agg[k]=agg[k]||{amount:0,count:0};agg[k].amount+=c;agg[k].count++;
+    if(o.storeDeferred===true){const p=dealPay(o);if(o.driverId)aggD[o.driverId]=(aggD[o.driverId]||0)+p;if(o.storeId)aggS[o.storeId]=(aggS[o.storeId]||0)+p}
   }
  }
  const now=Date.now();
@@ -671,6 +732,8 @@ async function deleteOrdersArchived(map){
   const key=push(ref(db,"finance")).key;
   upd["finance/"+key]={type:"archive",userId:uid,userName:(users[uid]&&users[uid].name)||"",amount:a.amount,count:a.count,note:"عمولات طلبات محذوفة",createdAt:now};
  }
+ for(const [uid,a] of Object.entries(aggD)){const key=push(ref(db,"finance")).key;upd["finance/"+key]={type:"deferred_archive",userId:uid,userName:(users[uid]&&users[uid].name)||"",amount:a,note:"مبالغ متاجر آجلة لطلبات محذوفة",createdAt:now}}
+ for(const [uid,a] of Object.entries(aggS)){const key=push(ref(db,"finance")).key;upd["finance/"+key]={type:"store_archive",userId:uid,userName:(users[uid]&&users[uid].name)||"",amount:a,note:"مستحقات طلبات آجلة محذوفة",createdAt:now}}
  await update(ref(db),upd);
  return ids.length;
 }
@@ -783,12 +846,15 @@ function draw(){
 
  const liveProfit=os.filter(o=>o.status==="delivered").reduce((s,o)=>s+orderComm(o),0);
  const archProfit=Object.values(fin).filter(f=>f&&f.type==="archive").reduce((s,f)=>s+(Number(f.amount)||0),0);
+ const profitReset=Object.values(fin).filter(f=>f&&f.type==="profit_reset").reduce((s,f)=>s+(Number(f.amount)||0),0);
  const adjProfit=Object.values(fin).reduce((s,f)=>f&&f.type==="deduction"?s+(Number(f.amount)||0):f&&f.type==="bonus"?s-(Number(f.amount)||0):s,0);
- $("platformProfit").textContent=showProfitFlag?fmt(liveProfit+archProfit+adjProfit)+" د.ع":"***** د.ع";
+ $("platformProfit").textContent=showProfitFlag?fmt(liveProfit+archProfit+adjProfit-profitReset)+" د.ع":"***** د.ع";
  $("profitNote").textContent=showProfitFlag?`عمولة التوصيل + عمولة المتاجر + الخصومات − المكافآت (منها ${fmt(archProfit)} من طلبات محذوفة)`:"";
 
  drawOrders();
  drawLiveOrders();
+ lastNet=liveProfit+archProfit+adjProfit-profitReset;lastReset=profitReset;
+ drawProfitTab();
  drawCalls();
  syncCust();
  checkForced();
@@ -809,7 +875,7 @@ function draw(){
  // لا نعيد رسم جدول المتاجر وانت تكتب المبلغ
  const ae=document.activeElement;
  if(!(ae&&ae.tagName==="INPUT"&&$("stores").contains(ae))){
- $("stores").innerHTML=table(["الاسم","رقم الدخول","الموقع","عمولة طلب المتجر (د.ع)","عمولة تطبيق الزبون (%)","الإلغاءات","تاريخ التسجيل","إجراءات"],sts.map(([id,u])=>
+ $("stores").innerHTML=table(["الاسم","رقم الدخول","الموقع","عمولة طلب المتجر (د.ع)","عمولة تطبيق الزبون (%)","الإلغاءات","الآجل","تاريخ التسجيل","إجراءات"],sts.map(([id,u])=>
   `<tr><td><b>${esc(u.name)}</b></td><td dir="ltr">${esc(u.username)}</td>
   <td>${mapLink(u.mapUrl)} ${u.mapUrl?(hasLatLng(u.mapUrl)?'<span class="tag g">مقروء</span>':'<span class="tag y">غير مقروء</span>'):'<span class="tag r">لا يوجد</span>'}</td>
   <td><input class="pc" type="number" min="0" step="50" id="pc-${esc(id)}" value="${esc(storeFee(u))}">
@@ -817,6 +883,7 @@ function draw(){
   <td><input class="pc" type="number" min="0" max="100" step="0.5" id="cp-${esc(id)}" placeholder="افتراضي" value="${esc(u.custCommissionPct??"")}">
   <button type="button" data-cp="${esc(id)}" class="grn">حفظ</button></td>
   <td>${cancelStat(id)}</td>
+  <td>${dealCell(id,u)}</td>
   <td>${tm(u.createdAt)}</td>
   <td><button type="button" data-ed="${esc(id)}" data-ek="store" class="blue">تعديل</button>
   <button type="button" data-tg="${esc(id)}" class="${u.isActive===false?"grn":"org"}">${u.isActive===false?"تفعيل":"تعطيل"}</button>
@@ -834,8 +901,8 @@ function draw(){
  $("cd").innerHTML=drs.map(([id,u])=>`<option value="${esc(id)}">${esc(u.name)} (${esc(u.username)})</option>`).join("");
  if(keep)$("cd").value=keep;
 
- $("fin").innerHTML=table(["السائق","النوع","المبلغ","ملاحظة","الوقت"],Object.values(fin).filter(f=>f&&["cash_received","deduction","bonus"].includes(f.type)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(f=>
-  `<tr><td>${esc(f.userName)}</td><td>${f.type==="deduction"?'<span class="tag r">خصم</span>':f.type==="bonus"?'<span class="tag b">مكافأة</span>':'<span class="tag g">كاش مستلم</span>'}</td><td style="color:var(--ok);font-weight:700">${fmt(f.amount)} د.ع</td>
+ $("fin").innerHTML=table(["الاسم","النوع","المبلغ","ملاحظة","الوقت"],Object.values(fin).filter(f=>f&&["cash_received","deduction","bonus","store_paid"].includes(f.type)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(f=>
+  `<tr><td>${esc(f.userName)}</td><td>${f.type==="deduction"?'<span class="tag r">خصم</span>':f.type==="bonus"?'<span class="tag b">مكافأة</span>':f.type==="store_paid"?'<span class="tag y">تسديد للمتجر</span>':'<span class="tag g">كاش مستلم</span>'}</td><td style="color:var(--ok);font-weight:700">${fmt(f.amount)} د.ع</td>
   <td>${esc(f.note)||"—"}</td><td>${tm(f.createdAt)}</td></tr>`),"لا توجد سجلات.");
 
  $("managers").innerHTML=table(["الاسم","البريد الإلكتروني","الصلاحية","تاريخ الإنشاء"],Object.values(users).filter(u=>u&&(u.role==="store_manager"||u.role==="driver_manager")).map(u=>
@@ -846,6 +913,7 @@ function draw(){
 
 document.addEventListener("click",e=>{const b=e.target.closest("button[data-cc]");if(!b)return;run(async()=>{if(!(await showToastConfirm("إلغاء طلب الزبون؟")))return;await update(ref(db,"customerOrders/"+b.dataset.cc),{status:"cancelled"});say("تم إلغاء طلب الزبون.")})});
 $("btnToggleProfit").onclick=()=>{showProfitFlag=!showProfitFlag;draw()};
+$("btnToggleProfit2").onclick=()=>{showProfitFlag=!showProfitFlag;draw()};
 
 $("btnPrintAreas").onclick=()=>{
   $("printDate").textContent="تاريخ التقرير: "+new Date().toLocaleString("ar-IQ");
@@ -1027,7 +1095,7 @@ $("editForm").onsubmit=e=>{e.preventDefault();run(async()=>{
 document.addEventListener("click",e=>{
  const b=e.target.closest("button");if(!b||b.disabled||b.type==="submit")return;const d=b.dataset;
  if(d.ed){openEdit(d.ek,d.ed);return}
- if(!(d.ss||d.tg||d.ta||d.pc||d.cp||d.zp||d.ded||d.bon||d.cra||d.crr||d.del))return;
+ if(!(d.ss||d.tg||d.ta||d.pc||d.cp||d.zp||d.ded||d.bon||d.cra||d.crr||d.del||d.df||d.dx||d.dp||d.sz||d.szall||d.pzero))return;
  run(async()=>{
   if(d.ss){
     if(await showToastConfirm("تغيير حالة الطلب؟")){
@@ -1090,6 +1158,49 @@ document.addEventListener("click",e=>{
   }
   else if(d.crr){
     if(await showToastConfirm("رفض طلب الإلغاء؟")){await update(ref(db),{["orders/"+d.crr+"/cancelRequest/state"]:"rejected"});say("تم رفض طلب الإلغاء.")}
+  }
+  else if(d.df){
+    const u=users[d.df];
+    const raw=prompt(`عدد أيام التسديد للمتجر "${u.name}" (مثلاً 15):`,String(u.deferDays||15));
+    if(raw===null)return;
+    const n=Number(raw);
+    if(!Number.isInteger(n)||n<1||n>365)throw Error("عدد الأيام لازم رقم صحيح بين 1 و 365.");
+    await update(ref(db,"users/"+d.df),{deferred:true,deferDays:n,deferSince:Date.now()});
+    say("تم تفعيل الآجل. يسري على الطلبات الجديدة فقط.");
+  }
+  else if(d.dx){
+    const u=users[d.dx];
+    if(storeDue(d.dx)>0)throw Error("على الإدارة مستحقات لهذا المتجر ("+fmt(storeDue(d.dx))+" د.ع). سدّدها أولاً.");
+    if(await showToastConfirm(`إيقاف الآجل للمتجر "${u.name}"؟ الطلبات الجديدة ترجع للدفع كاش.`)){
+      await update(ref(db,"users/"+d.dx),{deferred:false});say("تم إيقاف الآجل.");
+    }
+  }
+  else if(d.dp){
+    const due=storeDue(d.dp);if(due<=0)return say("لا توجد مستحقات.");
+    const raw=prompt(`مبلغ التسديد للمتجر "${users[d.dp].name}" (المستحق ${fmt(due)} د.ع):`,String(due));
+    if(raw===null)return;
+    const amount=Number(raw);
+    if(!Number.isSafeInteger(amount)||amount<=0||amount>due)throw Error("المبلغ غير صحيح، ولازم ما يتجاوز المستحق.");
+    const note=(prompt("ملاحظة (اختياري):")||"").trim();
+    await push(ref(db,"finance"),{type:"store_paid",userId:d.dp,userName:users[d.dp].name,amount,note,createdAt:Date.now()});
+    say("تم تسجيل التسديد للمتجر.");
+  }
+  else if(d.sz||d.szall){
+    const ids=d.szall?Object.keys(users).filter(id=>users[id]&&users[id].role==="store"&&storeDue(id)>0):[d.sz];
+    const tot=ids.reduce((s,id)=>s+storeDue(id),0);
+    if(!ids.length||tot<=0)return say("لا توجد ديون لتصفيرها.");
+    if(await showToastConfirm(d.szall?`تصفير ديون ${ids.length} متجر بمجموع ${fmt(tot)} د.ع؟ يعني تم تسديدها كاملة.`:`تصفير دين المتجر "${users[d.sz].name}" (${fmt(tot)} د.ع)؟ يعني تم تسديده كاملاً.`)){
+      const upd={},now=Date.now();
+      for(const id of ids){upd["finance/"+push(ref(db,"finance")).key]={type:"store_paid",userId:id,userName:users[id].name,amount:storeDue(id),note:"تصفير الديون",createdAt:now}}
+      await update(ref(db),upd);say("تم تصفير الديون.");
+    }
+  }
+  else if(d.pzero){
+    if(!(lastNet>0))return say("لا توجد أرباح لتصفيرها.");
+    if(await showToastConfirm(`تصفير أرباح المنصة (${fmt(lastNet)} د.ع)؟ يُسجَّل كسحب أرباح ويبقى في السجل.`)){
+      await push(ref(db,"finance"),{type:"profit_reset",userId:"_platform",userName:"المنصة",amount:lastNet,note:"تصفير أرباح المنصة",createdAt:Date.now()});
+      say("تم تصفير الأرباح.");
+    }
   }
   else if(d.zp){ await resetWallet(d.zp); }
   else if(d.del){

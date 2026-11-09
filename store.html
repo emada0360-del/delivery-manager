@@ -757,7 +757,7 @@ async function confirmCustomerOrder(id,p,mins){
  const note="طلب من تطبيق الزبون"+(cl?" - موقع الزبون: https://www.google.com/maps?q="+cl:"");
  const km=tf.km!=null?tf.km:null;
  await update(ref(db),{
-  ["orders/"+id]:{storeId:uid,storeName:store.name,storePhone:storePhoneOf(),areaId:"customer-app",area:"زبون التطبيق"+(km!=null?" · "+Number(km).toFixed(1)+" كم":""),...(km!=null?{distanceKm:Number(km)}:{}),itemPrice:p,deliveryFee:fee,customerTotal:p+fee,storeCommission:com,amountToReceive:p-com,storeMapUrl:store.mapUrl||"",status:"preparing",prepMinutes:pm,prepReadyAt:now+pm*60000,createdAt:now,customerOrder:true,orderType:"customer",customerOrderId:id},
+  ["orders/"+id]:{storeId:uid,storeName:store.name,storePhone:storePhoneOf(),areaId:"customer-app",area:"زبون التطبيق"+(km!=null?" · "+Number(km).toFixed(1)+" كم":""),...(km!=null?{distanceKm:Number(km)}:{}),itemPrice:p,deliveryFee:fee,customerTotal:p+fee,storeCommission:com,amountToReceive:p-com,...(store.deferred===true?{storeDeferred:true}:{}),storeMapUrl:store.mapUrl||"",status:"preparing",prepMinutes:pm,prepReadyAt:now+pm*60000,createdAt:now,customerOrder:true,orderType:"customer",customerOrderId:id},
   ["orderPrivate/"+id]:{storeId:uid,note},
   ["customerOrders/"+id+"/price"]:p,["customerOrders/"+id+"/priceAt"]:now,["customerOrders/"+id+"/status"]:"preparing"
  });
@@ -981,7 +981,7 @@ $("btnCreate").onclick=async()=>{
    ["orders/"+key]:{
     storeId:uid, storeName:store.name, storePhone:storePhoneOf(),
     areaId:aId, area:a.name, itemPrice:p, deliveryFee:fee, customerTotal:p+fee,
-    storeCommission:storeCom, amountToReceive:Math.max(0,p-storeCom), storeMapUrl:store.mapUrl||"",
+    storeCommission:storeCom, amountToReceive:Math.max(0,p-storeCom), ...(store.deferred===true?{storeDeferred:true}:{}), storeMapUrl:store.mapUrl||"",
     status:"preparing", prepMinutes:15, prepReadyAt:now+15*60000, createdAt:now, orderType:"store"
    },
    ["orderPrivate/"+key]:{ storeId:uid, customerPhone:ph, ...(cn?{customerName:cn}:{}), ...(nt?{note:nt}:{}) }

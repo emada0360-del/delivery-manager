@@ -692,11 +692,11 @@ function __main(){
    if(o&&o.status==="delivered"){
     n++;
     const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommissionFixed??settings.storeCommission??500));
-    d+=Math.round(Number(o.platformDeliveryCommission)||0)+Math.round(sc);
+    d+=Math.round(Number(o.platformDeliveryCommission)||0)+Math.round(sc)+(o.storeDeferred===true?Math.max(0,Math.round((Number(o.itemPrice)||0)-sc)):0);
     if(Number(o.deliveredAt)>=t0)tp+=Math.round(Number(o.driverProfit)||0);
    }
   }
-  for(const id in finance){const f=finance[id];if(!f)continue;const am=Math.round(Number(f.amount)||0);if(f.type==="cash_received"||f.type==="bonus")d-=am;else if(f.type==="deduction"||f.type==="archive"){d+=am;if(f.type==="archive")n+=Number(f.count)||0}}
+  for(const id in finance){const f=finance[id];if(!f)continue;const am=Math.round(Number(f.amount)||0);if(f.type==="cash_received"||f.type==="bonus")d-=am;else if(f.type==="deduction"||f.type==="archive"){d+=am;if(f.type==="archive")n+=Number(f.count)||0}else if(f.type==="deferred_archive")d+=am}
   if(d<0)d=0;debt=d;
   $("statDone").textContent=n;$("statDebt").textContent=fmt(d)+" د.ع";$("statProfit").textContent=fmt(tp)+" د.ع";
   $("warnBox").hidden=d<debtLimit;
@@ -715,16 +715,17 @@ function __main(){
  }
  function finBox(o){
   const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommissionFixed??settings.storeCommission??500));
-  const fee=Number(o.deliveryFee)||0,pc=Math.round(fee*PC()),payStore=Math.round((Number(o.itemPrice)||0)-sc),collect=Math.round(Number(o.customerTotal)||0),profit=Math.round(fee-pc);
+  const def=o.storeDeferred===true,fee=Number(o.deliveryFee)||0,pc=Math.round(fee*PC()),payStore=Math.round((Number(o.itemPrice)||0)-sc),collect=Math.round(Number(o.customerTotal)||0),profit=Math.round(fee-pc);
   return `<div class="fin-box">
-   <div class="fin-row f-pay"><span>تدفع للمتجر:</span><b>${fmt(payStore)} د.ع</b></div>
+   ${def?`<div class="fin-row f-pay"><span>المتجر آجل:</span><b>لا تدفع له</b></div>`:`<div class="fin-row f-pay"><span>تدفع للمتجر:</span><b>${fmt(payStore)} د.ع</b></div>`}
    <div class="fin-row f-get"><span>تستلم من الزبون:</span><b>${fmt(collect)} د.ع</b></div>
    <div class="fin-row f-profit"><span>ربحك الصافي (الكروة):</span><b>${fmt(profit)} د.ع</b></div>
   </div>
   <div class="debt-box">
    <div class="fin-row" style="margin-bottom:5px"><span>عمولة المنصة (${+(PC()*100).toFixed(1)}%):</span><b>${fmt(pc)} د.ع</b></div>
    <div class="fin-row" style="margin-bottom:5px"><span>عمولة المتجر (ثابتة):</span><b>${fmt(sc)} د.ع</b></div>
-   <div class="fin-row"><span>سيضاف لدينك:</span><b>${fmt(pc+sc)} د.ع</b></div>
+   ${def?`<div class="fin-row" style="margin-bottom:5px"><span>مبلغ المتجر الآجل (تسلّمه للإدارة):</span><b>${fmt(payStore)} د.ع</b></div>`:""}
+    <div class="fin-row"><span>سيضاف لدينك:</span><b>${fmt(pc+sc+(def?payStore:0))} د.ع</b></div>
   </div>`;
  }
  function getDist(a,b,c,d){
