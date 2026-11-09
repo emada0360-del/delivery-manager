@@ -694,7 +694,7 @@ async function dial(oid){
   ui("جارٍ الاتصال بالمطعم...",[["إنهاء",hangup]]);
   const o=await c.pc.createOffer();await c.pc.setLocalDescription(o);
   await set(ref(db,`calls/${oid}/offer`),{type:o.type,sdp:o.sdp});
-  c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(a&&!c.pc.remoteDescription){await c.pc.setRemoteDescription(a);flush(c)}}));
+  c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(a&&call===c&&!c.pc.remoteDescription){try{await c.pc.setRemoteDescription(a);flush(c)}catch(e){}}}));
   await update(ref(db,"customerOrders/"+oid),{ring:Date.now()});
   setTimeout(()=>{if(call&&call.oid===oid&&call.pc.connectionState!=="connected")hangup()},45000);
  }catch(e){closeCall(true);alert("تعذر بدء المكالمة: "+(e.name==="NotAllowedError"?"اسمح باستخدام المايكروفون":e.message))}
@@ -702,14 +702,15 @@ async function dial(oid){
 async function answerCall(oid){
  if(call)return;ring(false);
  try{
-  const off=(await get(ref(db,`calls/${oid}/offer`))).val();
-  if(!off){ui("");return}
-  const c=await openCall(oid,"r");ui("جارٍ الربط...");
-  await c.pc.setRemoteDescription(off);flush(c);
-  const a=await c.pc.createAnswer();await c.pc.setLocalDescription(a);
+  const [os,es]=await Promise.all([get(ref(db,`calls/${oid}/offer`)),get(ref(db,`calls/${oid}/ended`))]);
+  const off=os.val();
+  if(!off||es.val()){ui("انتهت المكالمة قبل الرد",[["حسناً",()=>ui("")]]);return}
+  const c=await openCall(oid,"r");if(call!==c)return;ui("جارٍ الربط...");
+  await c.pc.setRemoteDescription(off);if(call!==c)return;flush(c);
+  const a=await c.pc.createAnswer();if(call!==c)return;await c.pc.setLocalDescription(a);if(call!==c)return;
   await set(ref(db,`calls/${oid}/answer`),{type:a.type,sdp:a.sdp});
   const ans=Date.now();set(ref(db,`calls/${oid}/answeredAt`),ans).catch(()=>{});update(ref(db,"customerOrders/"+oid),{callAnswered:true,callAnsweredAt:ans}).catch(()=>{});
- }catch(e){closeCall(true);const den=e&&(e.name==="NotAllowedError"||/denied/i.test(e.message||""));alert(den?"المايكروفون غير مسموح للتطبيق. فعّله من: إعدادات الهاتف ← التطبيقات ← تطبيق المتجر ← الأذونات ← الميكروفون ← سماح. الحين اكتب السعر وأرسل الطلب.":"تعذر الرد: "+e.message);if(den)decideUI(oid)}
+ }catch(e){const gone=!call||/closed/i.test((e&&e.message)||"");closeCall(true);const den=e&&(e.name==="NotAllowedError"||/denied/i.test(e.message||""));if(gone&&!den){ui("انتهت المكالمة قبل الرد",[["حسناً",()=>ui("")]]);return}alert(den?"المايكروفون غير مسموح للتطبيق. فعّله من: إعدادات الهاتف ← التطبيقات ← تطبيق المتجر ← الأذونات ← الميكروفون ← سماح. الحين اكتب السعر وأرسل الطلب.":"تعذر الرد: "+e.message);if(den)decideUI(oid)}
 }
 function hangup(){if(call)set(ref(db,`calls/${call.oid}/ended`),Date.now()).catch(()=>{});closeCall()}
 function closeCall(quiet){

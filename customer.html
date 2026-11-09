@@ -479,7 +479,7 @@ async function dial(oid){
   const o=await c.pc.createOffer();await c.pc.setLocalDescription(o);
   await set(ref(db,`calls/${oid}/offer`),{type:o.type,sdp:o.sdp});
    c.un.push(onValue(ref(db,`calls/${oid}/busy`),s=>{if(s.val())onBusy(oid)}));
-  c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(a&&!c.pc.remoteDescription){await c.pc.setRemoteDescription(a);flush(c)}}));
+  c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(a&&call===c&&!c.pc.remoteDescription){try{await c.pc.setRemoteDescription(a);flush(c)}catch(e){}}}));
   await update(ref(db,"customerOrders/"+oid),{ring:serverTimestamp()});
   setTimeout(()=>{if(call&&call.oid===oid&&call.pc.connectionState!=="connected")hangup()},45000);
  }catch(e){closeCall(true);alert("تعذر بدء المكالمة: "+(e.name==="NotAllowedError"?"اسمح باستخدام المايكروفون":e.message))}
@@ -487,13 +487,14 @@ async function dial(oid){
 async function answerCall(oid){
  if(call)return;ring(false);
  try{
-  const off=(await get(ref(db,`calls/${oid}/offer`))).val();
-  if(!off){ui("");return}
-  const c=await openCall(oid,"r");ui("جارٍ الربط...");
-  await c.pc.setRemoteDescription(off);flush(c);
-  const a=await c.pc.createAnswer();await c.pc.setLocalDescription(a);
+  const [os,es]=await Promise.all([get(ref(db,`calls/${oid}/offer`)),get(ref(db,`calls/${oid}/ended`))]);
+  const off=os.val();
+  if(!off||es.val()){ui("انتهت المكالمة قبل الرد",[["حسناً",()=>ui("")]]);return}
+  const c=await openCall(oid,"r");if(call!==c)return;ui("جارٍ الربط...");
+  await c.pc.setRemoteDescription(off);if(call!==c)return;flush(c);
+  const a=await c.pc.createAnswer();if(call!==c)return;await c.pc.setLocalDescription(a);if(call!==c)return;
   await set(ref(db,`calls/${oid}/answer`),{type:a.type,sdp:a.sdp});
- }catch(e){closeCall(true);alert("تعذر الرد: "+e.message)}
+ }catch(e){const gone=!call||/closed/i.test((e&&e.message)||"");closeCall(true);if(gone){ui("انتهت المكالمة قبل الرد",[["حسناً",()=>ui("")]]);return}alert("تعذر الرد: "+e.message)}
 }
 function busyTone(){try{const a=new (window.AudioContext||window.webkitAudioContext)();[0,.5,1].forEach(t=>{const o=a.createOscillator(),g=a.createGain();o.frequency.value=425;g.gain.value=.3;o.connect(g);g.connect(a.destination);o.start(a.currentTime+t);o.stop(a.currentTime+t+.3)});setTimeout(()=>{try{a.close()}catch(e){}},1800)}catch(e){}}
 function sayBusy(){try{if(window.speechSynthesis){const u=new SpeechSynthesisUtterance("المتجر مشغول، حاول الاتصال مرة أخرى");u.lang="ar-SA";speechSynthesis.cancel();speechSynthesis.speak(u)}}catch(e){}}
