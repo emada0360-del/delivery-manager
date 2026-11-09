@@ -316,10 +316,27 @@ let restsLoaded=false,filt="all",curTab="home",firstSt=true;const lastSt={};
 
 // ===== مكالمة صوتية داخل التطبيق (WebRTC + Firebase للإشارات) =====
 async function iceServers(){
- const EX_U="000000002109565717",EX_P="9KWEX2Wj/WDdKMDTubxNjONG1RM=";
- const ex=[{urls:"turn:free.expressturn.com:3478",username:EX_U,credential:EX_P},{urls:"turn:free.expressturn.com:3478?transport=tcp",username:EX_U,credential:EX_P}];
- return [...ex,{urls:"stun:free.expressturn.com:3478"},{urls:"stun:stun.l.google.com:19302"}];
+ // Metered (baqubah-delivery) أولاً، وExpressTURN احتياطاً
+ if(iceCache&&Date.now()-iceAt<600000)return iceCache;
+ const MU="0f46505186311035bcd6abe4",MC="jOQQDrOES5mQfiH7",EX_U="000000002109565717",EX_P="9KWEX2Wj/WDdKMDTubxNjONG1RM=";
+ iceCache=[
+  {urls:"stun:stun.relay.metered.ca:80"},
+  {urls:"turn:global.relay.metered.ca:80",username:MU,credential:MC},
+  {urls:"turn:global.relay.metered.ca:80?transport=tcp",username:MU,credential:MC},
+  {urls:"turn:global.relay.metered.ca:443",username:MU,credential:MC},
+  {urls:"turns:global.relay.metered.ca:443?transport=tcp",username:MU,credential:MC},
+  {urls:"turn:free.expressturn.com:3478",username:EX_U,credential:EX_P},
+  {urls:"turn:free.expressturn.com:3478?transport=tcp",username:EX_U,credential:EX_P},
+  {urls:"stun:stun.l.google.com:19302"}
+ ];
+ iceAt=Date.now();return iceCache;
 }
+let iceCache=null,iceAt=0,srvOff=0;
+// فرق ساعة الجهاز عن ساعة السيرفر: يمنع ضياع الرنّة إذا ساعة أحد الهاتفين غير مضبوطة
+try{onValue(ref(db,".info/serverTimeOffset"),s=>{srvOff=Number(s.val())||0})}catch(e){}
+const srvNow=()=>Date.now()+srvOff;
+// تحسين الصوت (Opus): تصحيح أخطاء الشبكة + معدل ثابت + مونو
+function tuneSdp(s){try{const m=/a=rtpmap:(\d+) opus\/48000\/2/.exec(s);if(!m)return s;return s.replace(new RegExp("(a=fmtp:"+m[1]+" )(.*)"),(x,a,b)=>a+b.replace(/;?(useinbandfec|maxaveragebitrate|stereo)=\d+/g,"")+";useinbandfec=1;maxaveragebitrate=32000;stereo=0")}catch(e){return s}}
 let call=null,onCallEnd=()=>{};
 let spk=false,callName="",callTick=null,wl=null,nearNow=false,proxOn=false,proxSensor=null,nativeLis=false;
 const callAudio=()=>{try{return window.Capacitor.Plugins.CallAudio||null}catch(e){return null}};
@@ -423,8 +440,8 @@ function callScreen(){
  d.querySelector("#csName").textContent=nm;
  d.classList.toggle("live",live);
  const st=d.querySelector("#csSt");
- if(live){if(!st.querySelector("#csTm"))st.innerHTML='<span id="csTm"></span>';st.querySelector("#csTm").textContent=fmtT(Math.floor((Date.now()-call.t0)/1000))}
- else st.innerHTML='جارٍ الاتصال<span class="dots"></span>';
+ if(live&&!call.recon){if(!st.querySelector("#csTm"))st.innerHTML='<span id="csTm"></span>';st.querySelector("#csTm").textContent=fmtT(Math.floor((Date.now()-call.t0)/1000))}
+ else st.innerHTML=(call&&call.recon?'جارٍ إعادة الاتصال':call&&call.stage==="ring"?'يرن':call&&call.stage==="link"?'جارٍ الربط':'جارٍ الاتصال')+'<span class="dots"></span>';
  d.querySelector("#csSpk").classList.toggle("on",spk);
  d.querySelector("#csSpkIc").innerHTML=IC_SPK(spk);
 }
@@ -457,29 +474,60 @@ function ring(on){
 function addC(c,x){if(c.pc.remoteDescription)c.pc.addIceCandidate(x).catch(()=>{});else c.q.push(x)}
 function flush(c){c.q.splice(0).forEach(x=>c.pc.addIceCandidate(x).catch(()=>{}))}
 async function openCall(oid,role){
- const stream=await navigator.mediaDevices.getUserMedia({audio:true});
- const pc=new RTCPeerConnection({iceServers:await iceServers()});
- const c=call={oid,role,pc,stream,un:[],q:[]};hookNative();
+ const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+ const pc=new RTCPeerConnection({iceServers:await iceServers(),bundlePolicy:"max-bundle",iceCandidatePoolSize:2});
+ const au=new Audio();au.autoplay=true;au.playsInline=true;
+ const c=call={oid,role,pc,stream,au,un:[],q:[],n:0,ansN:-1,stage:"call",up:false,recon:false,iceTry:0};hookNative();
  stream.getTracks().forEach(t=>pc.addTrack(t,stream));
- const au=new Audio();au.autoplay=true;
  pc.ontrack=e=>{au.srcObject=e.streams[0];au.play().catch(()=>{})};
  const mine=role==="c"?"cC":"rC",theirs=role==="c"?"rC":"cC";
  pc.onicecandidate=e=>{if(e.candidate)push(ref(db,`calls/${oid}/${mine}`),e.candidate.toJSON())};
- pc.onconnectionstatechange=()=>{if(pc.connectionState==="connected")connectedUI();if(pc.connectionState==="failed"){ui("تعذر الاتصال بسبب الشبكة",[["إغلاق",hangup]])}};
+ // مراقبة الاتصال مثل واتساب: انقطاع مؤقت => "جارٍ إعادة الاتصال" + إعادة ICE تلقائية بدون إنهاء المكالمة
+ const upd=()=>{
+  if(call!==c)return;
+  const st=pc.connectionState,ic=pc.iceConnectionState;
+  const ok=st==="connected"||((ic==="connected"||ic==="completed")&&st!=="failed"&&st!=="closed");
+  if(ok){
+   clearTimeout(c.dT);clearTimeout(c.fT);c.iceTry=0;
+   const was=c.recon;c.recon=false;
+   if(!c.up){c.up=true;try{au.play().catch(()=>{})}catch(e){}connectedUI()}else if(was)callScreen();
+   return}
+  const bad=st==="failed"||ic==="failed",dis=st==="disconnected"||ic==="disconnected";
+  if(!bad&&!dis)return;
+  if(c.up&&!c.recon){c.recon=true;callScreen()}
+  if(role==="c"){clearTimeout(c.dT);c.dT=setTimeout(()=>restartIce(c),bad?0:2500)}
+  clearTimeout(c.fT);c.fT=setTimeout(()=>{if(call===c&&pc.connectionState!=="connected"){ui("تعذر الاتصال بسبب الشبكة",[["إغلاق",hangup]])}},c.up?20000:15000);
+ };
+ pc.onconnectionstatechange=upd;pc.oniceconnectionstatechange=upd;
  c.un.push(onChildAdded(ref(db,`calls/${oid}/${theirs}`),s=>addC(c,s.val())));
  c.un.push(onValue(ref(db,`calls/${oid}/ended`),s=>{if(s.val())closeCall()}));
  return c;
 }
+// إعادة التفاوض (ICE restart) يبدؤها المتصل فقط؛ الطرف الآخر يردّ تلقائياً
+async function restartIce(c){
+ if(!c||call!==c||c.role!=="c"||c.restarting||c.iceTry>=6)return;
+ c.restarting=true;
+ try{
+  c.iceTry++;c.n++;
+  const o=await c.pc.createOffer({iceRestart:true});o.sdp=tuneSdp(o.sdp);
+  await c.pc.setLocalDescription(o);
+  await set(ref(db,`calls/${c.oid}/offer`),{type:o.type,sdp:o.sdp,n:c.n});
+ }catch(e){}
+ c.restarting=false;
+ clearTimeout(c.dT);c.dT=setTimeout(()=>{if(call===c&&c.pc.connectionState!=="connected")restartIce(c)},6000);
+}
+window.addEventListener("online",()=>{if(call&&call.role==="c"&&call.up){call.iceTry=0;restartIce(call)}});
 async function dial(oid){
  if(call)return;
  try{
   await set(ref(db,"calls/"+oid),null);
   const c=await openCall(oid,"c");
   callName="المتجر";callScreen();get(ref(db,"customerOrders/"+oid+"/restaurantName")).then(x=>{if(x.val()){callName=String(x.val());if(call&&call.oid===oid)callScreen()}}).catch(()=>{});
-  const o=await c.pc.createOffer();await c.pc.setLocalDescription(o);
+  const o=await c.pc.createOffer();o.sdp=tuneSdp(o.sdp);await c.pc.setLocalDescription(o);
   await set(ref(db,`calls/${oid}/offer`),{type:o.type,sdp:o.sdp});
    c.un.push(onValue(ref(db,`calls/${oid}/busy`),s=>{if(s.val())onBusy(oid)}));
-  c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(a&&call===c&&!c.pc.remoteDescription){try{await c.pc.setRemoteDescription(a);flush(c)}catch(e){}}}));
+  c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(!a||call!==c)return;const n=a.n||0;if(n!==c.n||n<=c.ansN)return;c.ansN=n;try{await c.pc.setRemoteDescription({type:a.type,sdp:a.sdp});flush(c);if(n===0&&!c.up){c.stage="link";callScreen()}}catch(e){c.ansN=n-1}}));
+  c.un.push(onValue(ref(db,`calls/${oid}/ringing`),s=>{if(s.val()&&call===c&&!c.up&&c.stage==="call"){c.stage="ring";callScreen()}}));
   await update(ref(db,"customerOrders/"+oid),{ring:serverTimestamp()});
   setTimeout(()=>{if(call&&call.oid===oid&&call.pc.connectionState!=="connected")hangup()},45000);
  }catch(e){closeCall(true);alert("تعذر بدء المكالمة: "+(e.name==="NotAllowedError"?"اسمح باستخدام المايكروفون":e.message))}
@@ -492,8 +540,9 @@ async function answerCall(oid){
   if(!off||es.val()){ui("انتهت المكالمة قبل الرد",[["حسناً",()=>ui("")]]);return}
   const c=await openCall(oid,"r");if(call!==c)return;ui("جارٍ الربط...");
   await c.pc.setRemoteDescription(off);if(call!==c)return;flush(c);
-  const a=await c.pc.createAnswer();if(call!==c)return;await c.pc.setLocalDescription(a);if(call!==c)return;
-  await set(ref(db,`calls/${oid}/answer`),{type:a.type,sdp:a.sdp});
+  const a=await c.pc.createAnswer();a.sdp=tuneSdp(a.sdp);if(call!==c)return;await c.pc.setLocalDescription(a);if(call!==c)return;
+  c.n=off.n||0;await set(ref(db,`calls/${oid}/answer`),{type:a.type,sdp:a.sdp,n:c.n});
+  c.un.push(onValue(ref(db,`calls/${oid}/offer`),async s=>{const o=s.val();if(!o||call!==c||(o.n||0)<=c.n)return;c.n=o.n;try{await c.pc.setRemoteDescription({type:o.type,sdp:o.sdp});flush(c);const a2=await c.pc.createAnswer();a2.sdp=tuneSdp(a2.sdp);await c.pc.setLocalDescription(a2);await set(ref(db,`calls/${oid}/answer`),{type:a2.type,sdp:a2.sdp,n:c.n})}catch(e){}}));
  }catch(e){const gone=!call||/closed/i.test((e&&e.message)||"");closeCall(true);if(gone){ui("انتهت المكالمة قبل الرد",[["حسناً",()=>ui("")]]);return}alert("تعذر الرد: "+e.message)}
 }
 function busyTone(){try{const a=new (window.AudioContext||window.webkitAudioContext)();[0,.5,1].forEach(t=>{const o=a.createOscillator(),g=a.createGain();o.frequency.value=425;g.gain.value=.3;o.connect(g);g.connect(a.destination);o.start(a.currentTime+t);o.stop(a.currentTime+t+.3)});setTimeout(()=>{try{a.close()}catch(e){}},1800)}catch(e){}}
@@ -506,7 +555,7 @@ function onBusy(oid){
 function hangup(){if(call)set(ref(db,`calls/${call.oid}/ended`),Date.now()).catch(()=>{});closeCall()}
 function closeCall(quiet){
  ring(false);ui("");stopTick();
- if(!call){syncProx();releaseWL();return}const c=call;call=null;if(spk)setSpk(false);syncProx();releaseWL();
+ if(!call){syncProx();releaseWL();return}const c=call;call=null;clearTimeout(c.dT);clearTimeout(c.fT);try{c.au.srcObject=null}catch(e){}if(spk)setSpk(false);syncProx();releaseWL();
  c.un.forEach(f=>{try{f()}catch(e){}});c.stream.getTracks().forEach(t=>t.stop());try{c.pc.close()}catch(e){}
  if(!quiet)onCallEnd(c);
 }
