@@ -451,7 +451,7 @@ jobs:
       - name: Driver background reliability
         if: matrix.role == 'driver'
         run: |
-          for f in native_driver_1.py native_driver_2.py native_driver_3.py; do
+          for f in native_driver_1.py native_driver_2.py native_driver_3.py native_keepalive.py; do
             if [ ! -f "$f" ]; then
               echo "Missing file in repo root: $f"
               exit 1
@@ -460,11 +460,12 @@ jobs:
           python3 native_driver_1.py
           python3 native_driver_2.py
           python3 native_driver_3.py
+          python3 native_keepalive.py driver
 
       - name: Store background reliability
         if: matrix.role == 'store'
         run: |
-          for f in native_store_1.py native_store_2.py native_store_3.py; do
+          for f in native_store_1.py native_store_2.py native_store_3.py native_keepalive.py; do
             if [ ! -f "$f" ]; then
               echo "Missing file in repo root: $f"
               exit 1
@@ -473,6 +474,7 @@ jobs:
           python3 native_store_1.py
           python3 native_store_2.py
           python3 native_store_3.py
+          python3 native_keepalive.py store
 
       - name: Build APK
         run: |
