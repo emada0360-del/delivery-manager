@@ -209,6 +209,27 @@ input,select,textarea{height:40px;padding:0 12px;border-radius:11px;margin:3px 0
 .rbtn.yes{background:#0f9a63}.rbtn.no{background:#d9002f}
 @media(prefers-reduced-motion:reduce){.ringAv{animation:none}}
 </style>
+<style id="csExtra">
+.cs .cs-top{display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px}
+.cs .cs-min{border:0;background:#ffffff1c;color:#fff;border-radius:99px;padding:9px 16px;font:600 13px var(--font);cursor:pointer}
+.cs .cs-mini{display:none}
+.cs-bot{gap:30px!important}
+.cs-ic svg{pointer-events:none}
+.cs.min{inset:0 0 auto 0!important;height:calc(62px + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 14px 0!important;flex-direction:row!important;justify-content:space-between;border-radius:0 0 18px 18px;box-shadow:0 8px 26px #0008;z-index:100001}
+.cs.min>*:not(.cs-mini){display:none!important}
+.cs.min .cs-mini{display:flex;align-items:center;gap:12px;width:100%;height:62px;cursor:pointer}
+.cs-mini b{font-size:20px;font-variant-numeric:tabular-nums;direction:ltr}
+.cs-mini small{flex:1;text-align:right;color:#b8c4d3;font-size:13px}
+.cs-mini button{border:0;border-radius:99px;background:#e5173f;color:#fff;padding:10px 16px;font:600 13px var(--font)}
+</style>
+<style id="swCss">
+.sw{direction:ltr;display:inline-flex;align-items:center;justify-content:flex-end;position:relative;width:104px;height:38px;border-radius:99px;border:0;padding:0 12px;font:700 12.5px var(--font,inherit);color:#fff;background:#d9002f;transition:background .25s;flex:none;cursor:pointer}
+.sw i{position:absolute;top:4px;left:4px;width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:0 2px 6px #0004;transition:transform .25s}
+.sw span{direction:rtl}
+.sw.on{background:#0f9a63;justify-content:flex-start}
+.sw.on i{transform:translateX(66px)}
+.sw[hidden]{display:none}
+</style>
 </head>
 <body>
 
@@ -225,7 +246,7 @@ input,select,textarea{height:40px;padding:0 12px;border-radius:11px;margin:3px 0
 <div id="app" hidden>
 <header>
 <div class="brand"><h2 id="sname">المتجر</h2></div>
-<div style="display:flex;align-items:center;gap:8px"><div class="pill"><i class="dot" id="pulse"></i><b id="onCount">0</b> <span>سائق متصل</span></div><button type="button" id="btnOut" style="background:#ffffff14;padding:6px 12px;border-radius:999px;font-size:12px">خروج</button></div>
+<div style="display:flex;align-items:center;gap:8px"><button type="button" id="stSw" class="sw on" hidden><i></i><span>مفتوح</span></button><button type="button" id="btnOut" style="background:#ffffff14;padding:6px 12px;border-radius:999px;font-size:12px">خروج</button></div>
 </header>
 <main>
 <div id="msg"></div>
@@ -409,7 +430,7 @@ function checkOverdue(){checkReadyAlarm(Object.entries(orders))}
 const countOnline=()=>Object.values(presenceData).filter(x=>x&&x.online===true&&Date.now()-(Number(x.lastSeen)||0)<180000).length;
 function tick(){
  const now=Date.now();
- {const c=countOnline();if(c!==driversOnline){driversOnline=c;$("onCount").textContent=c;$("pulse").className="dot "+(c>0?"":"off")}}
+ 
  document.querySelectorAll(".pr[data-ts]").forEach(e=>{const r=Number(e.dataset.ts)-now;e.textContent=r>0?fmtMS(r):"انتهى الوقت — اضغط جاهز";e.classList.toggle("late",r<=0)});
  document.querySelectorAll(".el[data-ts]").forEach(e=>{e.textContent=fmtAge(now-Number(e.dataset.ts))});
  checkOverdue();
@@ -420,27 +441,10 @@ setInterval(tick,1000);
 // ===== مكالمة صوتية داخل التطبيق (WebRTC + Firebase للإشارات) =====
 // بيانات TURN من Metered (حساب baqubah-delivery)
 async function iceServers(){
- // Metered (baqubah-delivery) أولاً، وExpressTURN احتياطاً
- if(iceCache&&Date.now()-iceAt<600000)return iceCache;
- const MU="0f46505186311035bcd6abe4",MC="jOQQDrOES5mQfiH7",EX_U="000000002109565717",EX_P="9KWEX2Wj/WDdKMDTubxNjONG1RM=";
- iceCache=[
-  {urls:"stun:stun.relay.metered.ca:80"},
-  {urls:"turn:global.relay.metered.ca:80",username:MU,credential:MC},
-  {urls:"turn:global.relay.metered.ca:80?transport=tcp",username:MU,credential:MC},
-  {urls:"turn:global.relay.metered.ca:443",username:MU,credential:MC},
-  {urls:"turns:global.relay.metered.ca:443?transport=tcp",username:MU,credential:MC},
-  {urls:"turn:free.expressturn.com:3478",username:EX_U,credential:EX_P},
-  {urls:"turn:free.expressturn.com:3478?transport=tcp",username:EX_U,credential:EX_P},
-  {urls:"stun:stun.l.google.com:19302"}
- ];
- iceAt=Date.now();return iceCache;
+ const EX_U="000000002109565717",EX_P="9KWEX2Wj/WDdKMDTubxNjONG1RM=";
+ const ex=[{urls:"turn:free.expressturn.com:3478",username:EX_U,credential:EX_P},{urls:"turn:free.expressturn.com:3478?transport=tcp",username:EX_U,credential:EX_P}];
+ return [...ex,{urls:"stun:free.expressturn.com:3478"},{urls:"stun:stun.l.google.com:19302"}];
 }
-let iceCache=null,iceAt=0,srvOff=0;
-// فرق ساعة الجهاز عن ساعة السيرفر: يمنع ضياع الرنّة إذا ساعة أحد الهاتفين غير مضبوطة
-try{onValue(ref(db,".info/serverTimeOffset"),s=>{srvOff=Number(s.val())||0})}catch(e){}
-const srvNow=()=>Date.now()+srvOff;
-// تحسين الصوت (Opus): تصحيح أخطاء الشبكة + معدل ثابت + مونو
-function tuneSdp(s){try{const m=/a=rtpmap:(\d+) opus\/48000\/2/.exec(s);if(!m)return s;return s.replace(new RegExp("(a=fmtp:"+m[1]+" )(.*)"),(x,a,b)=>a+b.replace(/;?(useinbandfec|maxaveragebitrate|stereo)=\d+/g,"")+";useinbandfec=1;maxaveragebitrate=32000;stereo=0")}catch(e){return s}}
 let call=null,onCallEnd=()=>{};
 let callTick=null,callWL=null,nearNow=false,proxOn=false,proxSensor=null,nativeLis=false;
 // ---- حساس القرب: يطفّي الشاشة ويمنع اللمس لما الجوال على الأذن ----
@@ -529,6 +533,8 @@ function callCss(){
  document.head.appendChild(s);
 }
 const callSub=id=>"طلب #"+String(id||"").slice(-5);
+let cMuted=false,cMin=false;
+function applyMute(){try{call&&call.stream&&call.stream.getAudioTracks().forEach(t=>{t.enabled=!cMuted})}catch(e){}}
 function callScreen(){
  callCss();
  const live=!!(call&&call.t0);
@@ -536,21 +542,29 @@ function callScreen(){
  if(!d||d.dataset.mode!=="call"){
   if(d)d.remove();
   d=document.createElement("div");d.id="callUI";d.dataset.mode="call";d.className="cs";
-  d.innerHTML=`<div class="cs-glow"></div>
-<div class="cs-top"><span class="cs-rec"><i></i>هذه المكالمة مسجّلة</span></div>
+  d.innerHTML=`<div class="cs-glow"></div><div class="cs-mini" id="csMini"><b id="csMiniT">--:--</b><small>مكالمة جارية — اضغط للعودة</small><button type="button" id="csMiniEnd">إنهاء</button></div>
+<div class="cs-top"><button type="button" class="cs-min" id="csMin">▾ تصغير</button><span class="cs-rec"><i></i>هذه المكالمة مسجّلة</span></div>
 <div class="cs-mid"><div class="cs-av">${IC_USER}<b></b><b></b></div><div class="cs-name">زبون</div><div class="cs-sub" id="csSub"></div><div class="cs-st" id="csSt"></div></div>
-<div class="cs-bot"><button type="button" class="cs-b" id="csSpk"><span class="cs-ic" id="csSpkIc"></span><em>مكبر الصوت</em></button><button type="button" class="cs-b end" id="csEnd"><span class="cs-ic">${IC_END}</span><em>إنهاء</em></button></div>`;
+<div class="cs-bot"><button type="button" class="cs-b" id="csMute"><span class="cs-ic" id="csMuteIc"></span><em>كتم المايك</em></button><button type="button" class="cs-b" id="csSpk"><span class="cs-ic" id="csSpkIc"></span><em>مكبر الصوت</em></button><button type="button" class="cs-b end" id="csEnd"><span class="cs-ic">${IC_END}</span><em>إنهاء</em></button></div>`;
   document.body.appendChild(d);
   d.querySelector("#csSpk").onclick=()=>{setSpk(!spk);callScreen()};
   d.querySelector("#csEnd").onclick=hangup;
+  d.querySelector("#csMute").onclick=()=>{cMuted=!cMuted;applyMute();callScreen()};
+  d.querySelector("#csMin").onclick=()=>{cMin=true;callScreen()};
+  d.querySelector("#csMini").onclick=e=>{if(e.target.closest("#csMiniEnd"))return hangup();cMin=false;callScreen()};
  }
  d.querySelector("#csSub").textContent=call?callSub(call.oid):"";
  d.classList.toggle("live",live);
  const st=d.querySelector("#csSt");
- if(live&&!call.recon){if(!st.querySelector("#csTm"))st.innerHTML='<span id="csTm"></span>';st.querySelector("#csTm").textContent=fmtT(Math.floor((Date.now()-call.t0)/1000))}
- else st.innerHTML=(call&&call.recon?'جارٍ إعادة الاتصال':'جارٍ الربط')+'<span class="dots"></span>';
+ if(live){if(!st.querySelector("#csTm"))st.innerHTML='<span id="csTm"></span>';st.querySelector("#csTm").textContent=fmtT(Math.floor((Date.now()-call.t0)/1000))}
+ else st.innerHTML='جارٍ الربط<span class="dots"></span>';
  d.querySelector("#csSpk").classList.toggle("on",spk);
  d.querySelector("#csSpkIc").innerHTML=IC_SPK(spk);
+ d.querySelector("#csMute").classList.toggle("on",cMuted);
+ d.querySelector("#csMute em").textContent=cMuted?"إلغاء الكتم":"كتم المايك";
+ d.querySelector("#csMuteIc").innerHTML=`<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>${cMuted?'<path d="M4 4l16 16" stroke="#e5173f" stroke-width="2.6"/>':""}</svg>`;
+ d.classList.toggle("min",cMin);
+ applyMute();
 }
 function stopTick(){clearInterval(callTick);callTick=null}
 function connectedUI(){
@@ -558,7 +572,7 @@ function connectedUI(){
  if(!call.t0)call.t0=Date.now();
  call.connected=true;
  callScreen();
- stopTick();callTick=setInterval(()=>{const e=document.getElementById("csTm");if(e&&call&&call.t0)e.textContent=fmtT(Math.floor((Date.now()-call.t0)/1000))},500);
+ stopTick();callTick=setInterval(()=>{const e=document.getElementById("csTm");if(e&&call&&call.t0){e.textContent=fmtT(Math.floor((Date.now()-call.t0)/1000));const m=document.getElementById("csMiniT");if(m)m.textContent=e.textContent}},500);
  setSpk(spk);acquireWL();
 }
 // رسائل عامة بنفس الشكل العصري
@@ -690,60 +704,29 @@ async function flushRecs(){for(const v of await idbAll()){try{await upRec(v);awa
 function addC(c,x){if(c.pc.remoteDescription)c.pc.addIceCandidate(x).catch(()=>{});else c.q.push(x)}
 function flush(c){c.q.splice(0).forEach(x=>c.pc.addIceCandidate(x).catch(()=>{}))}
 async function openCall(oid,role){
- const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
- const pc=new RTCPeerConnection({iceServers:await iceServers(),bundlePolicy:"max-bundle",iceCandidatePoolSize:2});
- const au=new Audio();au.autoplay=true;au.playsInline=true;
- const c=call={oid,role,pc,stream,au,un:[],q:[],n:0,ansN:-1,stage:"call",up:false,recon:false,iceTry:0};hookNative();
+ const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+ const pc=new RTCPeerConnection({iceServers:await iceServers()});
+ const c=call={oid,role,pc,stream,un:[],q:[]};hookNative();
  stream.getTracks().forEach(t=>pc.addTrack(t,stream));
+ const au=new Audio();au.autoplay=true;
  pc.ontrack=e=>{au.srcObject=e.streams[0];au.play().catch(()=>{})};
  const mine=role==="c"?"cC":"rC",theirs=role==="c"?"rC":"cC";
  pc.onicecandidate=e=>{if(e.candidate)push(ref(db,`calls/${oid}/${mine}`),e.candidate.toJSON())};
- // مراقبة الاتصال مثل واتساب: انقطاع مؤقت => "جارٍ إعادة الاتصال" + إعادة ICE تلقائية بدون إنهاء المكالمة
- const upd=()=>{
-  if(call!==c)return;
-  const st=pc.connectionState,ic=pc.iceConnectionState;
-  const ok=st==="connected"||((ic==="connected"||ic==="completed")&&st!=="failed"&&st!=="closed");
-  if(ok){
-   clearTimeout(c.dT);clearTimeout(c.fT);c.iceTry=0;
-   const was=c.recon;c.recon=false;
-   if(!c.up){c.up=true;try{au.play().catch(()=>{})}catch(e){}setSpk(spk);if(role==="r")startRec(c);connectedUI()}else if(was)callScreen();
-   return}
-  const bad=st==="failed"||ic==="failed",dis=st==="disconnected"||ic==="disconnected";
-  if(!bad&&!dis)return;
-  if(c.up&&!c.recon){c.recon=true;callScreen()}
-  if(role==="c"){clearTimeout(c.dT);c.dT=setTimeout(()=>restartIce(c),bad?0:2500)}
-  clearTimeout(c.fT);c.fT=setTimeout(()=>{if(call===c&&pc.connectionState!=="connected"){ui("تعذر الاتصال بسبب الشبكة",[["إغلاق",hangup]])}},c.up?20000:15000);
- };
- pc.onconnectionstatechange=upd;pc.oniceconnectionstatechange=upd;
+ pc.onconnectionstatechange=()=>{if(pc.connectionState==="connected"){setSpk(spk);connectedUI();if(role==="r")startRec(c)}if(pc.connectionState==="failed"){ui("تعذر الاتصال بسبب الشبكة",[["إغلاق",hangup]])}};
  c.un.push(onChildAdded(ref(db,`calls/${oid}/${theirs}`),s=>addC(c,s.val())));
  c.un.push(onValue(ref(db,`calls/${oid}/ended`),s=>{if(s.val())closeCall()}));
  return c;
 }
-// إعادة التفاوض (ICE restart) يبدؤها المتصل فقط؛ الطرف الآخر يردّ تلقائياً
-async function restartIce(c){
- if(!c||call!==c||c.role!=="c"||c.restarting||c.iceTry>=6)return;
- c.restarting=true;
- try{
-  c.iceTry++;c.n++;
-  const o=await c.pc.createOffer({iceRestart:true});o.sdp=tuneSdp(o.sdp);
-  await c.pc.setLocalDescription(o);
-  await set(ref(db,`calls/${c.oid}/offer`),{type:o.type,sdp:o.sdp,n:c.n});
- }catch(e){}
- c.restarting=false;
- clearTimeout(c.dT);c.dT=setTimeout(()=>{if(call===c&&c.pc.connectionState!=="connected")restartIce(c)},6000);
-}
-window.addEventListener("online",()=>{if(call&&call.role==="c"&&call.up){call.iceTry=0;restartIce(call)}});
 async function dial(oid){
  if(call)return;
  try{
   await set(ref(db,"calls/"+oid),null);
   const c=await openCall(oid,"c");
   ui("جارٍ الاتصال بالمطعم...",[["إنهاء",hangup]]);
-  const o=await c.pc.createOffer();o.sdp=tuneSdp(o.sdp);await c.pc.setLocalDescription(o);
+  const o=await c.pc.createOffer();await c.pc.setLocalDescription(o);
   await set(ref(db,`calls/${oid}/offer`),{type:o.type,sdp:o.sdp});
-  c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(!a||call!==c)return;const n=a.n||0;if(n!==c.n||n<=c.ansN)return;c.ansN=n;try{await c.pc.setRemoteDescription({type:a.type,sdp:a.sdp});flush(c);if(n===0&&!c.up){c.stage="link";callScreen()}}catch(e){c.ansN=n-1}}));
-  c.un.push(onValue(ref(db,`calls/${oid}/ringing`),s=>{if(s.val()&&call===c&&!c.up&&c.stage==="call"){c.stage="ring";callScreen()}}));
-  await update(ref(db,"customerOrders/"+oid),{ring:srvNow()});
+  c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(a&&call===c&&!c.pc.remoteDescription){try{await c.pc.setRemoteDescription(a);flush(c)}catch(e){}}}));
+  await update(ref(db,"customerOrders/"+oid),{ring:Date.now()});
   setTimeout(()=>{if(call&&call.oid===oid&&call.pc.connectionState!=="connected")hangup()},45000);
  }catch(e){closeCall(true);alert("تعذر بدء المكالمة: "+(e.name==="NotAllowedError"?"اسمح باستخدام المايكروفون":e.message))}
 }
@@ -755,16 +738,15 @@ async function answerCall(oid){
   if(!off||es.val()){ui("انتهت المكالمة قبل الرد",[["حسناً",()=>ui("")]]);return}
   const c=await openCall(oid,"r");if(call!==c)return;ui("جارٍ الربط...");
   await c.pc.setRemoteDescription(off);if(call!==c)return;flush(c);
-  const a=await c.pc.createAnswer();a.sdp=tuneSdp(a.sdp);if(call!==c)return;await c.pc.setLocalDescription(a);if(call!==c)return;
-  c.n=off.n||0;await set(ref(db,`calls/${oid}/answer`),{type:a.type,sdp:a.sdp,n:c.n});
-  c.un.push(onValue(ref(db,`calls/${oid}/offer`),async s=>{const o=s.val();if(!o||call!==c||(o.n||0)<=c.n)return;c.n=o.n;try{await c.pc.setRemoteDescription({type:o.type,sdp:o.sdp});flush(c);const a2=await c.pc.createAnswer();a2.sdp=tuneSdp(a2.sdp);await c.pc.setLocalDescription(a2);await set(ref(db,`calls/${oid}/answer`),{type:a2.type,sdp:a2.sdp,n:c.n})}catch(e){}}));
+  const a=await c.pc.createAnswer();if(call!==c)return;await c.pc.setLocalDescription(a);if(call!==c)return;
+  await set(ref(db,`calls/${oid}/answer`),{type:a.type,sdp:a.sdp});
   const ans=Date.now();set(ref(db,`calls/${oid}/answeredAt`),ans).catch(()=>{});update(ref(db,"customerOrders/"+oid),{callAnswered:true,callAnsweredAt:ans}).catch(()=>{});
  }catch(e){const gone=!call||/closed/i.test((e&&e.message)||"");closeCall(true);const den=e&&(e.name==="NotAllowedError"||/denied/i.test(e.message||""));if(gone&&!den){ui("انتهت المكالمة قبل الرد",[["حسناً",()=>ui("")]]);return}alert(den?"المايكروفون غير مسموح للتطبيق. فعّله من: إعدادات الهاتف ← التطبيقات ← تطبيق المتجر ← الأذونات ← الميكروفون ← سماح. الحين اكتب السعر وأرسل الطلب.":"تعذر الرد: "+e.message);if(den)decideUI(oid)}
 }
 function hangup(){if(call)set(ref(db,`calls/${call.oid}/ended`),Date.now()).catch(()=>{});closeCall()}
 function closeCall(quiet){
- curRing=null;ring(false);ui("");stopTick();
- if(!call){syncProx();releaseWL();return}const c=call;call=null;clearTimeout(c.dT);clearTimeout(c.fT);try{c.au.srcObject=null}catch(e){}
+ curRing=null;ring(false);ui("");stopTick();cMuted=false;cMin=false;
+ if(!call){syncProx();releaseWL();return}const c=call;call=null;
  stopRec(c);spk=true;syncProx();releaseWL();try{const sc=storeCall();if(sc&&sc.endCall)sc.endCall().catch(()=>{})}catch(e){}
  c.un.forEach(f=>{try{f()}catch(e){}});c.stream.getTracks().forEach(t=>t.stop());try{c.pc.close()}catch(e){}
  if(!quiet)onCallEnd(c);
@@ -782,11 +764,11 @@ function cq(){
  if(!b){b=document.createElement("div");b.id="cqBar";b.style.cssText="margin:6px 0";document.getElementById("tabs").after(b);b.onclick=e=>{const x=e.target.closest("[data-pr]");if(x)decideUI(x.dataset.pr)}}
  b.innerHTML=need.map(([id])=>`<button data-pr="${esc(id)}" style="width:100%;margin-bottom:6px;background:#0f9a63">📞 طلب زبون #${esc(id.slice(-5))} — اضغط للتحضير أو الإلغاء</button>`).join("");
  for(const [id,o] of need){
-  if(!o.ring||srvNow()-o.ring>=45000)continue;
+  if(!o.ring||Date.now()-o.ring>=45000)continue;
   const key=id+o.ring;if(handled.has(key))continue;
   handled.add(key);
   if(call||(curRing&&curRing!==id)){busyReply(id);continue}
-  ringing=key;curRing=id;ring(true);showIncoming(id);set(ref(db,`calls/${id}/ringing`),srvNow()).catch(()=>{});
+  ringing=key;curRing=id;ring(true);showIncoming(id);
   let un=null;
   un=onValue(ref(db,`calls/${id}/ended`),sn=>{if(sn.val()&&curRing===id&&!call){curRing=null;ring(false);ui("");try{un&&un()}catch(e){}}});
   setTimeout(()=>{try{un&&un()}catch(e){}if(curRing===id)curRing=null;if(!call){ring(false);if(document.getElementById("callUI"))ui("")}},45000);
@@ -828,9 +810,9 @@ function syncCust(){
 function priceUI(id){
  if(cOrders[id]&&cOrders[id].price&&orders[id])return;
  const d=document.createElement("div");d.style.cssText="position:fixed;inset:0;background:#0d131aee;z-index:98;display:grid;place-items:center;padding:20px";
- d.innerHTML=`<div style="background:#fff;border-radius:18px;padding:18px;width:100%;max-width:340px;color:#0f1b2a"><b>سعر الطلب (بدون التوصيل)</b><input id="prIn" type="number" inputmode="numeric" placeholder="مثال: 10000" style="width:100%;padding:12px;margin:10px 0;border:1px solid #ccd;border-radius:12px;font-size:18px"><b>وقت التحضير (دقيقة)</b><div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0 14px"><button type="button" id="mMin" style="width:46px;height:46px;padding:0;font-size:24px;background:#1a6fd4">−</button><b id="mVal" style="min-width:64px;text-align:center;font-size:22px">15</b><button type="button" id="mPlus" style="width:46px;height:46px;padding:0;font-size:24px;background:#1a6fd4">+</button></div><div id="prErr" style="color:#b0002a;font-size:13px;font-weight:700;min-height:18px;margin:-4px 0 8px"></div><div style="display:flex;gap:8px"><button id="prOk" style="flex:1">تأكيد</button><button id="prNo" style="flex:1;background:#e8edf3;color:#0f1b2a">لاحقاً</button></div></div>`;
+ d.innerHTML=`<div style="background:#fff;border-radius:18px;padding:18px;width:100%;max-width:340px;color:#0f1b2a"><b>سعر الطلب (بدون التوصيل)</b><input id="prIn" type="number" inputmode="numeric" placeholder="مثال: 10000" style="width:100%;padding:12px;margin:10px 0;border:1px solid #ccd;border-radius:12px;font-size:18px"><b>وقت التحضير (دقيقة)</b><div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0 14px"><button type="button" id="mMin" style="width:46px;height:46px;padding:0;font-size:24px;background:#1a6fd4">−</button><b id="mVal" style="min-width:64px;text-align:center;font-size:22px">15</b><button type="button" id="mPlus" style="width:46px;height:46px;padding:0;font-size:24px;background:#1a6fd4">+</button></div><div id="prErr" style="color:#b0002a;font-size:13px;font-weight:700;min-height:18px;margin:-4px 0 8px"></div><div style="display:flex;gap:8px"><button id="prOk" style="flex:1">تأكيد</button></div></div>`;
  document.body.appendChild(d);
- d.querySelector("#prNo").onclick=()=>d.remove();
+
  let mins=15;const mv=d.querySelector("#mVal");d.querySelector("#mMin").onclick=()=>{mins=Math.max(5,mins-5);mv.textContent=mins};d.querySelector("#mPlus").onclick=()=>{mins=Math.min(120,mins+5);mv.textContent=mins};
  d.querySelector("#prOk").onclick=async()=>{const p=Math.round(Number(d.querySelector("#prIn").value)),er=d.querySelector("#prErr");if(!(p>=500&&p<=5000000)){er.textContent="اكتب سعراً صحيحاً (من 500 إلى 5,000,000)";return}er.textContent="";const bt=d.querySelector("#prOk");bt.disabled=true;try{await confirmCustomerOrder(id,p,mins);d.remove()}catch(e){bt.disabled=false;er.textContent=e.code||e.message||"فشل التسجيل"}};
 }
@@ -849,9 +831,9 @@ function decideUI(id){
  d.style.cssText="position:fixed;inset:0;background:#0d131aee;z-index:98;display:grid;place-items:center;padding:20px";
  const box=h=>`<div style="background:#fff;border-radius:18px;padding:18px;width:100%;max-width:340px;color:#0f1b2a;text-align:center">${h}</div>`;
  const B=(k,t,c,x)=>`<button data-k="${k}" ${x||""} style="width:100%;border:0;border-radius:12px;padding:14px;margin-top:8px;font:700 16px inherit;color:#fff;background:${c}">${t}</button>`;
- const RS=["الوجبة غير متوفرة","المطعم مشغول حالياً","خارج وقت العمل","سبب آخر"];
+ const RS=["الوجبة غير متوفرة","المطعم مشغول حالياً","خارج وقت العمل","زبون مزعج","سبب آخر"];
  let reason="",other="";
- const home=()=>{d.innerHTML=box(`<b style="font-size:17px">انتهت المكالمة</b><div style="margin:6px 0 10px;color:#5b6b7d;font-size:14px">طلب #${esc(id.slice(-5))} — ماذا تريد؟</div>${B("prep","✅ تحضير الطلب","#0f9a63")}${B("cancel","❌ إلغاء الطلب","#d9002f")}${B("later","لاحقاً","#8a97a6")}`)};
+ const home=()=>{d.innerHTML=box(`<b style="font-size:17px">انتهت المكالمة</b><div style="margin:6px 0 10px;color:#5b6b7d;font-size:14px">طلب #${esc(id.slice(-5))} — ماذا تريد؟</div>${B("prep","✅ تحضير الطلب","#0f9a63")}${B("cancel","❌ إلغاء الطلب","#d9002f")}`)};
  const confPrep=()=>{d.innerHTML=box(`<b style="font-size:17px">تأكيد تحضير الطلب؟</b><div style="margin:6px 0 4px;color:#5b6b7d;font-size:14px">بعد التأكيد تكتب السعر وترسل الطلب.</div>${B("prepYes","نعم، تحضير","#0f9a63")}${B("back","رجوع","#8a97a6")}`)};
  const pickReason=()=>{d.innerHTML=box(`<b style="font-size:17px">سبب إلغاء الطلب</b><div style="margin:10px 0 0">${RS.map((t,i)=>`<button data-k="r${i}" style="width:100%;border:2px solid ${reason===t?"#d9002f":"#d5dbe3"};background:${reason===t?"#fde8ec":"#fff"};color:#0f1b2a;border-radius:12px;padding:12px;margin-top:6px;font:700 15px inherit">${t}</button>`).join("")}</div>${reason==="سبب آخر"?`<input id="decOther" placeholder="اكتب السبب" value="${esc(other)}" style="width:100%;padding:12px;margin-top:8px;border:1px solid #ccd;border-radius:10px;font:inherit">`:""}<div id="decErr" style="color:#c0002a;font-size:13px;min-height:16px;margin-top:6px"></div>${B("toConf","متابعة","#d9002f")}${B("back","رجوع","#8a97a6")}`)};
  const confCancel=()=>{d.innerHTML=box(`<b style="font-size:17px">تأكيد إلغاء الطلب؟</b><div style="margin:8px 0 4px;color:#0f1b2a;font-size:14px">السبب: <b>${esc(reason)}</b></div><div style="color:#5b6b7d;font-size:13px">سيصل الإلغاء للزبون وللإدارة مع تسجيل المكالمة.</div>${B("cancelYes","تأكيد الإلغاء","#d9002f")}${B("back2","رجوع","#8a97a6")}`)};
@@ -925,15 +907,23 @@ function start(){
  stops.push(onValue(ref(db,"presence"),s=>{
   const p=s.val()||{};
   presenceData=p;driversOnline=countOnline();
-  $("onCount").textContent=driversOnline;
-  $("pulse").className="dot "+(driversOnline>0?"":"off");checkOverdue();
+checkOverdue();
  }));
+ stops.push(onValue(ref(db,"restaurants/"+uid),s=>{const v=s.val(),b=$("stSw");if(!b)return;b.hidden=!v;storeOpen=!v||v.isOpen!==false;paintSw()},()=>{}));
  stops.push(onValue(ref(db,"areas"),s=>{ areas=s.val()||{}; drawAreas(); }));
  stops.push(onValue(query(ref(db,"orders"),orderByChild("storeId"),equalTo(uid)),s=>{ orders=s.val()||{}; syncCust(); cq(); checkOverdue(); fetchDriversNames(); drawOrders(); }));
  stops.push(onValue(query(ref(db,"customerOrders"),orderByChild("restaurantId"),equalTo(uid)),s=>{cOrders=s.val()||{};cq();syncCust()}));
  stops.push(onValue(query(ref(db,"orderPrivate"),orderByChild("storeId"),equalTo(uid)),s=>{ priv=s.val()||{}; drawOrders(); }));
 }
 
+let storeOpen=true;
+function paintSw(){const b=$("stSw");if(!b)return;b.className="sw "+(storeOpen?"on":"off");b.querySelector("span").textContent=storeOpen?"مفتوح":"مغلق"}
+$("stSw").onclick=async()=>{
+ const nv=!storeOpen;
+ if(!nv&&!confirm("إغلاق المتجر؟ لن يظهر للزبائن حتى تفتحه مرة ثانية."))return;
+ try{await set(ref(db,"restaurants/"+uid+"/isOpen"),nv);say(nv?"المتجر الآن مفتوح":"المتجر الآن مغلق")}
+ catch(e){say("تعذر تغيير الحالة: "+(e.code||e.message),1)}
+};
 const triedDrivers=new Set();
 async function fetchDriversNames(){
   const driverIds = [...new Set(Object.values(orders).map(o => o.driverId).filter(Boolean))];
@@ -1096,6 +1086,12 @@ function card(id,o,isHistory){
  }else if(o.status==="pending"&&!isHistory){
   actionHtml=`<p class="meta" style="text-align:center;margin-top:8px">الطلب ظاهر للسائقين الآن، لا تحتاج أي إجراء.</p>`;
  }
+ {
+  const cr=o.cancelRequest;
+  if(cr&&cr.state==="rejected")actionHtml+=`<p class="meta" style="text-align:center;margin-top:8px;color:#b0002a">رفضت الإدارة طلب الإلغاء</p>`;
+  else if(cr&&!cr.state&&!isHistory)actionHtml+=`<p class="meta" style="text-align:center;margin-top:8px">تم إرسال طلب الإلغاء، بانتظار موافقة الإدارة</p>`;
+  else if(!cr&&!isHistory&&["preparing","pending","accepted","waiting_store","arrived_store"].includes(o.status))actionHtml+=`<div class="actions"><button type="button" class="ok2" style="background:#e8edf3;color:#b0002a" data-creq="${esc(id)}">طلب إلغاء الطلب</button></div>`;
+ }
  const storeCom=Number(o.storeCommission!==undefined?o.storeCommission:getStoreCom());
  const receiveAmt=Math.max(0,(Number(o.itemPrice)||0)-storeCom);
  return `<div class="card" id="o-${esc(id)}">
@@ -1113,12 +1109,17 @@ function card(id,o,isHistory){
 }
 
 // زر «جاهز» (الضغطة الوحيدة المطلوبة من المتجر بعد تسجيل السعر)
+$("activeOrders").addEventListener("click",async e=>{const c=e.target.closest("[data-creq]");if(!c)return;
+ const why=(prompt("سبب إلغاء الطلب (مطلوب):")||"").trim().slice(0,120);if(!why)return;
+ c.disabled=true;
+ try{await update(ref(db,"orders/"+c.dataset.creq+"/cancelRequest"),{reason:why,at:Date.now()});say("تم إرسال طلب الإلغاء للإدارة")}
+ catch(er){c.disabled=false;say("تعذر إرسال طلب الإلغاء: "+(er.code||er.message),1)}});
 $("activeOrders").addEventListener("click",e=>{const b=e.target.closest("[data-ready]");if(!b)return;b.disabled=true;releaseOrder(b.dataset.ready)});
 
 // ---- إعادة الاتصال عند رجوع التطبيق من الخلفية (نفس منطق تطبيق السائق)
 let lastResume=0;
 function resumeStore(){
- if(!uid||document.visibilityState==="hidden"||call)return;
+ if(!uid||document.visibilityState==="hidden")return;
  const n=Date.now();if(n-lastResume<5000)return;lastResume=n;
  try{goOffline(db);goOnline(db)}catch(e){}
  try{start()}catch(e){}

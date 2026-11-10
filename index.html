@@ -283,7 +283,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div id="feeRows"></div>
 <input id="custFees" type="hidden">
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="btnFeeAdd">+ إضافة فئة</button><button type="button" id="btnCustFees" class="grn">حفظ الأسعار</button></div></div>
-<div class="box"><h3>الزبائن وتفعيل الحسابات والحظر</h3><button type="button" id="btnApproveAll" class="grn" style="margin-bottom:10px">تفعيل جميع الزبائن الحاليين</button><p class="sub">الزبون الجديد يظهر هنا مع رمز تفعيل عشوائي؛ اضغط «إرسال الرمز» ليفتح واتساب برسالة جاهزة فيها الرمز. الحظر يمنع الرقم والجهاز من الدخول. (يعتمد على معرّف الجهاز داخل الـAPK، وفي المتصفح على معرّف محلي أضعف.) زر «حذف» يزيل حساب الزبون من التطبيق وتبقى طلباته السابقة، ولا يظهر للزبون المحظور (فك الحظر أولاً).</p><div id="custUsers" class="wrap"></div></div>
+<div class="box"><h3>الزبائن وتفعيل الحسابات والحظر</h3><button type="button" id="btnApproveAll" class="grn" style="margin-bottom:10px">تفعيل جميع الزبائن الحاليين</button><p class="sub">الزبون الجديد يظهر هنا مع رمز تفعيل عشوائي؛ اضغط «إرسال الرمز» ليفتح واتساب برسالة جاهزة فيها الرمز. الحظر يمنع الرقم والجهاز من الدخول. (يعتمد على معرّف الجهاز داخل الـAPK، وفي المتصفح على معرّف محلي أضعف.) زر «حذف» يزيل حساب الزبون من التطبيق وتبقى طلباته السابقة، ولا يظهر للزبون المحظور (فك الحظر أولاً).</p><input type="search" id="custSearch" placeholder="ابحث عن زبون بالاسم أو رقم الهاتف" autocomplete="off" style="margin:0 0 10px"><div id="custUsers" class="wrap"></div></div>
 </section>
 
 <section id="t11" class="tab" hidden>
@@ -291,7 +291,8 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <p class="sub">كل مكالمة يُرد عليها تُسجَّل تلقائياً. المكالمات المرفوضة تُلغي الطلب تلقائياً وتظهر هنا بدون تسجيل صوتي.</p>
 <input type="search" id="clSearch" placeholder="ابحث برقم الطلب أو اسم الزبون أو رقمه" autocomplete="off" style="margin:0 0 10px">
 <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:13px"><input type="checkbox" id="clOnlyCanc" style="width:18px;height:18px;min-height:0;margin:0;flex:none;accent-color:#0d131a"> إظهار طلبات الزبائن الملغاة فقط</label>
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button type="button" id="btnDelCanc" style="background:#b0002a">🗑 حذف كل الطلبات الملغاة</button><button type="button" id="btnDelRecs" style="background:#b0002a">🗑 حذف كل التسجيلات</button></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button type="button" id="btnDelCanc" style="background:#b0002a">🗑 حذف كل الطلبات الملغاة</button><button type="button" id="btnDelRecs" style="background:#b0002a">🗑 حذف التسجيلات مع الطلبات المُجاب عليها</button></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;font-size:13px"><label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="recAutoOn" checked style="width:18px;height:18px;min-height:0;margin:0;accent-color:#0d131a"> حذف تلقائي بعد</label><input type="number" id="recDays" min="1" max="365" value="7" style="width:70px;margin:0"> <span>يوم</span><button type="button" id="btnRecAuto" class="grn">حفظ</button></div>
 <audio id="clAudio" controls style="width:100%;margin-bottom:10px;display:none"></audio>
 <div id="callLogs" class="wrap"></div></div>
 </section>
@@ -504,7 +505,7 @@ function renderCust(){
  }
  if(!feeDirty&&!(ae&&ae.closest&&ae.closest("#feeRows"))){const f=Array.isArray(settings.custFees)?settings.custFees:[];$("custFees").value=f.map(x=>x.km+":"+x.fee).join(",");renderFeeRows()}
  ensureCodes();
- if(!(ae&&ae.tagName==="INPUT"))$("custUsers").innerHTML=table(["الاسم","الهاتف","الحالة","رمز التفعيل","إجراءات"],Object.entries(custers).sort((x,y)=>(y[1].createdAt||0)-(x[1].createdAt||0)).map(([id,c])=>{
+ if(!(ae&&ae.tagName==="INPUT"&&ae.id!=="custSearch"))$("custUsers").innerHTML=table(["الاسم","الهاتف","الحالة","رمز التفعيل","إجراءات"],Object.entries(custers).filter(([id,c])=>custMatch(c)).sort((x,y)=>(y[1].createdAt||0)-(x[1].createdAt||0)).map(([id,c])=>{
   const d=c.deviceId||"",bn=(d&&banned[d])||banned["ph_"+c.phone],ok=appr[id]===true||!!acts[id],code=codes[id]||"";
   const msg="مرحباً "+(c.name||"")+"، معك دعم Baqubah Delivery. رمز تفعيل حسابك: "+code+"\nاكتبه بالتطبيق وراح يتفعل حسابك.";
   return `<tr><td><b>${esc(c.name)}</b> ${bn?'<span class="tag r">محظور</span>':''}</td><td dir="ltr">${esc(c.phone)}</td>
@@ -764,6 +765,9 @@ document.addEventListener("click",e=>{
 });
 
 const CRES={answered:'<span class="tag g">تم الرد</span>',rejected:'<span class="tag r">رفضها المتجر</span>'};
+const _nd=s=>String(s||"").replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g,"");
+function custMatch(c){const q=(($("custSearch")&&$("custSearch").value)||"").trim().toLowerCase();if(!q)return true;const qd=_nd(q);return String(c.name||"").toLowerCase().includes(q)||(qd.length>=2&&_nd(c.phone).includes(qd))}
+document.addEventListener("input",e=>{if(e.target&&e.target.id==="custSearch")draw()});
 function drawCalls(){
  const nd=s=>String(s||"").replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/\D/g,"");
  const onlyC=$("clOnlyCanc")&&$("clOnlyCanc").checked;
@@ -786,6 +790,7 @@ function drawCalls(){
   const hot=(s&&s.n>=3)||(co&&co.status==="cancelled"&&l.result==="answered");
   return `<tr${hot?' style="background:#fff5f6"':""}><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${cu}</td><td>${esc(st)}</td><td>${CRES[l.result]||esc(l.result||"")}</td><td>${cs}</td><td>${why?esc(why):"—"}</td><td>${dur}</td><td>${tm(l.startedAt||l.at)}</td><td>${rec}</td><td>${act}</td></tr>`;
  }),"لا توجد مكالمات مطابقة.");
+ {const ae2=document.activeElement;if($("recDays")&&!(ae2&&ae2.id==="recDays")){$("recDays").value=Number(settings.recAutoDays)||7;$("recAutoOn").checked=settings.recAutoOn!==false}}
  if(Object.keys(clogs).length)cleanRecs();
 }
 document.addEventListener("input",e=>{if(e.target&&e.target.id==="clSearch")drawCalls()});
@@ -811,11 +816,20 @@ document.addEventListener("click",e=>{const b=e.target.closest("button[data-recd
  const id=b.dataset.recdel,l=clogs[id];if(!l||typeof l.recording!=="string"||!l.recording.startsWith("db:"))return;
  if(!confirm("حذف هذا التسجيل نهائياً من قاعدة البيانات؟ (سجل المكالمة يبقى)"))return;
  run(async()=>{b.disabled=true;try{await update(ref(db),{["callRecData/"+l.recording.slice(3)]:null,["callLogs/"+id+"/recording"]:"deleted"});const a=$("clAudio");if(a&&!a.paused){a.pause();a.removeAttribute("src");a.style.display="none"}say("تم حذف التسجيل.");setTimeout(drawCalls,500)}finally{b.disabled=false}})});
-// حذف التسجيلات الأقدم من 14 يوماً للبقاء ضمن الحصة المجانية
+// حذف تلقائي: التسجيلات + الطلبات التي تم الرد عليها بعد (recAutoDays) يوم، افتراضي 7 (قابل للتعديل من تبويب التسجيلات)
 let _recClean=false;
-function cleanRecs(){if(_recClean)return;_recClean=true;try{const lim=Date.now()-14*864e5,u={};let n=0;
- for(const [id,l] of Object.entries(clogs)){if(n>=30)break;if(l&&typeof l.recording==="string"&&l.recording.startsWith("db:")&&(l.startedAt||l.at||0)<lim){u["callRecData/"+l.recording.slice(3)]=null;u["callLogs/"+id+"/recording"]="expired";n++}}
+function cleanRecs(){if(_recClean)return;_recClean=true;try{
+ if(settings.recAutoOn===false)return;
+ const days=Math.max(1,Number(settings.recAutoDays)||7),lim=Date.now()-days*864e5,live=["calling","preparing","ready","pending","waiting_store","accepted","arrived_store","picked_up","delivering"],u={};let n=0;
+ for(const [id,l] of Object.entries(clogs)){if(n>=30)break;
+  if(!l||l.result!=="answered"||(l.startedAt||l.at||0)>=lim)continue;
+  if(cord[id]&&live.includes(cord[id].status)){if(typeof l.recording==="string"&&l.recording.startsWith("db:")){u["callRecData/"+l.recording.slice(3)]=null;u["callLogs/"+id+"/recording"]="expired";n++}continue}
+  u["customerOrders/"+id]=null;u["callLogs/"+id]=null;u["callRecData/"+id]=null;u["calls/"+id]=null;u["customerOrderPrivate/"+id]=null;n++}
  if(n)update(ref(db),u).catch(()=>{})}catch(e){}}
+setInterval(()=>{_recClean=false;try{cleanRecs()}catch(e){}},6*3600*1000);
+document.addEventListener("click",e=>{const b=e.target.closest("#btnRecAuto");if(!b)return;
+ const d=Math.round(Number($("recDays").value));if(!(d>=1&&d<=365)){say("اكتب عدد أيام من 1 إلى 365",1);return}
+ run(async()=>{await update(ref(db,"settings"),{recAutoDays:d,recAutoOn:$("recAutoOn").checked});_recClean=false;say($("recAutoOn").checked?"تم الحفظ: حذف تلقائي بعد "+d+" يوم":"تم إيقاف الحذف التلقائي")})});
 document.addEventListener("click",e=>{
  if(e.target.closest("#btnDelCanc")){
   const ids=new Set(Object.entries(cord).filter(([id,o])=>o&&o.status==="cancelled").map(([id])=>id));
@@ -830,10 +844,21 @@ document.addEventListener("click",e=>{
    const a=$("clAudio");if(a){a.pause();a.removeAttribute("src");a.style.display="none"}
    say("تم حذف "+arr.length+" طلب ملغى مع تسجيلاته.");setTimeout(drawCalls,700)})}
  if(e.target.closest("#btnDelRecs")){
-  const u={callRecData:null};let n=0;
-  for(const [id,l] of Object.entries(clogs)){if(l&&typeof l.recording==="string"&&l.recording!=="deleted"&&l.recording!=="expired"){u["callLogs/"+id+"/recording"]="deleted";n++}}
-  if(!confirm("سيتم حذف كل التسجيلات الصوتية نهائياً ("+n+" تسجيل). سجلات المكالمات تبقى. لا يمكن التراجع. متابعة؟"))return;
-  run(async()=>{await update(ref(db),u);const a=$("clAudio");if(a){a.pause();a.removeAttribute("src");a.style.display="none"}say("تم حذف كل التسجيلات.");setTimeout(drawCalls,700)})}
+  const live=["calling","preparing","ready","pending","waiting_store","accepted","arrived_store","picked_up","delivering"];
+  const ans=Object.entries(clogs).filter(([id,l])=>l&&l.result==="answered");
+  const del=ans.filter(([id])=>!(cord[id]&&live.includes(cord[id].status))).map(([id])=>id);
+  const keepLive=ans.length-del.length;
+  if(!ans.length){say("لا توجد مكالمات مُجاب عليها للحذف.");return}
+  if(!confirm("سيتم حذف كل التسجيلات الصوتية مع "+del.length+" طلب تم الرد عليه (وسجل مكالمته)."+(keepLive?"\nملاحظة: "+keepLive+" طلب ما زال جارياً، يُحذف تسجيله فقط وسيبقى الطلب.":"")+"\nلا يمكن التراجع. متابعة؟"))return;
+  run(async()=>{
+   const u={callRecData:null};
+   for(const [id,l] of ans){if(!del.includes(id)&&typeof l.recording==="string"&&l.recording!=="deleted"&&l.recording!=="expired")u["callLogs/"+id+"/recording"]="deleted"}
+   await update(ref(db),u);
+   for(let i=0;i<del.length;i+=80){const v={};
+    for(const id of del.slice(i,i+80)){v["customerOrders/"+id]=null;v["callLogs/"+id]=null;v["calls/"+id]=null;v["customerOrderPrivate/"+id]=null}
+    await update(ref(db),v)}
+   const a=$("clAudio");if(a){a.pause();a.removeAttribute("src");a.style.display="none"}
+   say("تم حذف التسجيلات مع "+del.length+" طلب.");setTimeout(drawCalls,700)})}
 });
 document.addEventListener("change",e=>{if(e.target&&e.target.id==="clOnlyCanc")drawCalls()});
 function draw(){
