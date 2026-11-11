@@ -270,7 +270,9 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div class="box"><h3>إجراءات</h3>
 <p class="sub">التصفير يُسجَّل في السجل بالتاريخ والوقت ولا يمسح الطلبات.</p>
 <div class="row2"><button type="button" data-szall="1" class="org">تصفير ديون المتاجر</button><button type="button" data-pzero="1" class="red">تصفير الأرباح</button></div>
-<button type="button" id="btnToggleProfit2" class="gray">إظهار / إخفاء الأرباح</button></div>
+<button type="button" id="btnToggleProfit2" class="gray">إظهار / إخفاء الأرباح</button>
+<button type="button" data-devreset="1" class="red" style="margin-top:8px;width:100%">🧹 تصفير كل الحسابات (وضع التطوير)</button>
+<p class="sub">يمسح السجل المالي والطلبات المُسلَّمة فقط، فترجع كل المربعات صفر. الطلبات الجارية والمستخدمون والإعدادات تبقى. لا يمكن التراجع.</p></div>
 <div class="box"><h3>ديون المتاجر الآجلة</h3><div id="pfStores" class="wrap"></div></div>
 <div class="box"><h3>التفاصيل المالية (الأحدث أولاً)</h3>
 <p class="sub">الحذف يخفي التفاصيل من العرض فقط، ولا يغيّر الأرباح أو الديون أو الأرصدة.</p>
@@ -1553,6 +1555,19 @@ document.addEventListener("click",e=>{
  }
  b.onclick=()=>{p.hidden=false;list()};
 })();
+
+// ---- تصفير كل الحسابات (للتطوير فقط) ----
+document.addEventListener("click",e=>{const b=e.target.closest("[data-devreset]");if(!b)return;
+ run(async()=>{
+  if(!(await showToastConfirm("تصفير كل الحسابات؟ سيُحذف السجل المالي كله والطلبات المُسلَّمة نهائياً، وترجع كل المبالغ صفر.")))return;
+  if(!(await showToastConfirm("تأكيد أخير: لا يمكن التراجع عن هذا الإجراء. متأكد؟")))return;
+  const upd={"settings/pfBase":null,"settings/ledgerClearedAt":null,"settings/finLogClearedAt":null};
+  for(const k of Object.keys(fin||{}))upd["finance/"+k]=null;
+  for(const [id,o] of Object.entries(orders)){if(o&&o.status==="delivered")upd["orders/"+id]=null}
+  await update(ref(db),upd);
+  try{localStorage.removeItem("hidPf")}catch(_){}
+  say("تم تصفير كل الحسابات.");
+ })});
 
 // ---- تصفير عرض الخصومات والمكافآت (لا يمس أرصدة السائقين) ----
 document.addEventListener("click",e=>{const b=e.target.closest("[data-pfz]");if(!b)return;
