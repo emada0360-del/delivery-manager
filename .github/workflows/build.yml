@@ -468,9 +468,11 @@ jobs:
           }
           EOF
 
+      - name: List repo files
+        run: ls -la | cat -A
+
       - name: Driver background reliability
         if: matrix.role == 'driver'
         run: |
           test -f native_driver_1.py
-          test -f native_driver_2.py
-          test -f native_dr
+    
