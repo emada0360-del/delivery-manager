@@ -335,7 +335,7 @@ main{padding:6px 10px 0}
  <h2>دخول السائق</h2>
  <form id="lf">
   <label for="un">رقم الهاتف</label>
-  <input id="un" type="tel" required autocomplete="username" autocapitalize="none" placeholder="07XXXXXXXXX">
+  <input id="un" type="tel" inputmode="numeric" maxlength="11" required autocomplete="username" autocapitalize="none" placeholder="07XXXXXXXXX" oninput="this.value=this.value.replace(/[٠-٩]/g,function(c){return c.charCodeAt(0)-1632}).replace(/\D/g,'').slice(0,11)">
   <label for="pw">كلمة المرور</label>
   <input id="pw" type="password" required autocomplete="current-password">
   <button id="lb">دخول</button>

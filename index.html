@@ -216,7 +216,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 
 <section id="t3" class="tab" hidden>
 <form id="fd" class="box"><h3>إضافة سائق جديد</h3>
-<input id="du" placeholder="رقم الهاتف (للدخول)" required>
+<input id="du" type="tel" inputmode="numeric" maxlength="11" pattern="07[0-9]{9}" title="11 رقماً ويبدأ بـ 07" placeholder="رقم الهاتف (07XXXXXXXXX)" oninput="this.value=this.value.replace(/[٠-٩]/g,function(d){return d.charCodeAt(0)-1632}).replace(/\D/g,'').slice(0,11)" required>
 <input id="dn" placeholder="اسم السائق" required>
 <input id="dp" type="password" placeholder="كلمة المرور (6 أحرف)" required>
 <button type="submit" class="grn">إضافة السائق</button></form>
@@ -718,10 +718,10 @@ function drawProfitTab(){
  const totalDue=stores.reduce((s,[id])=>s+storeDue(id),0);
  const allFin=Object.values(fin).filter(Boolean);
  const paidAll=allFin.filter(f=>f.type==="store_paid").reduce((s,f)=>s+(Number(f.amount)||0),0);
- $("pf1").textContent=showProfitFlag?fmt(lastNet)+" د.ع":"***** د.ع";
+ $("pf1").textContent=fmt(lastNet)+" د.ع";
  $("pf2").textContent=fmt(totalDue)+" د.ع";
  $("pf3").textContent=fmt(paidAll)+" د.ع";
- $("pf4").textContent=showProfitFlag?fmt(lastReset)+" د.ع":"***** د.ع";
+ $("pf4").textContent=fmt(lastReset)+" د.ع";
  {const sm=t=>allFin.filter(f=>f.type===t).reduce((s,f)=>s+(Number(f.amount)||0),0),pb=(settings&&settings.pfBase)||{},dd=Math.max(0,sm("deduction")-(Number(pb.d)||0)),bb=Math.max(0,sm("bonus")-(Number(pb.b)||0));$("pf5").textContent=fmt(dd)+" د.ع";$("pf6").textContent=fmt(bb)+" د.ع";$("pf7").textContent=fmt(dd+bb)+" د.ع";$("pf7n").textContent="الصافي للمنصة (خصومات − مكافآت): "+fmt(dd-bb)+" د.ع"}
  $("pfStores").innerHTML=table(["المتجر","المستحق عليكم","آخر تسديد","موعد التسديد","إجراءات"],stores.map(([id,u])=>{
   const due=storeDue(id),lp=Math.max(0,...allFin.filter(f=>f.userId===id&&f.type==="store_paid").map(f=>Number(f.createdAt)||0));
@@ -1352,7 +1352,7 @@ async function addUser(role,username,name,pass,extra={}){
  }finally{await deleteApp(sec)}
 }
 
-$("fd").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("driver",$("du").value,$("dn").value,$("dp").value);e.target.reset();say("تمت إضافة السائق.")})};
+$("fd").onsubmit=e=>{e.preventDefault();run(async()=>{if(!/^07\d{9}$/.test($("du").value.trim()))throw Error("رقم السائق يجب أن يكون 11 رقماً ويبدأ بـ 07 فقط.");await addUser("driver",$("du").value,$("dn").value,$("dp").value);e.target.reset();say("تمت إضافة السائق.")})};
 $("fs").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("store",$("su").value,$("sn").value,$("sp").value,{mapUrl:$("sm").value,storeType:$("stype").value});e.target.reset();say("تمت إضافة المتجر.")})};
 $("fa").onsubmit=e=>{e.preventDefault();run(async()=>{
  const name=$("an").value.trim(),fee=Number($("af").value);
@@ -1560,12 +1560,12 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-pfz]");if(
   if(!(await showToastConfirm("تصفير عرض الخصومات والمكافآت؟ لا يغيّر أرصدة السائقين ولا ديونهم.")))return;
   await update(ref(db,"settings/pfBase"),{d:sm("deduction"),b:sm("bonus"),at:Date.now()});say("تم تصفير العرض.")})});
 </script>
-<style>#t12 .grid .box.hv strong{filter:blur(9px);user-select:none}.cbt{display:flex;gap:6px;margin-top:8px}.cbt button{flex:1;padding:6px 4px;font-size:12px;min-height:0;border-radius:10px}</style>
+<style>#t12 .grid .box.hv strong{font-size:0;line-height:0}#t12 .grid .box.hv strong::after{content:"***** د.ع";font-size:22px;line-height:1.4}.cbt{display:flex;gap:6px;margin-top:8px}.cbt button{flex:1;padding:6px 4px;font-size:12px;min-height:0;border-radius:10px}</style>
 <script>
 (function(){
  try{
   var g=document.querySelector("#t12 .grid");if(!g)return;
-  var K="hidPf",H={};try{H=JSON.parse(localStorage.getItem(K)||"{}")}catch(e){}
+  var K="hidPf",H={};try{H=JSON.parse(localStorage.getItem(K)||"{}")}catch(e){}if(H.pf1===undefined)H.pf1=true;if(H.pf4===undefined)H.pf4=true;
   var Z={pf1:"data-pzero",pf2:"data-szall",pf3:"data-szall",pf4:"data-pzero",pf5:"data-pfz",pf6:"data-pfz",pf7:"data-pfz"};
   function save(){try{localStorage.setItem(K,JSON.stringify(H))}catch(e){}}
   function apply(b){var st=b.querySelector("strong");if(!st)return;b.classList.toggle("hv",!!H[st.id]);var h=b.querySelector("[data-hid]");if(h)h.textContent=H[st.id]?"إظهار":"إخفاء"}
@@ -1585,6 +1585,8 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-pfz]");if(
   a.onclick=function(){setAll(true)};c.onclick=function(){setAll(false)};
   var r=document.createElement("div");r.className="row2";r.appendChild(a);r.appendChild(c);all.appendChild(r);
   g.parentNode.insertBefore(all,g);
+  var tg=document.getElementById("btnToggleProfit2");
+  if(tg)tg.addEventListener("click",function(){var v=!(H.pf1&&H.pf4);H.pf1=v;H.pf4=v;save();g.querySelectorAll(".box").forEach(apply)});
  }catch(e){}
 })();
 </script>
