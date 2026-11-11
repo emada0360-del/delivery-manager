@@ -276,7 +276,7 @@ main{max-width:560px;margin:auto;padding:14px 14px calc(var(--nav) + 24px + env(
 <header><div class="logo"><svg class="ic"><use href="#i-scooter"/></svg></div><div class="ht"><small>Baqubah Delivery</small><h2 id="hello">توصيل سريع لباب بيتك</h2></div></header>
 
 <section id="auth" hidden>
- <div class="a-hero"><div class="logo"><svg class="ic"><use href="#i-scooter"/></svg></div><h1>Baqubah Delivery</h1><p>اطلب من مطعمك المفضل وإحنا نوصلها لك</p></div>
+ <div class="a-hero"><div class="logo"><svg class="ic"><use href="#i-scooter"/></svg></div><h1>Baqubah Delivery</h1><p>اطلب من متجرك المفضل وإحنا نوصلها لك</p></div>
  <div class="a-card">
   <h3 id="aT">تسجيل الدخول</h3>
   <input id="aN" placeholder="الاسم" hidden>
@@ -299,11 +299,11 @@ main{max-width:560px;margin:auto;padding:14px 14px calc(var(--nav) + 24px + env(
    <button class="l" id="locEdit"><svg class="ic" style="width:16px;height:16px"><use href="#i-refresh"/></svg>تحديث</button>
   </div>
   <div id="gate" hidden></div>
-  <div class="search"><svg class="ic"><use href="#i-search"/></svg><input id="q" placeholder="ابحث عن مطعم" autocomplete="off"></div>
+  <div class="search"><svg class="ic"><use href="#i-search"/></svg><input id="q" placeholder="ابحث عن متجر" autocomplete="off"></div>
   <div class="seg"><button class="fc on" data-f="all">الكل</button><button class="fc" data-f="ok">المتاح لموقعي</button></div>
   <div id="zoneBar"></div>
    <div id="feesBar"></div>
-  <h4>المطاعم <span id="cnt"></span></h4>
+  <h4>المتاجر <span id="cnt"></span></h4>
   <div id="list"></div>
  </section>
 
@@ -316,7 +316,7 @@ main{max-width:560px;margin:auto;padding:14px 14px calc(var(--nav) + 24px + env(
   <div class="box me-card"><div class="av big" id="meAv">؟</div><b id="meName"></b><span id="mePh" dir="ltr"></span></div>
   <div class="mlist">
    <button class="mi" id="meLoc"><span class="mi-ic"><svg class="ic"><use href="#i-pin"/></svg></span><span class="mi-t">تحديث موقعي<small>يُستخدم لحساب أجرة التوصيل ومعرفة موقعك الدقيق</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
-   <button class="mi" id="meFees"><span class="mi-ic"><svg class="ic"><use href="#i-tag"/></svg></span><span class="mi-t">أسعار التوصيل<small>حسب بعدك عن المطعم</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+   <button class="mi" id="meFees"><span class="mi-ic"><svg class="ic"><use href="#i-tag"/></svg></span><span class="mi-t">أسعار التوصيل<small>حسب بعدك عن المتجر</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
    <button class="mi danger" id="out"><span class="mi-ic"><svg class="ic"><use href="#i-logout"/></svg></span><span class="mi-t">تسجيل الخروج</span></button>
   </div>
   <p class="hint c">Baqubah Delivery · تطبيق الزبون</p>
@@ -353,7 +353,7 @@ const ICON=n=>`<svg class="ic" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const eic=(n,t,s)=>`<div class="empty"><div class="eic">${ICON(n)}</div><b>${t}</b>${s?`<span>${s}</span>`:""}</div>`;
 const skel=()=>'<div class="sk"></div><div class="sk"></div><div class="sk"></div>';
 const safeUrl=u=>{const v=String(u||"").trim();return /^https?:\/\/[^\s"'<>]+$/i.test(v)?v:""};
-const ST={calling:"جارٍ الاتصال بالمطعم",preparing:"قيد التحضير",ready:"جاهز - بانتظار السائق",pending:"جاهز - بانتظار سائق",waiting_store:"السائق بالطريق للمطعم",accepted:"السائق بالطريق للمطعم",arrived_store:"السائق وصل للمطعم",picked_up:"بالطريق إليك",delivering:"بالطريق إليك",delivered:"تم التسليم",cancelled:"ملغي"};
+const ST={calling:"جارٍ الاتصال بالمتجر",preparing:"قيد التحضير",ready:"جاهز - بانتظار السائق",pending:"جاهز - بانتظار سائق",waiting_store:"السائق بالطريق للمتجر",accepted:"السائق بالطريق للمتجر",arrived_store:"السائق وصل للمتجر",picked_up:"بالطريق إليك",delivering:"بالطريق إليك",delivered:"تم التسليم",cancelled:"ملغي"};
 const STAGE={calling:0,preparing:1,ready:1,pending:1,waiting_store:2,accepted:2,arrived_store:2,picked_up:3,delivering:3,delivered:4};
 const DONE=["delivered","cancelled"],CALL_EXPIRE=10*60*1000;
 const isLive=o=>o&&!DONE.includes(o.status)&&Date.now()-(Number(o.createdAt)||0)<6*3600e3&&!(o.status==="calling"&&Date.now()-(Number(o.createdAt)||0)>CALL_EXPIRE);
@@ -649,9 +649,9 @@ const km=(a,b,c,d)=>{const r=x=>x*Math.PI/180,h=Math.sin(r(c-a)/2)**2+Math.cos(r
 function ll(u){let s=String(u||"");try{s=decodeURIComponent(s)}catch(e){}for(const re of [/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/[?&](?:q|ll|query|destination|center)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/,/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/]){const m=s.match(re);if(m)return{lat:+m[1],lng:+m[2]}}return null}
 function quote(r){
  if(!loc)return{ok:false,why:"حدد موقعك أولاً"};
- const p=typeof r.lat==="number"?{lat:r.lat,lng:r.lng}:ll(r.mapUrl);if(!p)return{ok:false,why:"المطعم لم يحدد موقعه بعد"};
+ const p=typeof r.lat==="number"?{lat:r.lat,lng:r.lng}:ll(r.mapUrl);if(!p)return{ok:false,why:"المتجر لم يحدد موقعه بعد"};
  const zc=inZone(loc);if(zc)return{ok:false,zone:true,why:"التوصيل متوقف مؤقتاً في منطقتك"+(zc.reason?" ("+zc.reason+")":"")};
- if(inZone(p))return{ok:false,zone:true,why:"التوصيل من هذا المطعم متوقف مؤقتاً لظروف المنطقة"};
+ if(inZone(p))return{ok:false,zone:true,why:"التوصيل من هذا المتجر متوقف مؤقتاً لظروف المنطقة"};
  if(!fees.length)return{ok:false,why:"أسعار التوصيل غير محددة حالياً"};
  const d=km(p.lat,p.lng,loc.lat,loc.lng),ringF=[...fees].sort((a,b)=>a.km-b.km).find(f=>d<=f.km);
  return ringF?{ok:true,fee:ringF.fee,km:d}:{ok:false,why:"المسافة أبعد من نطاق التوصيل"};
@@ -718,7 +718,7 @@ $("gOk").onclick=()=>{if(loc)$("locGate").hidden=true};
 $("locEdit").onclick=()=>{startTracking();if(!loc)openPicker()};
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&me)startTracking()});
 
-// ---- قائمة المطاعم ----
+// ---- قائمة المتاجر ----
 function drawMapLayers(){
  if(!map)return;
  if(mLayer)map.removeLayer(mLayer);
@@ -743,7 +743,7 @@ function renderMe(){
 }
 function drawFees(){
  const f=[...fees].sort((a,b)=>a.km-b.km);
- $("feesBar").innerHTML=f.length?`<div class="fees"><div class="fees-h">${ICON("tag")}<b>أجرة التوصيل حسب بعدك عن المطعم</b></div><div class="fr">${f.map(x=>`<span><i>حتى ${esc(x.km)} كم</i><em>${fmt(x.fee)}</em></span>`).join("")}</div></div>`:"";
+ $("feesBar").innerHTML=f.length?`<div class="fees"><div class="fees-h">${ICON("tag")}<b>أجرة التوصيل حسب بعدك عن المتجر</b></div><div class="fr">${f.map(x=>`<span><i>حتى ${esc(x.km)} كم</i><em>${fmt(x.fee)}</em></span>`).join("")}</div></div>`:"";
 }
 function drawList(){
  drawMapLayers();
@@ -761,10 +761,10 @@ function drawList(){
   const call=q.ok?`<button class="g main" data-c="${esc(id)}" ${!busy&&!blocked?"":"disabled"}>${ICON("phone")}اطلب بالاتصال</button>`:"";
   const im=r.imgV?getImg(id,r.imgV):"";
    return `<article class="rc ${q.ok?"":"off"}" id="rc-${esc(id)}">${im?`<img class="rimg" alt="" loading="lazy" src="${im}">`:""}<div class="rh"><div class="av" style="background:${colOf(r.name)}">${esc(nm.charAt(0))}</div>
-  <div class="rn"><b>${esc(r.name)}</b><span class="dist">${ICON("pin")}${q.ok?"يبعد "+q.km.toFixed(1)+" كم عنك":esc(q.why)}</span></div>
+  <div class="rn"><b>${esc(r.name)}</b>${r.type==="shop"?'<small style="opacity:.7;margin-inline-start:6px">متجر</small>':(r.type==="restaurant"?'<small style="opacity:.7;margin-inline-start:6px">مطعم</small>':"")}<span class="dist">${ICON("pin")}${q.ok?"يبعد "+q.km.toFixed(1)+" كم عنك":esc(q.why)}</span></div>
   ${q.ok?`<div class="fee">${fmt(q.fee)}<small>د.ع توصيل</small></div>`:`<div class="fee off">غير متاح</div>`}</div>
   ${call||extra?`<div class="ra">${call}${extra}</div>`:""}
-  ${busy&&q.ok?'<div class="why">لديك طلب جارٍ، انتظر اكتماله لتطلب مجدداً.</div>':""}</article>`}).join("")||eic("bowl",qs||filt==="ok"?"لا توجد نتائج":"لا توجد مطاعم حالياً",filt==="ok"?"جرّب «الكل» أو حدّث موقعك":"");
+  ${busy&&q.ok?'<div class="why">لديك طلب جارٍ، انتظر اكتماله لتطلب مجدداً.</div>':""}</article>`}).join("")||eic("bowl",qs||filt==="ok"?"لا توجد نتائج":"لا توجد متاجر حالياً",filt==="ok"?"جرّب «الكل» أو حدّث موقعك":"");
 }
 $("list").onclick=async e=>{
  const b=e.target.closest("button");if(!b)return;
@@ -773,7 +773,7 @@ $("list").onclick=async e=>{
  if(b.dataset.c){
   if(reqApp&&!approved)return toast("حسابك بانتظار التفعيل من الإدارة",1);
   if(Object.values(orders).some(isLive))return toast("لديك طلب جارٍ بالفعل",1);
-  const r=rests[b.dataset.c],q=quote(r);if(!q.ok)return;
+  const r=rests[b.dataset.c],q=quote(r);if(!q.ok)return toast(q.why||"الاتصال غير متاح حالياً",1);
    if(!(await askTips(r)))return;
    if(Object.values(orders).some(isLive))return toast("لديك طلب جارٍ بالفعل",1);
    b.disabled=true;
@@ -807,7 +807,7 @@ function inZone(p){
  }
  return null;
 }
-// ---- صورة المطعم (تُحمَّل مرة وتُحفظ بالجهاز) ----
+// ---- صورة المتجر (تُحمَّل مرة وتُحفظ بالجهاز) ----
 function getImg(id,v){
  const c=imgs[id];if(c&&c.v===v)return c.u;
  try{const j=JSON.parse(localStorage.getItem("rimg_"+id)||"null");if(j&&j.v===v&&typeof j.u==="string"){imgs[id]=j;return j.u}}catch(e){}
@@ -816,7 +816,7 @@ function getImg(id,v){
  return "";
 }
 // ---- نصائح قبل الاتصال ----
-const DEF_TIPS=["راجع منيو المطعم قبل الاتصال حتى لا تنسى شيئاً من طلبك.","المكالمة مسجّلة بالكامل لأغراض الجودة.","لا داعي لإعطاء رقم هاتفك للمطعم؛ فالسائق والإدارة لديهما المعلومات الكافية لإيصال الطلب إليك بأسرع وقت."];
+const DEF_TIPS=["راجع منيو المتجر قبل الاتصال حتى لا تنسى شيئاً من طلبك.","المكالمة مسجّلة بالكامل لأغراض الجودة.","لا داعي لإعطاء رقم هاتفك للمتجر؛ فالسائق والإدارة لديهما المعلومات الكافية لإيصال الطلب إليك بأسرع وقت."];
 function askTips(r){
  return new Promise(res=>{
   const t=(Array.isArray(callTips)?callTips:Object.values(callTips||{})).map(x=>String(x||"").trim()).filter(Boolean),L=t.length?t:DEF_TIPS,mu=safeUrl(r.menuUrl);
@@ -827,12 +827,12 @@ function askTips(r){
   document.body.appendChild(d);
  });
 }
-// ---- التواصل مع الدعم عند عدم رد المطعم ----
+// ---- التواصل مع الدعم عند عدم رد المتجر ----
 function supportOpen(msg){let p=adminWa.replace(/\D/g,"");if(p.startsWith("0"))p="964"+p.slice(1);if(!p){toast("رقم الدعم غير متوفر حالياً",1);return}window.open("https://wa.me/"+p+"?text="+encodeURIComponent(msg),"_blank")}
-function supportFor(oid){const o=orders[oid]||{};supportOpen("مرحباً، اتصلت بمطعم «"+(o.restaurantName||"")+"» (طلب #"+String(oid).slice(-5)+") ولم يرد أحد. أرجو مساعدتي. الاسم: "+((prof&&prof.name)||"")+" الرقم: "+((prof&&prof.phone)||""))}
+function supportFor(oid){const o=orders[oid]||{};supportOpen("مرحباً، اتصلت بمتجر «"+(o.restaurantName||"")+"» (طلب #"+String(oid).slice(-5)+") ولم يرد أحد. أرجو مساعدتي. الاسم: "+((prof&&prof.name)||"")+" الرقم: "+((prof&&prof.phone)||""))}
 function noAnswer(oid){
  const o=orders[oid]||{};if(o.callAnswered)return;
- const nm=o.restaurantName||callName||"المطعم";
+ const nm=o.restaurantName||callName||"المتجر";
  ui(`لم يرد ${esc(nm)} على مكالمتك<div style="font-size:14px;color:#cbd5e1;margin-top:8px;line-height:1.8">تواصل مع الدعم لمعرفة سبب عدم الرد وحل مشكلتك، أو أعد الاتصال.</div>`,
   [...(adminWa?[["تواصل مع الدعم",()=>supportFor(oid),"#0f9a63"]]:[]),["إعادة الاتصال",()=>{ui("");dial(oid)},"#1a6fd4"],["حسناً",()=>ui(""),"#475569"]]);
 }
@@ -849,7 +849,7 @@ function drawHist(){
   <div class="row"><span>أجرة التوصيل</span><b>${fmt(fee)} د.ع</b></div>
   <div class="row tot"><span>المجموع</span><b>${price?fmt(price+fee)+" د.ع":"—"}</b></div></div>
   ${(DONE.includes(o.status)||expired)&&rests[o.restaurantId]?`<button class="l full" data-again="${esc(o.restaurantId)}">${ICON("refresh")}اطلب مجدداً</button>`:""}</article>`}).join(""):
-  eic("receipt","ما عندك طلبات بعد","اطلب من أي مطعم وراح يظهر هنا");
+  eic("receipt","ما عندك طلبات بعد","اطلب من أي متجر وراح يظهر هنا");
 }
 $("hist").onclick=e=>{
  const b=e.target.closest("[data-again]");if(!b)return;
@@ -875,8 +875,8 @@ function drawGate(){
 }
 
 // ---- إشعارات تغيّر حالة الطلب ----
-const NT={preparing:"المطعم يجهّز طلبك 👨‍🍳",pending:"طلبك جاهز، نبحث لك عن سائق 🛵",accepted:"السائق قبل طلبك وبالطريق للمطعم 🛵",arrived_store:"السائق وصل للمطعم",picked_up:"السائق استلم طلبك وبالطريق إليك 🎉",delivering:"السائق بالطريق إليك 🎉",delivered:"تم تسليم طلبك، بالعافية 🍽️",cancelled:"تم إلغاء طلبك"};
-function cancelMsg(o){if(!o||o.status!=="cancelled")return"";if(o.cancelReason==="store_rejected_call")return"تم رفض المكالمة لأن المطعم مشغول";if(o.cancelReason==="store_cancel_after_call")return"ألغى المطعم طلبك"+(o.cancelReasonText?": "+o.cancelReasonText:"");return""}
+const NT={preparing:"المتجر يجهّز طلبك 👨‍🍳",pending:"طلبك جاهز، نبحث لك عن سائق 🛵",accepted:"السائق قبل طلبك وبالطريق للمتجر 🛵",arrived_store:"السائق وصل للمتجر",picked_up:"السائق استلم طلبك وبالطريق إليك 🎉",delivering:"السائق بالطريق إليك 🎉",delivered:"تم تسليم طلبك، بالعافية 🍽️",cancelled:"تم إلغاء طلبك"};
+function cancelMsg(o){if(!o||o.status!=="cancelled")return"";return"المتجر مشغول حالياً، نعتذر عن عدم تنفيذ طلبك"}
 function watchStatus(){
  for(const [id,o] of Object.entries(orders)){
   const p=lastSt[id];lastSt[id]=o.status;
@@ -895,16 +895,40 @@ function drawCur(){
  const [id,o]=act,price=Number(o.price)||0,stage=STAGE[o.status]??1,fee=Number(o.deliveryFee)||0;
  const bc=o.status==="cancelled"?"c":(o.status==="calling"?"w":"");
  const delivered=o.status==="delivered";
- const names=["التحضير","السائق للمطعم","بالطريق إليك","التسليم"],ics=["store","scooter","pin","home"];
+ const names=["التحضير","السائق للمتجر","بالطريق إليك","التسليم"],ics=["store","scooter","pin","home"];
  const route=names.map((n,k)=>{const c=(stage>k+1||delivered)?"d":stage===k+1?"n":"";return `<li class="${c}"><i>${ICON(c==="d"?"check":ics[k])}</i>${n}</li>`}).join("");
  const p=delivered?1:Math.min(1,Math.max(0,(stage-1)/3));
  $("cur").innerHTML=`<div class="live-card"><div class="lc-top"><div><small>طلبك الحالي</small><b>${esc(o.restaurantName)}</b></div><span class="badge ${bc}">${ST[o.status]||esc(o.status)}</span></div>
  ${o.status==="cancelled"?"":`<ol class="route" style="--p:${p}">${route}</ol>`}
   ${cancelMsg(o)?`<p class="lnote" style="color:#c0002a;font-weight:700">${esc(cancelMsg(o))}</p>`:""}
- ${o.status==="calling"&&!price?`<p class="lnote">بعد المكالمة سيسجّل المطعم سعر طلبك.</p><div class="acts"><button class="g main" data-redial="${esc(id)}">${ICON("phone")}إعادة الاتصال</button>${o.callAnswered?"":`<button class="l sm" data-cancel="${esc(id)}">إلغاء</button>`}${o.callAnswered||!adminWa?"":`<button class="l" data-support="${esc(id)}">تواصل مع الدعم</button>`}</div>${o.callAnswered?`<p class="lhint">تم الرد على مكالمتك، لا يمكن إلغاء الطلب.</p>`:""}`:""}
- <div class="lrows"><div class="row"><span>سعر الطلب</span><b>${price?fmt(price)+" د.ع"+(o.priceFixed?" (مُصحَّح، كان "+fmt(o.priceOld)+")":""):"بانتظار المطعم"}</b></div>
+ ${o.status==="calling"&&!price?`<p class="lnote">بعد المكالمة سيسجّل المتجر سعر طلبك.</p><div class="acts"><button class="g main" data-redial="${esc(id)}">${ICON("phone")}إعادة الاتصال</button>${o.callAnswered?"":`<button class="l sm" data-cancel="${esc(id)}">إلغاء</button>`}${o.callAnswered||!adminWa?"":`<button class="l" data-support="${esc(id)}">تواصل مع الدعم</button>`}</div>${o.callAnswered?`<p class="lhint">تم الرد على مكالمتك، لا يمكن إلغاء الطلب.</p>`:""}`:""}
+ <div class="lrows"><div class="row"><span>سعر الطلب</span><b>${price?fmt(price)+" د.ع"+(o.priceFixed?" (مُصحَّح، كان "+fmt(o.priceOld)+")":""):"بانتظار المتجر"}</b></div>
  <div class="row"><span>أجرة التوصيل</span><b>${fmt(fee)} د.ع</b></div>
  <div class="row tot"><span>المجموع</span><b>${price?fmt(price+fee)+" د.ع":"—"}</b></div></div>
- ${isLive(o)&&price?'<p class="lhint">لإلغاء الطلب بعد تحديد السعر تواصل مع الإدارة.</p>':""}</div>`;
+ ${isLive(o)&&(price||o.callAnswered)?`<p class="lhint">هل لديك مشكلة؟</p><div class="acts"><button class="l" data-chat="${esc(id)}">💬 دردشة مع المتجر</button>${adminWa?`<button class="l" data-support="${esc(id)}">تواصل مع الدعم</button>`:""}${o.driverPhone?`<button class="l" data-drvwa="${esc(id)}">واتساب السائق</button>`:""}</div>`:""}</div>`;
 }
+
+// ---- دردشة الزبون والمتجر (نص + صور) ----
+function chShrink(f,m,q){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const k=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement("canvas");c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);c.getContext("2d").drawImage(i,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",q))};i.onerror=no;i.src=r.result};r.onerror=no;r.readAsDataURL(f)})}
+function openChat(oid,role,myUid){
+ const old=document.getElementById("chatBox");if(old)old.remove();
+ const d=document.createElement("div");d.id="chatBox";
+ d.style.cssText="position:fixed;inset:0;z-index:9999;background:#0d131a;display:flex;flex-direction:column;direction:rtl;color:#fff;font-family:inherit";
+ d.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;padding:14px;padding-top:calc(14px + env(safe-area-inset-top,0px));background:#151d27"><b>الدردشة</b><button id="chX" type="button" style="background:#2a3441;color:#fff;border:0;border-radius:10px;padding:8px 14px">إغلاق</button></div><div id="chL" style="flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px"></div><div style="display:flex;gap:8px;padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));background:#151d27"><label style="background:#2a3441;border-radius:12px;padding:10px 12px">📷<input id="chF" type="file" accept="image/*" hidden></label><input id="chT" placeholder="اكتب رسالة" style="flex:1;min-width:0;border:0;border-radius:12px;padding:10px;background:#1f2933;color:#fff"><button id="chS" type="button" style="background:#d9002f;color:#fff;border:0;border-radius:12px;padding:10px 16px">إرسال</button></div>';
+ document.body.appendChild(d);
+ const L=d.querySelector("#chL"),T=d.querySelector("#chT"),cref=ref(db,"chats/"+oid);
+ const un=onValue(cref,s=>{const v=s.val()||{};L.innerHTML="";Object.values(v).sort((a,b)=>(a.at||0)-(b.at||0)).forEach(m=>{const b=document.createElement("div");b.style.cssText="max-width:78%;padding:8px 12px;border-radius:14px;word-break:break-word;"+(m.from===role?"align-self:flex-start;background:#d9002f":"align-self:flex-end;background:#2a3441");if(m.img&&String(m.img).startsWith("data:image/")){const i=document.createElement("img");i.src=m.img;i.style.cssText="max-width:100%;border-radius:10px;display:block";b.appendChild(i)}if(m.text){const t=document.createElement("div");t.textContent=m.text;b.appendChild(t)}L.appendChild(b)});L.scrollTop=L.scrollHeight},()=>{L.textContent="تعذر تحميل الدردشة"});
+ const send=async(img)=>{const text=T.value.trim();if(!text&&!img)return;T.value="";try{await push(cref,{from:role,uid:myUid,at:Date.now(),...(text?{text:text.slice(0,500)}:{}),...(img?{img}:{})})}catch(e){alert("تعذر الإرسال: "+(e.code||e.message))}};
+ d.querySelector("#chS").onclick=()=>send();
+ T.onkeydown=e=>{if(e.key==="Enter")send()};
+ d.querySelector("#chF").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;try{let u=await chShrink(f,900,.6);if(u.length>140000)u=await chShrink(f,600,.4);if(u.length>140000)return alert("الصورة كبيرة، اختر صورة أصغر");send(u)}catch(x){alert("تعذر قراءة الصورة")}};
+ d.querySelector("#chX").onclick=()=>{try{un()}catch(e){}d.remove()};
+}
+
+$("cur").addEventListener("click",async e=>{
+ const b=e.target.closest("button");if(!b)return;
+ if(b.dataset.chat)openChat(b.dataset.chat,"c",me.uid);
+ if(b.dataset.drvwa){const o=orders[b.dataset.drvwa]||{};let p=String(o.driverPhone||"").replace(/\D/g,"");if(p.startsWith("0"))p="964"+p.slice(1);if(!p)return toast("رقم السائق غير متوفر",1);window.open("https://wa.me/"+p+"?text="+encodeURIComponent("مرحباً، أنا صاحب الطلب #"+String(b.dataset.drvwa).slice(-5)),"_blank")}
+
+});
 </script></body></html>

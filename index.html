@@ -226,7 +226,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <section id="t4" class="tab" hidden>
 <form id="fs" class="box"><h3>إضافة متجر جديد</h3>
 <input id="su" placeholder="رقم الهاتف (للدخول)" required>
-<input id="sn" placeholder="اسم المتجر" required>
+<input id="sn" placeholder="اسم المتجر" required><select id="stype" required><option value="restaurant">النوع: مطعم</option><option value="shop">النوع: متجر</option></select>
 <input id="sm" placeholder="رابط غوغل ماب الكامل أو الإحداثيات 33.75,44.63">
 <p class="sub" style="margin-top:-8px">يتحول الرابط تلقائياً إلى إحداثيات. الرابط الكامل مهم (المختصر goo.gl / maps.app لا يُقرأ، استعمل الإحداثيات بدله).</p>
 <input id="sp" type="password" placeholder="كلمة المرور (6 أحرف)" required>
@@ -301,15 +301,15 @@ bdi{direction:ltr;unicode-bidi:isolate}
 </section>
 
 <section id="t10" class="tab" hidden>
-<div class="box"><h3>مطاعم تطبيق الزبون</h3>
+<div class="box"><h3>متاجر تطبيق الزبون</h3>
 <p class="sub">فعّل "يظهر للزبون" وضع رابط المنيو (يفتح داخل التطبيق). أرقام المتاجر لا تظهر للزبون أبداً.</p>
 <div id="custRest" class="wrap"></div></div>
 <div class="box"><h3>نصائح الاتصال للزبون</h3>
 <p class="sub">تظهر كنقاط للزبون عند الضغط على «اطلب بالاتصال». اكتب كل نقطة في سطر مستقل (حتى 8 نقاط).</p>
 <textarea id="callTips" rows="6"></textarea>
 <div class="row2"><button type="button" id="btnTips" class="grn">حفظ النصائح</button><button type="button" id="btnTipsReset" class="gray">استعادة الافتراضي</button></div></div>
-<div class="box"><h3>أسعار الكروة حسب البعد عن المطعم</h3>
-<p class="sub">سعر التوصيل للزبون يتحدد حسب بعده عن المطعم بالكيلومتر. كل سطر فئة: «حتى كم = سعر». وأي مسافة أبعد من آخر سطر تظهر للزبون «غير متاح».</p>
+<div class="box"><h3>أسعار الكروة حسب البعد عن المتجر</h3>
+<p class="sub">سعر التوصيل للزبون يتحدد حسب بعده عن المتجر بالكيلومتر. كل سطر فئة: «حتى كم = سعر». وأي مسافة أبعد من آخر سطر تظهر للزبون «غير متاح».</p>
 <div id="feeRows"></div>
 <input id="custFees" type="hidden">
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="btnFeeAdd">+ إضافة فئة</button><button type="button" id="btnCustFees" class="grn">حفظ الأسعار</button></div></div>
@@ -526,7 +526,7 @@ $("nav").onclick=e=>{const b=e.target.closest("[data-t]");if(!b)return;
  document.querySelectorAll("#nav button").forEach(x=>x.classList.toggle("on",x===b))};
 
 
-// ===== تطبيق الزبون: المطاعم + الكروة + الزونات =====
+// ===== تطبيق الزبون: المتاجر + الكروة + الزونات =====
 const gen=new Set();
 const newCode=()=>String(Math.floor(100000+Math.random()*900000));
 function ensureCodes(){
@@ -539,7 +539,7 @@ function renderCust(){
  const ae=document.activeElement;
  const sts=Object.entries(users).filter(([,u])=>u&&u.role==="store");
  if(!(ae&&ae.tagName==="INPUT"&&$("custRest").contains(ae))){
-  $("custRest").innerHTML=table(["المطعم","يظهر للزبون","رابط المنيو","الإحداثيات (عرض,طول)","صورة الواجهة","حفظ"],sts.map(([id,u])=>
+  $("custRest").innerHTML=table(["المتجر","يظهر للزبون","رابط المنيو","الإحداثيات (عرض,طول)","صورة الواجهة","حفظ"],sts.map(([id,u])=>
    `<tr><td><b>${esc(u.name)}</b></td>
    <td><input type="checkbox" id="cv-${esc(id)}" ${u.custVisible?"checked":""} style="width:22px;height:22px"></td>
    <td><input id="cm-${esc(id)}" dir="ltr" value="${esc(u.menuUrl||"")}" placeholder="https://..."></td>
@@ -572,9 +572,9 @@ $("t10").addEventListener("click",e=>{
   const u=users[d.cs],vis=$("cv-"+d.cs).checked,mu=$("cm-"+d.cs).value.trim();
   if(mu&&!/^https?:\/\//i.test(mu))throw new Error("رابط المنيو يجب أن يبدأ بـ https://");
   const cm=($("cl-"+d.cs).value||"").match(/(-?\d+(?:\.\d+)?)\s*[,،\s]\s*(-?\d+(?:\.\d+)?)/),lat=cm?+cm[1]:null,lng=cm?+cm[2]:null;
-  if(vis&&lat==null)throw new Error("حدد إحداثيات المطعم (مثال: 33.7500,44.6300). انسخها من خرائط Google بالضغط المطول على الموقع.");
+  if(vis&&lat==null)throw new Error("حدد إحداثيات المتجر (مثال: 33.7500,44.6300). انسخها من خرائط Google بالضغط المطول على الموقع.");
   await update(ref(db),{["users/"+d.cs+"/custLat"]:lat,["users/"+d.cs+"/custLng"]:lng,["users/"+d.cs+"/custVisible"]:vis,["users/"+d.cs+"/menuUrl"]:mu,
-   ["restaurants/"+d.cs]:vis?{name:u.name,menuUrl:mu,mapUrl:u.mapUrl||"",lat:lat,lng:lng,isOpen:u.isActive!==false,...(u.imgV?{imgV:u.imgV}:{})}:null});
+   ["restaurants/"+d.cs]:vis?{name:u.name,type:u.storeType||"restaurant",menuUrl:mu,mapUrl:u.mapUrl||"",lat:lat,lng:lng,isOpen:u.isActive!==false,...(u.imgV?{imgV:u.imgV}:{})}:null});
   say("تم الحفظ.");
  });
  if(b.id==="btnCustFees")run(async()=>{
@@ -722,7 +722,7 @@ function drawProfitTab(){
  $("pf2").textContent=fmt(totalDue)+" د.ع";
  $("pf3").textContent=fmt(paidAll)+" د.ع";
  $("pf4").textContent=showProfitFlag?fmt(lastReset)+" د.ع":"***** د.ع";
- {const sm=t=>allFin.filter(f=>f.type===t).reduce((s,f)=>s+(Number(f.amount)||0),0),dd=sm("deduction"),bb=sm("bonus");$("pf5").textContent=fmt(dd)+" د.ع";$("pf6").textContent=fmt(bb)+" د.ع";$("pf7").textContent=fmt(dd+bb)+" د.ع";$("pf7n").textContent="الصافي للمنصة (خصومات − مكافآت): "+fmt(dd-bb)+" د.ع"}
+ {const sm=t=>allFin.filter(f=>f.type===t).reduce((s,f)=>s+(Number(f.amount)||0),0),pb=(settings&&settings.pfBase)||{},dd=Math.max(0,sm("deduction")-(Number(pb.d)||0)),bb=Math.max(0,sm("bonus")-(Number(pb.b)||0));$("pf5").textContent=fmt(dd)+" د.ع";$("pf6").textContent=fmt(bb)+" د.ع";$("pf7").textContent=fmt(dd+bb)+" د.ع";$("pf7n").textContent="الصافي للمنصة (خصومات − مكافآت): "+fmt(dd-bb)+" د.ع"}
  $("pfStores").innerHTML=table(["المتجر","المستحق عليكم","آخر تسديد","موعد التسديد","إجراءات"],stores.map(([id,u])=>{
   const due=storeDue(id),lp=Math.max(0,...allFin.filter(f=>f.userId===id&&f.type==="store_paid").map(f=>Number(f.createdAt)||0));
   const dd=storeDueDate(u,id),left=Math.ceil((dd-Date.now())/864e5);
@@ -1344,7 +1344,7 @@ async function addUser(role,username,name,pass,extra={}){
  try{
   const email=username.includes("@")?username:username+"@baqubah.app";
   const c=await createUserWithEmailAndPassword(getAuth(sec),email,pass);
-  const rec={role,username,name,email,mapUrl:mm.url,isActive:true,createdAt:Date.now()};
+  const rec={role,username,name,email,mapUrl:mm.url,isActive:true,createdAt:Date.now(),...(role==="store"?{storeType:extra.storeType==="shop"?"shop":"restaurant"}:{})};
   if(/^[0-9+]{7,15}$/.test(username))rec.phone=username;
   if(mm.p){rec.custLat=mm.p.lat;rec.custLng=mm.p.lng}
   if(role==="store")rec.commissionAmount=Number(settings.storeCommissionFixed??500);
@@ -1353,7 +1353,7 @@ async function addUser(role,username,name,pass,extra={}){
 }
 
 $("fd").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("driver",$("du").value,$("dn").value,$("dp").value);e.target.reset();say("تمت إضافة السائق.")})};
-$("fs").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("store",$("su").value,$("sn").value,$("sp").value,{mapUrl:$("sm").value});e.target.reset();say("تمت إضافة المتجر.")})};
+$("fs").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("store",$("su").value,$("sn").value,$("sp").value,{mapUrl:$("sm").value,storeType:$("stype").value});e.target.reset();say("تمت إضافة المتجر.")})};
 $("fa").onsubmit=e=>{e.preventDefault();run(async()=>{
  const name=$("an").value.trim(),fee=Number($("af").value);
  if(!name||!Number.isSafeInteger(fee)||fee<0)throw Error("بيانات غير صحيحة.");
@@ -1392,7 +1392,7 @@ async function autoClean(){
 }
 
 // ===== نصائح الاتصال + صور المتاجر =====
-const DEF_TIPS=["راجع منيو المطعم قبل الاتصال حتى لا تنسى شيئاً من طلبك.","المكالمة مسجّلة بالكامل لأغراض الجودة.","لا داعي لإعطاء رقم هاتفك للمطعم؛ فالسائق والإدارة لديهما المعلومات الكافية لإيصال الطلب إليك بأسرع وقت."];
+const DEF_TIPS=["راجع منيو المتجر قبل الاتصال حتى لا تنسى شيئاً من طلبك.","المكالمة مسجّلة بالكامل لأغراض الجودة.","لا داعي لإعطاء رقم هاتفك للمتجر؛ فالسائق والإدارة لديهما المعلومات الكافية لإيصال الطلب إليك بأسرع وقت."];
 const rimgC={};
 function imgThumb(id,v){
  const c=rimgC[id];
@@ -1521,6 +1521,72 @@ document.addEventListener("click",e=>{
   say(restore?"تمت إعادة إظهار التفاصيل.":"تم حذف التفاصيل المالية من العرض.");
  });
 });
+
+// ---- عرض دردشات الزبائن للإدارة ----
+(function(){
+ const b=document.createElement("button");b.type="button";b.textContent="💬 الدردشات";
+ b.style.cssText="position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:900;background:#0d131a;color:#fff;border:0;border-radius:14px;padding:12px 16px;font-weight:700";
+ document.body.appendChild(b);
+ const p=document.createElement("div");p.hidden=true;
+ p.style.cssText="position:fixed;inset:0;z-index:9999;background:#0d131a;color:#fff;direction:rtl;padding:12px;padding-top:calc(12px + env(safe-area-inset-top,0px));overflow:auto";
+ document.body.appendChild(p);
+ const btn=(t,f)=>{const x=document.createElement("button");x.type="button";x.textContent=t;x.style.cssText="background:#2a3441;color:#fff;border:0;border-radius:10px;padding:8px 14px;margin:4px 0";x.onclick=f;return x};
+ function head(t,back){const h=document.createElement("div");h.style.cssText="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px";const a=document.createElement("b");a.textContent=t;h.appendChild(a);h.appendChild(btn(back?"رجوع":"إغلاق",back||(()=>{p.hidden=true})));return h}
+ async function openOne(id,o){
+  p.innerHTML="";p.appendChild(head("دردشة طلب #"+String(id).slice(-5),list));
+  const box=document.createElement("div");box.textContent="جاري التحميل...";p.appendChild(box);
+  try{
+   const v=(await get(ref(db,"chats/"+id))).val()||{};const a=Object.values(v).sort((x,y)=>(x.at||0)-(y.at||0));
+   box.innerHTML="";if(!a.length){box.textContent="لا توجد رسائل لهذا الطلب";return}
+   a.forEach(m=>{const d=document.createElement("div");d.style.cssText="max-width:80%;margin:6px 0;padding:8px 12px;border-radius:14px;word-break:break-word;background:"+(m.from==="s"?"#2a3441":"#d9002f")+";"+(m.from==="s"?"margin-right:auto":"margin-left:auto");
+    const w=document.createElement("small");w.style.cssText="display:block;opacity:.7";w.textContent=(m.from==="s"?"المتجر":"الزبون")+" - "+new Date(m.at||0).toLocaleString("ar-IQ");d.appendChild(w);
+    if(m.img&&String(m.img).startsWith("data:image/")){const i=document.createElement("img");i.src=m.img;i.style.cssText="max-width:100%;border-radius:10px;display:block;margin-top:4px";d.appendChild(i)}
+    if(m.text){const t=document.createElement("div");t.textContent=m.text;d.appendChild(t)}
+    box.appendChild(d)});
+  }catch(er){box.textContent="تعذر التحميل: "+(er.code||er.message)}
+ }
+ function list(){
+  p.innerHTML="";p.appendChild(head("دردشات الزبائن والمتاجر"));
+  const all=Object.entries((typeof cord==="object"&&cord)||{}).filter(([,o])=>o&&(o.callAnswered||o.price)).sort((x,y)=>(y[1].createdAt||0)-(x[1].createdAt||0)).slice(0,100);
+  if(!all.length){p.appendChild(document.createTextNode("لا توجد طلبات بها دردشة بعد"));return}
+  all.forEach(([id,o])=>{const r=btn((o.restaurantName||"متجر")+" - #"+String(id).slice(-5)+(o.cancelAsk?" ⚠️ طلب إلغاء":""),()=>openOne(id,o));r.style.cssText+=";display:block;width:100%;text-align:right";p.appendChild(r)});
+ }
+ b.onclick=()=>{p.hidden=false;list()};
+})();
+
+// ---- تصفير عرض الخصومات والمكافآت (لا يمس أرصدة السائقين) ----
+document.addEventListener("click",e=>{const b=e.target.closest("[data-pfz]");if(!b)return;
+ run(async()=>{const all=Object.values(fin).filter(Boolean),sm=t=>all.filter(f=>f.type===t).reduce((s,f)=>s+(Number(f.amount)||0),0);
+  if(!(await showToastConfirm("تصفير عرض الخصومات والمكافآت؟ لا يغيّر أرصدة السائقين ولا ديونهم.")))return;
+  await update(ref(db,"settings/pfBase"),{d:sm("deduction"),b:sm("bonus"),at:Date.now()});say("تم تصفير العرض.")})});
+</script>
+<style>#t12 .grid .box.hv strong{filter:blur(9px);user-select:none}.cbt{display:flex;gap:6px;margin-top:8px}.cbt button{flex:1;padding:6px 4px;font-size:12px;min-height:0;border-radius:10px}</style>
+<script>
+(function(){
+ try{
+  var g=document.querySelector("#t12 .grid");if(!g)return;
+  var K="hidPf",H={};try{H=JSON.parse(localStorage.getItem(K)||"{}")}catch(e){}
+  var Z={pf1:"data-pzero",pf2:"data-szall",pf3:"data-szall",pf4:"data-pzero",pf5:"data-pfz",pf6:"data-pfz",pf7:"data-pfz"};
+  function save(){try{localStorage.setItem(K,JSON.stringify(H))}catch(e){}}
+  function apply(b){var st=b.querySelector("strong");if(!st)return;b.classList.toggle("hv",!!H[st.id]);var h=b.querySelector("[data-hid]");if(h)h.textContent=H[st.id]?"إظهار":"إخفاء"}
+  g.querySelectorAll(".box").forEach(function(b){
+   var st=b.querySelector("strong");if(!st)return;
+   var w=document.createElement("div");w.className="cbt";
+   var h=document.createElement("button");h.type="button";h.className="gray";h.setAttribute("data-hid","1");h.textContent="إخفاء";
+   h.addEventListener("click",function(){H[st.id]=!H[st.id];save();apply(b)});
+   w.appendChild(h);
+   if(Z[st.id]){var z=document.createElement("button");z.type="button";z.className="red";z.setAttribute(Z[st.id],"1");z.textContent="تصفير";w.appendChild(z)}
+   b.appendChild(w);apply(b);
+  });
+  var all=document.createElement("div");all.className="box";
+  var a=document.createElement("button");a.type="button";a.className="gray";a.textContent="إخفاء جميع الحسابات";
+  var c=document.createElement("button");c.type="button";c.className="gray";c.textContent="إظهار جميع الحسابات";
+  function setAll(v){g.querySelectorAll(".box strong").forEach(function(s){H[s.id]=v});save();g.querySelectorAll(".box").forEach(apply)}
+  a.onclick=function(){setAll(true)};c.onclick=function(){setAll(false)};
+  var r=document.createElement("div");r.className="row2";r.appendChild(a);r.appendChild(c);all.appendChild(r);
+  g.parentNode.insertBefore(all,g);
+ }catch(e){}
+})();
 </script>
 </body>
 </html>

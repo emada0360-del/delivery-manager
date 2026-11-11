@@ -644,7 +644,7 @@ function showIncoming(id){
  d=document.createElement("div");d.id="callUI";d.dataset.mode="in";d.className="cs";
  d.innerHTML=`<div class="cs-glow"></div>
 <div class="cs-top"><span class="cs-rec"><i></i>مكالمة واردة · ستُسجَّل عند الرد</span></div>
-<div class="cs-mid"><div class="cs-av">${IC_USER}<b></b><b></b></div><div class="cs-name">زبون يتصل بالمطعم</div><div class="cs-sub">${esc(callSub(id))}</div><div class="cs-st">مكالمة واردة<span class="dots"></span></div></div>
+<div class="cs-mid"><div class="cs-av">${IC_USER}<b></b><b></b></div><div class="cs-name">زبون يتصل بالمتجر</div><div class="cs-sub">${esc(callSub(id))}</div><div class="cs-st">مكالمة واردة<span class="dots"></span></div></div>
 <div class="cs-bot"><button type="button" class="cs-b no" data-k="no" aria-label="رفض"><span class="cs-ic">${IC_END}</span><em>رفض</em></button><button type="button" class="cs-b yes" data-k="yes" aria-label="رد"><span class="cs-ic">${IC_ANS}</span><em>رد</em></button></div>`;
  d.onclick=e=>{const b=e.target.closest("button");if(!b)return;
   if(b.dataset.k==="yes")answerCall(id);
@@ -654,10 +654,10 @@ function showIncoming(id){
 async function rejectCall(id){
  curRing=null;ring(false);ui("");
  const now=Date.now();
- try{await update(ref(db,"customerOrders/"+id),{status:"cancelled",cancelReason:"store_rejected_call",cancelReasonText:"المطعم مشغول",cancelledBy:"store",cancelledAt:now})}catch(e){}
+ try{await update(ref(db,"customerOrders/"+id),{status:"cancelled",cancelReason:"store_rejected_call",cancelReasonText:"المتجر مشغول",cancelledBy:"store",cancelledAt:now})}catch(e){}
  try{await set(ref(db,`calls/${id}/rejected`),now)}catch(e){}
  set(ref(db,`calls/${id}/ended`),now).catch(()=>{});
- update(ref(db,"callLogs/"+id),{storeId:uid,result:"rejected",at:now,cancelled:true,cancelReasonText:"المطعم مشغول",cancelledAt:now}).catch(()=>{});
+ update(ref(db,"callLogs/"+id),{storeId:uid,result:"rejected",at:now,cancelled:true,cancelReasonText:"المتجر مشغول",cancelledAt:now}).catch(()=>{});
 }
 let spk=true;
 function setSpk(v){spk=!!v;try{const sc=storeCall();if(sc&&sc.speaker)sc.speaker({on:spk}).catch(()=>{})}catch(e){}syncProx()}
@@ -722,7 +722,7 @@ async function dial(oid){
  try{
   await set(ref(db,"calls/"+oid),null);
   const c=await openCall(oid,"c");
-  ui("جارٍ الاتصال بالمطعم...",[["إنهاء",hangup]]);
+  ui("جارٍ الاتصال بالمتجر...",[["إنهاء",hangup]]);
   const o=await c.pc.createOffer();await c.pc.setLocalDescription(o);
   await set(ref(db,`calls/${oid}/offer`),{type:o.type,sdp:o.sdp});
   c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(a&&call===c&&!c.pc.remoteDescription){try{await c.pc.setRemoteDescription(a);flush(c)}catch(e){}}}));
@@ -831,7 +831,7 @@ function decideUI(id){
  d.style.cssText="position:fixed;inset:0;background:#0d131aee;z-index:98;display:grid;place-items:center;padding:20px";
  const box=h=>`<div style="background:#fff;border-radius:18px;padding:18px;width:100%;max-width:340px;color:#0f1b2a;text-align:center">${h}</div>`;
  const B=(k,t,c,x)=>`<button data-k="${k}" ${x||""} style="width:100%;border:0;border-radius:12px;padding:14px;margin-top:8px;font:700 16px inherit;color:#fff;background:${c}">${t}</button>`;
- const RS=["الوجبة غير متوفرة","المطعم مشغول حالياً","خارج وقت العمل","زبون مزعج","سبب آخر"];
+ const RS=["الوجبة غير متوفرة","المتجر مشغول حالياً","خارج وقت العمل","زبون مزعج","سبب آخر"];
  let reason="",other="";
  const home=()=>{d.innerHTML=box(`<b style="font-size:17px">انتهت المكالمة</b><div style="margin:6px 0 10px;color:#5b6b7d;font-size:14px">طلب #${esc(id.slice(-5))} — ماذا تريد؟</div>${B("prep","✅ تحضير الطلب","#0f9a63")}${B("cancel","❌ إلغاء الطلب","#d9002f")}`)};
  const confPrep=()=>{d.innerHTML=box(`<b style="font-size:17px">تأكيد تحضير الطلب؟</b><div style="margin:6px 0 4px;color:#5b6b7d;font-size:14px">بعد التأكيد تكتب السعر وترسل الطلب.</div>${B("prepYes","نعم، تحضير","#0f9a63")}${B("back","رجوع","#8a97a6")}`)};
@@ -1136,6 +1136,38 @@ function goTab(t){document.body.dataset.tab=t;selO=null;$("chips")._h=null;try{d
 document.body.dataset.tab="prep";$("historyOrders").hidden=false;
 $("tabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(b)goTab(b.dataset.t)};
 $("btnHistory").onclick = () => { $("historyOrders").hidden = !$("historyOrders").hidden; };
+
+// ---- دردشة الزبون والمتجر (نص + صور) ----
+function chShrink(f,m,q){return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const k=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement("canvas");c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);c.getContext("2d").drawImage(i,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",q))};i.onerror=no;i.src=r.result};r.onerror=no;r.readAsDataURL(f)})}
+function openChat(oid,role,myUid){
+ const old=document.getElementById("chatBox");if(old)old.remove();
+ const d=document.createElement("div");d.id="chatBox";
+ d.style.cssText="position:fixed;inset:0;z-index:9999;background:#0d131a;display:flex;flex-direction:column;direction:rtl;color:#fff;font-family:inherit";
+ d.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;padding:14px;padding-top:calc(14px + env(safe-area-inset-top,0px));background:#151d27"><b>الدردشة</b><button id="chX" type="button" style="background:#2a3441;color:#fff;border:0;border-radius:10px;padding:8px 14px">إغلاق</button></div><div id="chL" style="flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px"></div><div style="display:flex;gap:8px;padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));background:#151d27"><label style="background:#2a3441;border-radius:12px;padding:10px 12px">📷<input id="chF" type="file" accept="image/*" hidden></label><input id="chT" placeholder="اكتب رسالة" style="flex:1;min-width:0;border:0;border-radius:12px;padding:10px;background:#1f2933;color:#fff"><button id="chS" type="button" style="background:#d9002f;color:#fff;border:0;border-radius:12px;padding:10px 16px">إرسال</button></div>';
+ document.body.appendChild(d);
+ const L=d.querySelector("#chL"),T=d.querySelector("#chT"),cref=ref(db,"chats/"+oid);
+ const un=onValue(cref,s=>{const v=s.val()||{};L.innerHTML="";Object.values(v).sort((a,b)=>(a.at||0)-(b.at||0)).forEach(m=>{const b=document.createElement("div");b.style.cssText="max-width:78%;padding:8px 12px;border-radius:14px;word-break:break-word;"+(m.from===role?"align-self:flex-start;background:#d9002f":"align-self:flex-end;background:#2a3441");if(m.img&&String(m.img).startsWith("data:image/")){const i=document.createElement("img");i.src=m.img;i.style.cssText="max-width:100%;border-radius:10px;display:block";b.appendChild(i)}if(m.text){const t=document.createElement("div");t.textContent=m.text;b.appendChild(t)}L.appendChild(b)});L.scrollTop=L.scrollHeight},()=>{L.textContent="تعذر تحميل الدردشة"});
+ const send=async(img)=>{const text=T.value.trim();if(!text&&!img)return;T.value="";try{await push(cref,{from:role,uid:myUid,at:Date.now(),...(text?{text:text.slice(0,500)}:{}),...(img?{img}:{})})}catch(e){alert("تعذر الإرسال: "+(e.code||e.message))}};
+ d.querySelector("#chS").onclick=()=>send();
+ T.onkeydown=e=>{if(e.key==="Enter")send()};
+ d.querySelector("#chF").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;try{let u=await chShrink(f,900,.6);if(u.length>140000)u=await chShrink(f,600,.4);if(u.length>140000)return alert("الصورة كبيرة، اختر صورة أصغر");send(u)}catch(x){alert("تعذر قراءة الصورة")}};
+ d.querySelector("#chX").onclick=()=>{try{un()}catch(e){}d.remove()};
+}
+
+(function(){
+ const w=document.createElement("div");w.style.cssText="position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:900;direction:rtl";
+ w.innerHTML='<button id="cpB" type="button" style="background:#d9002f;color:#fff;border:0;border-radius:14px;padding:12px 16px;font-weight:700">💬 دردشات الزبائن</button><div id="cpL" hidden style="margin-top:8px;max-height:50vh;overflow:auto;width:min(320px,86vw);background:#151d27;color:#fff;border-radius:14px;padding:10px"></div>';
+ document.body.appendChild(w);
+ const B=w.querySelector("#cpB"),L=w.querySelector("#cpL");
+ const live=()=>Object.entries(typeof cOrders==="object"&&cOrders||{}).filter(([,o])=>o&&!["delivered","cancelled"].includes(o.status)&&(o.callAnswered||o.price));
+ function paint(){const a=live();B.textContent="💬 دردشات الزبائن ("+a.length+")";if(L.hidden)return;L.innerHTML="";if(!a.length){L.textContent="لا توجد طلبات حالياً";return}
+  a.forEach(([id,o])=>{const r=document.createElement("div");r.style.cssText="padding:8px 0;border-bottom:1px solid #2a3441";const t=document.createElement("div");t.textContent="طلب #"+String(id).slice(-5)+" - "+(o.customerName||"زبون");r.appendChild(t);
+   
+   const c=document.createElement("button");c.type="button";c.textContent="دردشة";c.style.cssText="margin:6px 6px 0 0;padding:6px 12px;border:0;border-radius:10px;background:#2a3441;color:#fff";c.onclick=()=>openChat(id,"s",uid);r.appendChild(c);
+   
+   L.appendChild(r)})}
+ B.onclick=()=>{L.hidden=!L.hidden;paint()};setInterval(paint,3000);
+})();
 </script>
 </body>
 </html>

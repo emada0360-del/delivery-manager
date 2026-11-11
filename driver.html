@@ -696,7 +696,7 @@ function __main(){
      }else if(!p&&o&&o.status==="accepted"&&o.forcedAssign){forcedAlert(o)}
     }
    }
-   prevMine=mine;fetchPrivate();draw();
+   prevMine=mine;try{window.__dp=window.__dp||{};for(const k in mine){const o=mine[k];if(o&&o.customerOrder&&o.driverId===uid&&!window.__dp[k]){window.__dp[k]=1;update(ref(db,"customerOrders/"+k),{driverPhone:(driver&&driver.phone)||o.driverPhone||"",driverName:(driver&&driver.name)||""}).catch(()=>{})}}}catch(e){}fetchPrivate();draw();
   },eh));
   stops.push(onValue(ref(db,"users/"+uid),s=>{const u=s.val();if(!u||u.isActive===false)logout(true)},()=>{}));
   tick=setInterval(draw,5000);
