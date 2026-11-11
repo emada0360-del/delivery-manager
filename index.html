@@ -225,7 +225,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 
 <section id="t4" class="tab" hidden>
 <form id="fs" class="box"><h3>إضافة متجر جديد</h3>
-<input id="su" placeholder="رقم الهاتف (للدخول)" required>
+<input id="su" type="tel" inputmode="numeric" maxlength="11" pattern="07[0-9]{9}" title="11 رقماً ويبدأ بـ 07" placeholder="رقم الهاتف (07XXXXXXXXX)" oninput="this.value=this.value.replace(/[٠-٩]/g,function(d){return d.charCodeAt(0)-1632}).replace(/\D/g,'').slice(0,11)" required>
 <input id="sn" placeholder="اسم المتجر" required><select id="stype" required><option value="restaurant">النوع: مطعم</option><option value="shop">النوع: متجر</option></select>
 <input id="sm" placeholder="رابط غوغل ماب الكامل أو الإحداثيات 33.75,44.63">
 <p class="sub" style="margin-top:-8px">يتحول الرابط تلقائياً إلى إحداثيات. الرابط الكامل مهم (المختصر goo.gl / maps.app لا يُقرأ، استعمل الإحداثيات بدله).</p>
@@ -1345,7 +1345,15 @@ async function addUser(role,username,name,pass,extra={}){
  const sec=initializeApp(cfg,"sec"+Date.now());
  try{
   const email=username.includes("@")?username:username+"@baqubah.app";
-  const c=await createUserWithEmailAndPassword(getAuth(sec),email,pass);
+  const ga=getAuth(sec);let c;
+  try{c=await createUserWithEmailAndPassword(ga,email,pass)}
+  catch(e){
+   if(e.code!=="auth/email-already-in-use")throw e;
+   // حساب دخول قديم بقي بعد حذف المستخدم من القاعدة: نعيد استعماله إذا كلمة المرور نفسها
+   try{c=await signInWithEmailAndPassword(ga,email,pass)}
+   catch(_){throw Error("الرقم مرتبط بحساب دخول قديم (محذوف سابقاً) بكلمة مرور مختلفة. استعمل كلمة المرور القديمة نفسها، أو احذف الحساب من Firebase ← Authentication ← Users ثم أعد المحاولة.")}
+   if(users[c.user.uid])throw Error("هذا الرقم مسجل مسبقاً بحساب فعّال.");
+  }
   const rec={role,username,name,email,mapUrl:mm.url,isActive:true,createdAt:Date.now(),...(role==="store"?{storeType:extra.storeType==="shop"?"shop":"restaurant"}:{})};
   if(/^[0-9+]{7,15}$/.test(username))rec.phone=username;
   if(mm.p){rec.custLat=mm.p.lat;rec.custLng=mm.p.lng}
@@ -1355,7 +1363,7 @@ async function addUser(role,username,name,pass,extra={}){
 }
 
 $("fd").onsubmit=e=>{e.preventDefault();run(async()=>{if(!/^07\d{9}$/.test($("du").value.trim()))throw Error("رقم السائق يجب أن يكون 11 رقماً ويبدأ بـ 07 فقط.");await addUser("driver",$("du").value,$("dn").value,$("dp").value);e.target.reset();say("تمت إضافة السائق.")})};
-$("fs").onsubmit=e=>{e.preventDefault();run(async()=>{await addUser("store",$("su").value,$("sn").value,$("sp").value,{mapUrl:$("sm").value,storeType:$("stype").value});e.target.reset();say("تمت إضافة المتجر.")})};
+$("fs").onsubmit=e=>{e.preventDefault();run(async()=>{if(!/^07\d{9}$/.test($("su").value.trim()))throw Error("رقم المتجر يجب أن يكون 11 رقماً ويبدأ بـ 07 فقط.");await addUser("store",$("su").value,$("sn").value,$("sp").value,{mapUrl:$("sm").value,storeType:$("stype").value});e.target.reset();say("تمت إضافة المتجر.")})};
 $("fa").onsubmit=e=>{e.preventDefault();run(async()=>{
  const name=$("an").value.trim(),fee=Number($("af").value);
  if(!name||!Number.isSafeInteger(fee)||fee<0)throw Error("بيانات غير صحيحة.");
