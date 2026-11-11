@@ -471,5 +471,6 @@ jobs:
       - name: Driver background reliability
         if: matrix.role == 'driver'
         run: |
-          for f in native_driver_1.py native_driver_2.py native_driver_3.py native_keepalive.py; do
- 
+          test -f native_driver_1.py
+          test -f native_driver_2.py
+          test -f native_dr
