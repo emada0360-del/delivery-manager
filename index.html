@@ -125,6 +125,22 @@ bdi{direction:ltr;unicode-bidi:isolate}
 .chips{margin-top:4px;display:flex;gap:6px;flex-wrap:wrap}
 .acts{display:flex;gap:6px;flex-wrap:wrap}.acts button{margin:0}td .tm{margin-top:2px}
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<style id="v2css">
+#liveOrders.wrap{overflow:visible}
+.lo{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;margin:0 0 12px}
+.lo-h{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}.lo-h bdi{font-weight:700;font-size:16px}
+.lo-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.lo-s{background:var(--raised);border-radius:14px;padding:10px 12px}
+.lo-s h4{margin:0 0 6px;font-size:13px;color:var(--muted);font-weight:600}
+.dr{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:14px;border-bottom:1px dashed var(--line)}
+.dr:last-child{border-bottom:0}.dr span{color:var(--muted);flex:none}.dr b{text-align:left;font-weight:600}
+.mapA{display:inline-block;margin-top:6px;padding:5px 12px;border-radius:999px;background:var(--info-soft);color:var(--info);font-weight:600;font-size:13px;text-decoration:none}
+.lo-f{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}.lo-f select{margin:0;flex:1;min-width:160px}
+#zmap{height:360px;border-radius:16px;position:relative;z-index:0;margin:10px 0}
+.upl{display:inline-block;padding:8px 14px;border-radius:12px;background:var(--info);color:#fff;font-weight:600;font-size:13px;cursor:pointer;margin-top:4px}
+</style>
 </head>
 <body>
 <section id="login" class="box">
@@ -146,6 +162,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <button type="button" data-t="t3">السائقون</button>
 <button type="button" data-t="t4">المتاجر</button>
 <button type="button" data-t="t5">المناطق</button>
+<button type="button" data-t="t13">إغلاق مناطق</button>
 <button type="button" data-t="t6">المالية</button>
 <button type="button" data-t="t12">أرباح المنصة</button>
 <button type="button" data-t="t7">المسؤولون</button>
@@ -234,7 +251,10 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <input id="ca" type="number" min="1" placeholder="المبلغ">
 <input id="cn" placeholder="ملاحظة (اختياري)">
 <button type="button" id="cb" class="grn">تسجيل الكاش</button></div>
-<div class="box"><h3>سجل الكاش والخصومات والمكافآت</h3><div id="fin" class="wrap"></div></div>
+<div class="box"><h3>سجل الكاش والخصومات والمكافآت</h3>
+<p class="sub">الحذف يخفي السجل من العرض فقط، ولا يغيّر ديون السائقين.</p>
+<div class="row2" style="margin-bottom:10px"><button type="button" data-clr="fin" class="red">🗑 حذف السجل</button><button type="button" data-clr="finx" class="gray">إظهار المحذوف</button></div>
+<div id="fin" class="wrap"></div></div>
 </section>
 
 <section id="t12" class="tab" hidden>
@@ -243,13 +263,19 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div class="box">ديون المنصة للمتاجر الآجلة<strong id="pf2">0</strong></div>
 <div class="box">مسدَّد للمتاجر<strong id="pf3">0</strong></div>
 <div class="box">أرباح تم تصفيرها<strong id="pf4">—</strong></div>
+<div class="box">خصومات السواق<strong id="pf5">0</strong></div>
+<div class="box">مكافآت السواق<strong id="pf6">0</strong></div>
+<div class="box">مجموع الخصومات والمكافآت<strong id="pf7">0</strong><span class="tm" id="pf7n"></span></div>
 </div>
 <div class="box"><h3>إجراءات</h3>
 <p class="sub">التصفير يُسجَّل في السجل بالتاريخ والوقت ولا يمسح الطلبات.</p>
 <div class="row2"><button type="button" data-szall="1" class="org">تصفير ديون المتاجر</button><button type="button" data-pzero="1" class="red">تصفير الأرباح</button></div>
 <button type="button" id="btnToggleProfit2" class="gray">إظهار / إخفاء الأرباح</button></div>
 <div class="box"><h3>ديون المتاجر الآجلة</h3><div id="pfStores" class="wrap"></div></div>
-<div class="box"><h3>التفاصيل المالية (الأحدث أولاً)</h3><div id="pfLedger" class="wrap"></div></div>
+<div class="box"><h3>التفاصيل المالية (الأحدث أولاً)</h3>
+<p class="sub">الحذف يخفي التفاصيل من العرض فقط، ولا يغيّر الأرباح أو الديون أو الأرصدة.</p>
+<div class="row2" style="margin-bottom:10px"><button type="button" data-clr="pf" class="red">🗑 حذف التفاصيل المالية</button><button type="button" data-clr="pfx" class="gray">إظهار المحذوف</button></div>
+<div id="pfLedger" class="wrap"></div></div>
 </section>
 
 <section id="t7" class="tab" hidden>
@@ -278,6 +304,10 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div class="box"><h3>مطاعم تطبيق الزبون</h3>
 <p class="sub">فعّل "يظهر للزبون" وضع رابط المنيو (يفتح داخل التطبيق). أرقام المتاجر لا تظهر للزبون أبداً.</p>
 <div id="custRest" class="wrap"></div></div>
+<div class="box"><h3>نصائح الاتصال للزبون</h3>
+<p class="sub">تظهر كنقاط للزبون عند الضغط على «اطلب بالاتصال». اكتب كل نقطة في سطر مستقل (حتى 8 نقاط).</p>
+<textarea id="callTips" rows="6"></textarea>
+<div class="row2"><button type="button" id="btnTips" class="grn">حفظ النصائح</button><button type="button" id="btnTipsReset" class="gray">استعادة الافتراضي</button></div></div>
 <div class="box"><h3>أسعار الكروة حسب البعد عن المطعم</h3>
 <p class="sub">سعر التوصيل للزبون يتحدد حسب بعده عن المطعم بالكيلومتر. كل سطر فئة: «حتى كم = سعر». وأي مسافة أبعد من آخر سطر تظهر للزبون «غير متاح».</p>
 <div id="feeRows"></div>
@@ -295,6 +325,18 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;font-size:13px"><label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="recAutoOn" checked style="width:18px;height:18px;min-height:0;margin:0;accent-color:#0d131a"> حذف تلقائي بعد</label><input type="number" id="recDays" min="1" max="365" value="7" style="width:70px;margin:0"> <span>يوم</span><button type="button" id="btnRecAuto" class="grn">حفظ</button></div>
 <audio id="clAudio" controls style="width:100%;margin-bottom:10px;display:none"></audio>
 <div id="callLogs" class="wrap"></div></div>
+</section>
+
+<section id="t13" class="tab" hidden>
+<div class="box"><h3>إغلاق مناطق التوصيل</h3>
+<p class="sub">حدّد على الخريطة المنطقة التي تريد إيقاف الطلب منها (مطر، أرض طينية...) حفاظاً على السائقين. الزبون داخل المنطقة لن يستطيع الطلب، ويظهر له سبب الإغلاق.</p>
+<div class="row2"><button type="button" id="zModeC" class="blue">⭕ دائرة</button><button type="button" id="zModeP" class="gray">⬠ رسم منطقة بالنقاط</button></div>
+<p class="sub" id="zHelp" style="margin:10px 0 0">اضغط على الخريطة لتحديد مركز الدائرة ثم اضبط نصف القطر.</p>
+<div id="zmap"></div>
+<div id="zRw"><label>نصف القطر: <b id="zRv">500 م</b></label><input id="zR" type="range" min="100" max="5000" step="50" value="500" style="padding:0"></div>
+<input id="zName" placeholder="اسم المنطقة (مثال: حي الكاطون)"><input id="zWhy" placeholder="سبب الإغلاق (مثال: أمطار وأرض طينية)">
+<div class="row2"><button type="button" id="zSave" class="grn">إغلاق هذه المنطقة</button><button type="button" id="zUndo" class="gray">تراجع</button><button type="button" id="zClear" class="gray">مسح التحديد</button></div></div>
+<div class="box"><h3>المناطق المغلقة</h3><div id="zList" class="wrap"></div></div>
 </section>
 
 <section id="t8" class="tab" hidden>
@@ -448,6 +490,7 @@ function fillSettings(){
  put("set-driver-commission",s.driverCommissionPercent??10);
  put("ann",s.announcement||"");
  put("set-adminwa",s.adminWhatsapp||"");
+ put("callTips",(Array.isArray(s.callTips)&&s.callTips.length?s.callTips:DEF_TIPS).join("\n"));
  put("set-cust-pct",(s.custCommissionPct===undefined||s.custCommissionPct===null)?"":s.custCommissionPct);
  {const c=$("set-reqapp");if(c&&document.activeElement!==c)c.checked=s.requireApproval===true}
 }
@@ -496,11 +539,12 @@ function renderCust(){
  const ae=document.activeElement;
  const sts=Object.entries(users).filter(([,u])=>u&&u.role==="store");
  if(!(ae&&ae.tagName==="INPUT"&&$("custRest").contains(ae))){
-  $("custRest").innerHTML=table(["المطعم","يظهر للزبون","رابط المنيو","الإحداثيات (عرض,طول)","حفظ"],sts.map(([id,u])=>
+  $("custRest").innerHTML=table(["المطعم","يظهر للزبون","رابط المنيو","الإحداثيات (عرض,طول)","صورة الواجهة","حفظ"],sts.map(([id,u])=>
    `<tr><td><b>${esc(u.name)}</b></td>
    <td><input type="checkbox" id="cv-${esc(id)}" ${u.custVisible?"checked":""} style="width:22px;height:22px"></td>
    <td><input id="cm-${esc(id)}" dir="ltr" value="${esc(u.menuUrl||"")}" placeholder="https://..."></td>
    <td><input id="cl-${esc(id)}" dir="ltr" value="${esc(u.custLat!=null?u.custLat+","+u.custLng:(()=>{const p=parseLatLng(u.mapUrl);return p?p.lat+","+p.lng:""})())}" placeholder="33.7500,44.6300"></td>
+   <td>${u.imgV?imgThumb(id,u.imgV):""}<label class="upl">📷 ${u.imgV?"تغيير الصورة":"رفع صورة"}<input type="file" accept="image/*" data-up="${esc(id)}" hidden></label>${u.imgV?` <button type="button" data-ud="${esc(id)}" class="red">حذف</button>`:""}</td>
    <td><button type="button" data-cs="${esc(id)}" class="grn">حفظ</button></td></tr>`),"لا توجد متاجر.");
  }
  if(!feeDirty&&!(ae&&ae.closest&&ae.closest("#feeRows"))){const f=Array.isArray(settings.custFees)?settings.custFees:[];$("custFees").value=f.map(x=>x.km+":"+x.fee).join(",");renderFeeRows()}
@@ -530,7 +574,7 @@ $("t10").addEventListener("click",e=>{
   const cm=($("cl-"+d.cs).value||"").match(/(-?\d+(?:\.\d+)?)\s*[,،\s]\s*(-?\d+(?:\.\d+)?)/),lat=cm?+cm[1]:null,lng=cm?+cm[2]:null;
   if(vis&&lat==null)throw new Error("حدد إحداثيات المطعم (مثال: 33.7500,44.6300). انسخها من خرائط Google بالضغط المطول على الموقع.");
   await update(ref(db),{["users/"+d.cs+"/custLat"]:lat,["users/"+d.cs+"/custLng"]:lng,["users/"+d.cs+"/custVisible"]:vis,["users/"+d.cs+"/menuUrl"]:mu,
-   ["restaurants/"+d.cs]:vis?{name:u.name,menuUrl:mu,mapUrl:u.mapUrl||"",lat:lat,lng:lng,isOpen:u.isActive!==false}:null});
+   ["restaurants/"+d.cs]:vis?{name:u.name,menuUrl:mu,mapUrl:u.mapUrl||"",lat:lat,lng:lng,isOpen:u.isActive!==false,...(u.imgV?{imgV:u.imgV}:{})}:null});
   say("تم الحفظ.");
  });
  if(b.id==="btnCustFees")run(async()=>{
@@ -678,6 +722,7 @@ function drawProfitTab(){
  $("pf2").textContent=fmt(totalDue)+" د.ع";
  $("pf3").textContent=fmt(paidAll)+" د.ع";
  $("pf4").textContent=showProfitFlag?fmt(lastReset)+" د.ع":"***** د.ع";
+ {const sm=t=>allFin.filter(f=>f.type===t).reduce((s,f)=>s+(Number(f.amount)||0),0),dd=sm("deduction"),bb=sm("bonus");$("pf5").textContent=fmt(dd)+" د.ع";$("pf6").textContent=fmt(bb)+" د.ع";$("pf7").textContent=fmt(dd+bb)+" د.ع";$("pf7n").textContent="الصافي للمنصة (خصومات − مكافآت): "+fmt(dd-bb)+" د.ع"}
  $("pfStores").innerHTML=table(["المتجر","المستحق عليكم","آخر تسديد","موعد التسديد","إجراءات"],stores.map(([id,u])=>{
   const due=storeDue(id),lp=Math.max(0,...allFin.filter(f=>f.userId===id&&f.type==="store_paid").map(f=>Number(f.createdAt)||0));
   const dd=storeDueDate(u,id),left=Math.ceil((dd-Date.now())/864e5);
@@ -695,6 +740,7 @@ function drawProfitTab(){
   else if(f.type==="profit_reset")rows.push({t:Number(f.createdAt)||0,who:"المنصة",kind:"z",amount:Number(f.amount)||0,note:f.note||"تصفير أرباح المنصة"});
  }
  rows.sort((a,b)=>b.t-a.t);
+ {const cl=Number(settings.ledgerClearedAt)||0;if(cl){for(let i=rows.length-1;i>=0;i--)if(rows[i].t<=cl)rows.splice(i,1)}}
  const kt={d:'<span class="tag y">دين على المنصة</span>',p:'<span class="tag g">تسديد للمتجر</span>',z:'<span class="tag b">تصفير أرباح</span>'};
  const shown=rows.slice(0,200);
  $("pfLedger").innerHTML=table(["الوقت والتاريخ","الجهة","النوع","المبلغ","التفاصيل"],shown.map(r=>`<tr><td>${tm(r.t)}</td><td>${esc(r.who)}</td><td>${kt[r.kind]}</td><td style="font-weight:700;color:${r.kind==="d"?"var(--brand)":"var(--ok)"}">${r.kind==="d"?"+":"−"}${fmt(r.amount)} د.ع</td><td>${esc(r.note)}</td></tr>`),"لا توجد حركات مالية بعد.")+(rows.length>200?`<p class="tm">يعرض آخر 200 حركة من ${rows.length}.</p>`:"");
@@ -725,6 +771,7 @@ async function deleteOrdersArchived(map){
   if(o&&o.status==="delivered"){
    const c=orderComm(o);
    const k=o.driverId||"_none";agg[k]=agg[k]||{amount:0,count:0};agg[k].amount+=c;agg[k].count++;
+    if(o.driverId)upd["driverHistory/"+o.driverId+"/"+id]={status:"delivered",createdAt:Number(o.createdAt)||0,deliveredAt:Number(o.deliveredAt)||Number(o.createdAt)||Date.now(),driverProfit:Math.round(Number(o.driverProfit)||0),deliveryFee:Number(o.deliveryFee)||0,storeName:String(o.storeName||""),area:String(o.area||"")};
     if(o.storeDeferred===true){const p=dealPay(o);if(o.driverId)aggD[o.driverId]=(aggD[o.driverId]||0)+p;if(o.storeId)aggS[o.storeId]=(aggS[o.storeId]||0)+p}
   }
  }
@@ -872,13 +919,12 @@ function draw(){
  const liveProfit=os.filter(o=>o.status==="delivered").reduce((s,o)=>s+orderComm(o),0);
  const archProfit=Object.values(fin).filter(f=>f&&f.type==="archive").reduce((s,f)=>s+(Number(f.amount)||0),0);
  const profitReset=Object.values(fin).filter(f=>f&&f.type==="profit_reset").reduce((s,f)=>s+(Number(f.amount)||0),0);
- const adjProfit=Object.values(fin).reduce((s,f)=>f&&f.type==="deduction"?s+(Number(f.amount)||0):f&&f.type==="bonus"?s-(Number(f.amount)||0):s,0);
- $("platformProfit").textContent=showProfitFlag?fmt(liveProfit+archProfit+adjProfit-profitReset)+" د.ع":"***** د.ع";
- $("profitNote").textContent=showProfitFlag?`عمولة التوصيل + عمولة المتاجر + الخصومات − المكافآت (منها ${fmt(archProfit)} من طلبات محذوفة)`:"";
+  $("platformProfit").textContent=showProfitFlag?fmt(liveProfit+archProfit-profitReset)+" د.ع":"***** د.ع";
+ $("profitNote").textContent=showProfitFlag?`عمولة التوصيل + عمولة المتاجر (منها ${fmt(archProfit)} من طلبات محذوفة). الخصومات والمكافآت لا تدخل هنا.`:"";
 
  drawOrders();
  drawLiveOrders();
- lastNet=liveProfit+archProfit+adjProfit-profitReset;lastReset=profitReset;
+ lastNet=liveProfit+archProfit-profitReset;lastReset=profitReset;
  drawProfitTab();
  drawCalls();
  syncCust();
@@ -926,7 +972,7 @@ function draw(){
  $("cd").innerHTML=drs.map(([id,u])=>`<option value="${esc(id)}">${esc(u.name)} (${esc(u.username)})</option>`).join("");
  if(keep)$("cd").value=keep;
 
- $("fin").innerHTML=table(["الاسم","النوع","المبلغ","ملاحظة","الوقت"],Object.values(fin).filter(f=>f&&["cash_received","deduction","bonus","store_paid"].includes(f.type)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(f=>
+ $("fin").innerHTML=table(["الاسم","النوع","المبلغ","ملاحظة","الوقت"],Object.values(fin).filter(f=>f&&["cash_received","deduction","bonus","store_paid"].includes(f.type)&&(Number(f.createdAt)||0)>(Number(settings.finLogClearedAt)||0)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(f=>
   `<tr><td>${esc(f.userName)}</td><td>${f.type==="deduction"?'<span class="tag r">خصم</span>':f.type==="bonus"?'<span class="tag b">مكافأة</span>':f.type==="store_paid"?'<span class="tag y">تسديد للمتجر</span>':'<span class="tag g">كاش مستلم</span>'}</td><td style="color:var(--ok);font-weight:700">${fmt(f.amount)} د.ع</td>
   <td>${esc(f.note)||"—"}</td><td>${tm(f.createdAt)}</td></tr>`),"لا توجد سجلات.");
 
@@ -957,25 +1003,39 @@ $("btnPrintAreas").onclick=()=>{
   setTimeout(()=>{$("printArea").hidden=true},500);
 };
 
+function storePos(sid,o){const u=users[sid]||{};if(u.custLat!=null&&u.custLng!=null&&isFinite(+u.custLat)&&isFinite(+u.custLng))return{lat:+u.custLat,lng:+u.custLng};return parseLatLng((o&&o.storeMapUrl)||u.mapUrl)}
+const mapA=(p,t)=>p?`<a class="mapA" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${p.lat},${p.lng}">📍 ${t}</a>`:'<span class="tm">الموقع غير محدد</span>';
 function drawLiveOrders(){
- const live=Object.entries(orders).filter(([id,o])=>o&&!["delivered","cancelled"].includes(o.status))
-   .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
+ const live=Object.entries(orders).filter(([id,o])=>o&&!["delivered","cancelled"].includes(o.status)).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
  const calling=Object.entries(cord).filter(([id,o])=>o&&o.status==="calling"&&!o.price&&!orders[id]&&Date.now()-(Number(o.createdAt)||0)<30*60000);
- const callRows=calling.map(([id,o])=>`<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td><span class="tag b">طلب زبون</span></td><td>${esc(o.restaurantName)}</td><td><span style="color:#94a3b8">—</span></td><td>—</td><td><span class="tag y">جارٍ الاتصال بالمتجر</span></td><td>${tm(o.createdAt)}</td><td>—</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td><td>—</td><td><select data-lvc="${esc(id)}"><option value="">اختر إجراء</option><option value="cc">إلغاء الطلب</option></select></td></tr>`);
- $("liveOrders").innerHTML=table(
-   ["الطلب","النوع","المتجر","السائق","رقم السائق","الحالة","وقت الإرسال","مدة القبول","منذ الإرسال","منذ القبول","إجراءات"],
-   [...callRows,...live.map(([id,o])=>{
-     let tagClass="y";
-     if(["accepted","arrived_store","picked_up","delivering"].includes(o.status))tagClass="g";
-     const dr=o.driverId?users[o.driverId]:null;
-     const name=o.driverName||(dr&&dr.name)||"";
-     const phone=o.driverPhone||(dr&&(dr.phone||dr.username))||"";
-     const driverName=name?`<b>${esc(name)}</b>${o.driverId?chipOf(o.driverId):""}`:'<span style="color:#94a3b8">بانتظار سائق</span>';
-     const driverPhone=phone?`<a href="tel:${esc(phone)}" dir="ltr">${esc(phone)}</a>`:'—';
-     return `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${o.customerOrder?'<span class="tag b">طلب زبون</span>':'<span class="tag">طلب متجر</span>'}${o.customerOrder?cpTag(id):""}</td><td>${esc(o.storeName)}</td><td>${driverName}</td>
-       <td style="text-align:left">${driverPhone}</td><td><span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span>${o.forcedAssign?' <span class="tag b">تعيين تلقائي</span>':''}${o.status==="preparing"&&Number(o.prepReadyAt)&&Date.now()>Number(o.prepReadyAt)?' <span class="tag r">انتهى وقت التحضير ولم يضغط جاهز</span>':''}</td><td>${tm(o.createdAt)}</td><td>${o.acceptedAt&&o.createdAt?fmtAge(o.acceptedAt-o.createdAt):"—"}</td><td><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></td><td>${o.acceptedAt?`<span class="ageC" data-ts="${Number(o.acceptedAt)}"></span>`:"—"}</td><td><select data-lv="${esc(id)}"><option value="">اختر إجراء</option>${o.status==="preparing"?'<option value="rel">إرسال للسائقين (جاهز)</option>':""}<option value="as">${o.driverId?"تعيين لسائق آخر":"تعيين لسائق"}</option>${o.driverId?'<option value="un">إلغاء التعيين (رفعه للسائقين)</option>':""}<option value="del">حذف الطلب</option></select></td></tr>`;
-   })],"لا توجد طلبات حية الآن."
- );
+ const dr=(k,v)=>`<div class="dr"><span>${k}</span><b>${v}</b></div>`;
+ const sec=(t,x)=>`<div class="lo-s"><h4>${t}</h4>${x}</div>`;
+ const cpos=id=>{const c=cord[id];return c&&isFinite(parseFloat(c.lat))&&isFinite(parseFloat(c.lng))?{lat:+c.lat,lng:+c.lng}:null};
+ const callCards=calling.map(([id,o])=>`<div class="lo"><div class="lo-h"><bdi>#${esc(id.slice(-6))}</bdi><span class="tag b">طلب زبون</span><span class="tag y">جارٍ الاتصال بالمتجر</span><span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></div>
+  <div class="lo-g">${sec("الزبون",cpTag(id)+dr("البعد عن المتجر",o.distanceKm!=null?Number(o.distanceKm).toFixed(1)+" كم":"—")+mapA(cpos(id),"موقع الزبون"))}
+  ${sec("المتجر",dr("الاسم",esc(o.restaurantName))+mapA(storePos(o.restaurantId,o),"موقع المتجر"))}
+  ${sec("الأسعار",dr("أجرة التوصيل",fmt(o.deliveryFee)+" د.ع")+dr("سعر الطلب","بانتظار تسجيله من المتجر"))}</div>
+  <div class="lo-f"><select data-lvc="${esc(id)}"><option value="">اختر إجراء</option><option value="cc">إلغاء الطلب</option></select></div></div>`);
+ const cards=live.map(([id,o])=>{
+  const cust=!!o.customerOrder,def=o.storeDeferred===true,sc=Number(o.storeCommission)||0,item=Number(o.itemPrice)||0,fee=Number(o.deliveryFee)||0,tot=Number(o.customerTotal)||item+fee,payStore=Math.max(0,Math.round(item-sc));
+  const dro=o.driverId?users[o.driverId]:null,name=o.driverName||(dro&&dro.name)||"",phone=o.driverPhone||(dro&&(dro.phone||dro.username))||"";
+  const tagClass=["accepted","arrived_store","picked_up","delivering"].includes(o.status)?"g":"y";
+  const driver=name?`<b>${esc(name)}</b>${o.driverId?chipOf(o.driverId):""}`:'<span class="tm">بانتظار سائق</span>';
+  const payBox=(def?'<span class="tag y">💳 آجل</span>':'<span class="tag g">💵 نقدي</span>')
+   +dr("يستلمه السائق من الزبون",fmt(tot)+" د.ع")
+   +dr("يدفعه السائق للمتجر",def?"لا شيء (آجل، الإدارة تسدّد للمتجر)":fmt(payStore)+" د.ع نقداً")
+   +(cust?`<div style="margin-top:8px"><button type="button" data-dfo="${esc(id)}" data-on="${def?0:1}" class="${def?"org":"blue"}">${def?"إغلاق الآجل (دفع نقدي للمتجر)":"تفعيل الدفع الآجل لهذا الطلب"}</button></div>`:'<div class="tm" style="margin-top:6px">طلب متجر: يدفع السائق للمتجر نقداً.</div>');
+  const custBox=cust?cpTag(id)+dr("البعد عن المتجر",o.distanceKm!=null?Number(o.distanceKm).toFixed(1)+" كم":"—")+mapA(cpos(id),"موقع الزبون")
+   :dr("المنطقة",esc(o.area||"—"))+'<div class="tm">طلب من المتجر، لا يوجد موقع زبون محفوظ.</div>';
+  return `<div class="lo"><div class="lo-h"><bdi>#${esc(id.slice(-6))}</bdi>${cust?'<span class="tag b">طلب زبون</span>':'<span class="tag">طلب متجر</span>'}${def?'<span class="tag y">آجل</span>':'<span class="tag g">نقدي</span>'}<span class="tag ${tagClass}">${ST[o.status]||esc(o.status)}</span>${o.forcedAssign?'<span class="tag b">تعيين تلقائي</span>':''}${o.status==="preparing"&&Number(o.prepReadyAt)&&Date.now()>Number(o.prepReadyAt)?'<span class="tag r">انتهى وقت التحضير ولم يضغط جاهز</span>':''}<span class="ageC" data-ts="${Number(o.createdAt)||0}"></span></div>
+  <div class="lo-g">${sec("الأسعار",dr("سعر الطلب",fmt(item)+" د.ع")+dr("أجرة التوصيل",fmt(fee)+" د.ع")+dr("المجموع على الزبون",fmt(tot)+" د.ع")+dr("عمولة المتجر",fmt(sc)+" د.ع"))}
+  ${sec("طريقة الدفع",payBox)}
+  ${sec("المتجر",dr("الاسم",esc(o.storeName))+(o.storePhone?dr("الهاتف",`<a href="tel:${esc(o.storePhone)}" dir="ltr">${esc(o.storePhone)}</a>`):"")+mapA(storePos(o.storeId,o),"موقع المتجر"))}
+  ${sec("الزبون",custBox)}
+  ${sec("السائق",dr("الاسم",driver)+dr("الهاتف",phone?`<a href="tel:${esc(phone)}" dir="ltr">${esc(phone)}</a>`:"—"))}
+  ${sec("الأوقات",dr("وقت الإرسال",tm(o.createdAt))+dr("مدة القبول",o.acceptedAt&&o.createdAt?fmtAge(o.acceptedAt-o.createdAt):"—")+dr("منذ القبول",o.acceptedAt?`<span class="ageC" data-ts="${Number(o.acceptedAt)}"></span>`:"—"))}</div>
+  <div class="lo-f"><select data-lv="${esc(id)}"><option value="">اختر إجراء</option>${o.status==="preparing"?'<option value="rel">إرسال للسائقين (جاهز)</option>':""}<option value="as">${o.driverId?"تعيين لسائق آخر":"تعيين لسائق"}</option>${o.driverId?'<option value="un">إلغاء التعيين (رفعه للسائقين)</option>':""}<option value="del">حذف الطلب</option></select></div></div>`});
+ $("liveOrders").innerHTML=[...callCards,...cards].join("")||'<p class="empty">لا توجد طلبات حية الآن.</p>';
  tickAges();
 }
 
@@ -1330,6 +1390,137 @@ async function autoClean(){
   await deleteOrdersArchived(old);
  }catch(e){console.warn("autoClean",e)}
 }
+
+// ===== نصائح الاتصال + صور المتاجر =====
+const DEF_TIPS=["راجع منيو المطعم قبل الاتصال حتى لا تنسى شيئاً من طلبك.","المكالمة مسجّلة بالكامل لأغراض الجودة.","لا داعي لإعطاء رقم هاتفك للمطعم؛ فالسائق والإدارة لديهما المعلومات الكافية لإيصال الطلب إليك بأسرع وقت."];
+const rimgC={};
+function imgThumb(id,v){
+ const c=rimgC[id];
+ if(c&&c.v===v)return `<img src="${c.u}" alt="" style="width:100%;max-width:150px;height:84px;object-fit:cover;border-radius:10px;display:block;margin-bottom:6px">`;
+ if(!rimgC["_"+id+v]){rimgC["_"+id+v]=1;get(ref(db,"restaurantImages/"+id)).then(s=>{const u=s.val();if(typeof u==="string"&&u.startsWith("data:image/")){rimgC[id]={v,u};scheduleDraw()}}).catch(()=>{})}
+ return "";
+}
+async function shrinkImg(file,maxW=900){
+ const img=await new Promise((res,rej)=>{const i=new Image(),u=URL.createObjectURL(file);i.onload=()=>{URL.revokeObjectURL(u);res(i)};i.onerror=()=>rej(Error("تعذر قراءة الصورة"));i.src=u});
+ const sc=Math.min(1,maxW/img.width),w=Math.round(img.width*sc),h=Math.round(img.height*sc),cv=document.createElement("canvas");
+ cv.width=w;cv.height=h;cv.getContext("2d").drawImage(img,0,0,w,h);
+ let q=.78,out=cv.toDataURL("image/jpeg",q);
+ while(out.length>200000&&q>.4){q-=.1;out=cv.toDataURL("image/jpeg",q)}
+ return out;
+}
+document.addEventListener("change",e=>{
+ const f=e.target.closest("input[data-up]");if(!f||!f.files[0])return;
+ const id=f.dataset.up,file=f.files[0];f.value="";
+ run(async()=>{
+  if(!/^image\//.test(file.type))throw Error("اختر ملف صورة.");
+  say("جاري معالجة الصورة...");
+  const data=await shrinkImg(file),v=Date.now(),u={["restaurantImages/"+id]:data,["users/"+id+"/imgV"]:v};
+  if(users[id]&&users[id].custVisible)u["restaurants/"+id+"/imgV"]=v;
+  await update(ref(db),u);rimgC[id]={v,u:data};say("تم رفع صورة الواجهة.");
+ });
+});
+$("t10").addEventListener("click",e=>{
+ const b=e.target.closest("button");if(!b)return;
+ if(b.id==="btnTips")run(async()=>{
+  const L=$("callTips").value.split("\n").map(x=>x.trim()).filter(Boolean);
+  if(L.length>8)throw Error("الحد الأقصى 8 نقاط.");
+  if(L.some(x=>x.length>220))throw Error("النقطة الواحدة لا تزيد عن 220 حرفاً.");
+  await update(ref(db,"settings"),{callTips:L.length?L:null});say("تم حفظ النصائح.");
+ });
+ if(b.id==="btnTipsReset")run(async()=>{await update(ref(db,"settings"),{callTips:null});$("callTips").value=DEF_TIPS.join("\n");say("تمت استعادة النصائح الافتراضية.")});
+ if(b.dataset.ud)run(async()=>{
+  const id=b.dataset.ud;if(!(await showToastConfirm("حذف صورة هذا المتجر؟")))return;
+  const u={["restaurantImages/"+id]:null,["users/"+id+"/imgV"]:null};
+  if(users[id]&&users[id].custVisible)u["restaurants/"+id+"/imgV"]=null;
+  await update(ref(db),u);delete rimgC[id];say("تم حذف الصورة.");
+ });
+});
+
+// ===== الدفع الآجل لطلب زبون =====
+document.addEventListener("click",e=>{
+ const b=e.target.closest("button[data-dfo]");if(!b)return;
+ const id=b.dataset.dfo,on=b.dataset.on==="1";
+ run(async()=>{
+  const o=orders[id];if(!o)throw Error("الطلب غير موجود.");
+  if(["delivered","cancelled"].includes(o.status))throw Error("الطلب منتهٍ.");
+  if(!(await showToastConfirm(on?"تفعيل الدفع الآجل؟ لن يدفع السائق للمتجر نقداً، والإدارة تسدّد للمتجر لاحقاً.":"إغلاق الآجل؟ سيدفع السائق للمتجر نقداً.")))return;
+  const u={["orders/"+id+"/storeDeferred"]:on?true:null},su=users[o.storeId];
+  if(on&&su&&!su.deferSince)u["users/"+o.storeId+"/deferSince"]=Date.now();
+  await update(ref(db),u);say(on?"تم تفعيل الدفع الآجل لهذا الطلب.":"تم إغلاق الآجل، الدفع نقدي.");
+ });
+});
+
+// ===== إغلاق المناطق =====
+let zMap=null,zMode="circle",zCenter=null,zPts=[],zDraft=null,zSaved=null;
+function initZoneMap(){
+ if(typeof L==="undefined"){say("تعذر تحميل الخريطة، تحقق من الإنترنت.",1);return}
+ if(!zMap){
+  zMap=L.map("zmap").setView([33.75,44.63],12);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(zMap);
+  zDraft=L.layerGroup().addTo(zMap);zSaved=L.layerGroup().addTo(zMap);
+  zMap.on("click",ev=>{if(zMode==="circle")zCenter=ev.latlng;else zPts.push(ev.latlng);drawDraft()});
+  drawZones();
+ }
+ setTimeout(()=>zMap.invalidateSize(),60);
+}
+function drawDraft(){
+ const r=Number($("zR").value)||500;$("zRv").textContent=r+" م";
+ if(!zDraft)return;zDraft.clearLayers();
+ if(zMode==="circle"&&zCenter)L.circle(zCenter,{radius:r,color:"#d9002f",fillOpacity:.2}).addTo(zDraft);
+ if(zMode==="poly"){zPts.forEach(p=>L.circleMarker(p,{radius:5,color:"#d9002f"}).addTo(zDraft));if(zPts.length>2)L.polygon(zPts,{color:"#d9002f",fillOpacity:.2}).addTo(zDraft);else if(zPts.length===2)L.polyline(zPts,{color:"#d9002f"}).addTo(zDraft)}
+}
+function setZMode(m){
+ zMode=m;zCenter=null;zPts=[];
+ $("zModeC").className=m==="circle"?"blue":"gray";$("zModeP").className=m==="poly"?"blue":"gray";
+ $("zRw").hidden=m!=="circle";
+ $("zHelp").textContent=m==="circle"?"اضغط على الخريطة لتحديد مركز الدائرة ثم اضبط نصف القطر.":"اضغط على الخريطة لإضافة نقاط تحيط بالمنطقة (3 نقاط على الأقل).";
+ drawDraft();
+}
+function drawZones(){
+ const rows=Object.entries((settings&&settings.closedZones)||{}).filter(([,z])=>z).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
+ if(zSaved&&typeof L!=="undefined"){
+  zSaved.clearLayers();
+  rows.forEach(([id,z])=>{
+   const off=z.active===false,o={color:off?"#8a97a8":"#b0002a",fillOpacity:off?.05:.25,dashArray:off?"6":null};let l=null;
+   if(z.type==="circle")l=L.circle([+z.lat,+z.lng],{...o,radius:+z.r});
+   else{const pts=Object.values(z.pts||{}).map(p=>[+p.la,+p.ln]);if(pts.length>2)l=L.polygon(pts,o)}
+   if(l)l.bindTooltip(z.name||"منطقة").addTo(zSaved);
+  });
+ }
+ $("zList").innerHTML=table(["المنطقة","السبب","الشكل","الحالة","إجراءات"],rows.map(([id,z])=>`<tr><td><b>${esc(z.name)}</b></td><td>${esc(z.reason||"—")}</td><td>${z.type==="circle"?"دائرة "+fmt(z.r)+" م":"مضلع ("+Object.keys(z.pts||{}).length+" نقاط)"}</td><td><span class="tag ${z.active===false?"":"r"}">${z.active===false?"مفتوحة":"مغلقة"}</span></td><td><div class="acts"><button type="button" data-zv="${esc(id)}" class="blue">عرض</button><button type="button" data-zt="${esc(id)}" class="${z.active===false?"red":"grn"}">${z.active===false?"إغلاق المنطقة":"إعادة الفتح"}</button><button type="button" data-zd="${esc(id)}" class="gray">حذف</button></div></td></tr>`),"لا توجد مناطق مغلقة.");
+}
+{const _d2=draw;draw=function(){_d2();try{drawZones()}catch(e){console.error(e)}}}
+$("nav").addEventListener("click",e=>{const b=e.target.closest("[data-t]");if(b&&b.dataset.t==="t13")setTimeout(initZoneMap,0)});
+$("zModeC").onclick=()=>setZMode("circle");$("zModeP").onclick=()=>setZMode("poly");
+$("zR").oninput=drawDraft;
+$("zUndo").onclick=()=>{if(zMode==="poly")zPts.pop();else zCenter=null;drawDraft()};
+$("zClear").onclick=()=>{zCenter=null;zPts=[];drawDraft()};
+$("zSave").onclick=()=>run(async()=>{
+ const name=$("zName").value.trim(),reason=$("zWhy").value.trim();
+ if(!name)throw Error("اكتب اسم المنطقة.");
+ let z={name,reason,active:true,createdAt:Date.now()};
+ if(zMode==="circle"){if(!zCenter)throw Error("حدد مركز الدائرة على الخريطة.");z={...z,type:"circle",lat:+zCenter.lat.toFixed(6),lng:+zCenter.lng.toFixed(6),r:Number($("zR").value)}}
+ else{if(zPts.length<3)throw Error("حدد 3 نقاط على الأقل.");z={...z,type:"poly",pts:zPts.map(p=>({la:+p.lat.toFixed(6),ln:+p.lng.toFixed(6)}))}}
+ await set(push(ref(db,"settings/closedZones")),z);
+ zCenter=null;zPts=[];$("zName").value="";$("zWhy").value="";drawDraft();say("تم إغلاق المنطقة، لن يستطيع الزبائن داخلها الطلب.");
+});
+$("zList").addEventListener("click",e=>{
+ const b=e.target.closest("button");if(!b)return;
+ const d=b.dataset,id=d.zv||d.zt||d.zd,z=((settings&&settings.closedZones)||{})[id];if(!z)return;
+ if(d.zv&&zMap){const p0=Object.values(z.pts||{})[0]||{};zMap.setView(z.type==="circle"?[+z.lat,+z.lng]:[+p0.la,+p0.ln],14);$("zmap").scrollIntoView({behavior:"smooth",block:"center"})}
+ if(d.zt)run(async()=>{await update(ref(db,"settings/closedZones/"+id),{active:z.active===false});say(z.active===false?"تم إغلاق المنطقة.":"تمت إعادة فتح المنطقة.")});
+ if(d.zd)run(async()=>{if(!(await showToastConfirm("حذف هذه المنطقة نهائياً؟")))return;await set(ref(db,"settings/closedZones/"+id),null);say("تم الحذف.")});
+});
+
+document.addEventListener("click",e=>{
+ const b=e.target.closest("button[data-clr]");if(!b)return;
+ const k=b.dataset.clr,key=k.startsWith("fin")?"finLogClearedAt":"ledgerClearedAt",restore=k.endsWith("x");
+ run(async()=>{
+  if(!restore&&!(await showToastConfirm("حذف التفاصيل المالية من العرض؟ الأرصدة والديون والأرباح لا تتغير.")))return;
+  await update(ref(db,"settings"),{[key]:restore?null:Date.now()});
+  say(restore?"تمت إعادة إظهار التفاصيل.":"تم حذف التفاصيل المالية من العرض.");
+ });
+});
 </script>
 </body>
 </html>

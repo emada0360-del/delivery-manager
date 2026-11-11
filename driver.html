@@ -288,6 +288,33 @@ main{padding:6px 10px 0}
 <style>#headerStatus{display:none!important}</style>
 </head>
 <body>
+<script>
+(function(){
+ var ever=false,tm=null,vis=function(){return document.visibilityState!=="hidden"};
+ var st=document.createElement("style");
+ st.textContent="#netFull{position:fixed;inset:0;z-index:100000;background:#0d131a;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center;font-family:system-ui,Tahoma,Arial,sans-serif}#netFull[hidden],#netBar[hidden]{display:none}#netFull .i{font-size:60px;line-height:1}#netFull b{font-size:24px}#netFull p{margin:0;color:#b8c4d3;line-height:1.9;font-size:15px}#netFull button{border:0;border-radius:14px;padding:14px 32px;background:#d9002f;color:#fff;font:700 16px system-ui,Tahoma,Arial,sans-serif}#netBar{position:fixed;top:0;left:0;right:0;z-index:100000;background:#b0002a;color:#fff;text-align:center;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;font:600 14px system-ui,Tahoma,Arial,sans-serif;pointer-events:none}";
+ document.head.appendChild(st);
+ var full=document.createElement("div");full.id="netFull";full.hidden=true;
+ full.innerHTML='<div class="i">📡</div><b>فشل اتصالك بالإنترنت</b><p id="netMsg">تأكد من الواي فاي أو بيانات الجوال، ثم اضغط إعادة المحاولة.</p><button type="button" id="netRetry">إعادة المحاولة</button>';
+ var bar=document.createElement("div");bar.id="netBar";bar.hidden=true;bar.textContent="فشل اتصالك بالإنترنت، جارٍ إعادة الاتصال...";
+ document.body.appendChild(full);document.body.appendChild(bar);
+ function hide(){full.hidden=true;bar.hidden=true}
+ function bad(){if(!vis())return;if(ever)bar.hidden=false;else full.hidden=false}
+ function ok(){ever=true;clearTimeout(tm);hide()}
+ document.getElementById("netRetry").onclick=function(){
+  if(navigator.onLine===false){document.getElementById("netMsg").textContent="ما زال الإنترنت مفقوداً. تحقق من الاتصال ثم حاول مجدداً.";return}
+  location.reload();
+ };
+ window.addEventListener("offline",bad);
+ window.addEventListener("online",function(){
+  if(!ever){setTimeout(function(){if(!ever&&navigator.onLine!==false)location.reload()},800);return}
+  clearTimeout(tm);tm=setTimeout(bad,7000);
+ });
+ window.__netOk=function(v){clearTimeout(tm);if(v)ok();else tm=setTimeout(bad,navigator.onLine===false?0:7000)};
+ if(navigator.onLine===false)bad();
+ setTimeout(function(){if(!ever)bad()},12000);
+})();
+</script>
 <!-- Drawn icons (SVG sprite) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
  <symbol id="panda" viewBox="0 0 48 48"><circle cx="24" cy="24" r="24" fill="#d9002f"/><circle cx="12" cy="13" r="5" fill="#111"/><circle cx="36" cy="13" r="5" fill="#111"/><ellipse cx="24" cy="26" rx="14" ry="13" fill="#fff"/><ellipse cx="18" cy="24" rx="3.600" ry="4.600" fill="#111" transform="rotate(20 18 24)"/><ellipse cx="30" cy="24" rx="3.600" ry="4.600" fill="#111" transform="rotate(-20 30 24)"/><circle cx="18.500" cy="24" r="1.200" fill="#fff"/><circle cx="29.500" cy="24" r="1.200" fill="#fff"/><ellipse cx="24" cy="30" rx="2.600" ry="1.800" fill="#111"/><path d="M21 33q3 2.500 6 0" fill="none" stroke="#111" stroke-width="1.400" stroke-linecap="round"/></symbol>
@@ -343,8 +370,8 @@ main{padding:6px 10px 0}
    <button data-side="history"><svg class="ic"><use href="#i-receipt"/></svg><span>حركات السائق</span><svg class="ic"><use href="#i-chev"/></svg></button>
    <button data-side="completed"><svg class="ic"><use href="#i-check"/></svg><span>الطلبات المكتملة</span><svg class="ic"><use href="#i-chev"/></svg></button>
    <button data-side="debt"><svg class="ic"><use href="#i-wallet"/></svg><span>الديون والمحفظة</span><svg class="ic"><use href="#i-chev"/></svg></button>
-   <button data-side="today"><svg class="ic"><use href="#i-cal"/></svg><span>طلبات اليوم</span><svg class="ic"><use href="#i-chev"/></svg></button>
-   <button data-side="all"><svg class="ic"><use href="#i-box"/></svg><span>كل الطلبات</span><svg class="ic"><use href="#i-chev"/></svg></button>
+   <button data-side="all"><svg class="ic"><use href="#i-box"/></svg><span>الطلبات</span><svg class="ic"><use href="#i-chev"/></svg></button>
+   <button data-side="monthly"><svg class="ic"><use href="#i-cal"/></svg><span>الأرباح الشهرية</span><svg class="ic"><use href="#i-chev"/></svg></button>
   </div>
   <div id="sideContent"></div>
   <button id="out" class="red"><svg class="ic"><use href="#i-out"/></svg>تسجيل الخروج</button>
@@ -435,6 +462,7 @@ function __main(){
  };
  if(!firebase.apps.length)firebase.initializeApp(cfg);
  const auth=firebase.auth(),db=firebase.database();
+ try{db.ref(".info/connected").on("value",s=>{window.__netOk&&window.__netOk(s.val()===true)})}catch(e){}
  const $=id=>document.getElementById(id);
  const fmt=n=>Number(n||0).toLocaleString("en-US");
  const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -533,7 +561,7 @@ function __main(){
 
  const PC=()=>{const v=Number(settings.driverCommissionPercent);return(settings.driverCommissionPercent!=null&&v>=0&&v<=100)?v/100:0.1};
  let uid=null,driver=null,settings={},isOnline=false,pos={lat:null,lng:null},debt=0,debtLimit=15000;
- let pend={},mine={},finance={},privData={},stops=[],gps=null,tick=null,presenceTick=null,pendLoaded=false;
+ let pend={},mine={},finance={},history={},privData={},stops=[],gps=null,tick=null,presenceTick=null,pendLoaded=false;
  let srvOff=0;const sNow=()=>Date.now()+srvOff;
  let seenAv=null,prevMine=null,busy=false,connectionRef=null,sideTab="overview",dailyCount=0,totalCount=0,completedCount=0,todayProfit=0;
 
@@ -562,7 +590,7 @@ function __main(){
  function show(on){$("login").hidden=on;$("app").hidden=!on;if(!on)clear()}
  function clear(keep){
   stops.forEach(f=>{try{f()}catch{}});
-  stops=[];pend={};mine={};finance={};privData={};if(!keep){seenAv=null;prevMine=null}pendLoaded=false;
+  stops=[];pend={};mine={};finance={};history={};privData={};if(!keep){seenAv=null;prevMine=null}pendLoaded=false;
   if(tick){clearInterval(tick);tick=null}
   if(presenceTick){clearInterval(presenceTick);presenceTick=null}
   if(gps!==null&&navigator.geolocation){try{navigator.geolocation.clearWatch(gps)}catch{}gps=null}
@@ -654,6 +682,7 @@ function __main(){
    draw();
   },()=>{}));
   stops.push(onValue(query(ref(db,"finance"),orderByChild("userId"),equalTo(uid)),s=>{finance=s.val()||{};draw()},eh));
+  stops.push(onValue(ref(db,"driverHistory/"+uid),s=>{history=s.val()||{};draw()},()=>{}));
   stops.push(onValue(query(ref(db,"orders"),orderByChild("status"),equalTo("pending")),s=>{pend=s.val()||{};pendLoaded=true;draw()},eh));
   stops.push(onValue(query(ref(db,"orders"),orderByChild("driverId"),equalTo(uid)),s=>{
    mine=s.val()||{};for(const k in mine){const m=mine[k];if(m&&m.status==="waiting_store")mine[k]={...m,status:"accepted"}}
@@ -695,7 +724,7 @@ function __main(){
   });
  }
  function stats(){
-  let d=0,tp=0,n=0;const t0=new Date().setHours(0,0,0,0);
+  let d=0,tp=0,n=0,an=0;const t0=new Date().setHours(0,0,0,0);
   for(const id in mine){
    const o=mine[id];
    if(o&&o.status==="delivered"){
@@ -705,11 +734,11 @@ function __main(){
     if(Number(o.deliveredAt)>=t0)tp+=Math.round(Number(o.driverProfit)||0);
    }
   }
-  for(const id in finance){const f=finance[id];if(!f)continue;const am=Math.round(Number(f.amount)||0);if(f.type==="cash_received"||f.type==="bonus")d-=am;else if(f.type==="deduction"||f.type==="archive"){d+=am;if(f.type==="archive")n+=Number(f.count)||0}else if(f.type==="deferred_archive")d+=am}
+  for(const id in finance){const f=finance[id];if(!f)continue;const am=Math.round(Number(f.amount)||0);if(f.type==="cash_received"||f.type==="bonus")d-=am;else if(f.type==="deduction"||f.type==="archive"){d+=am;if(f.type==="archive"){n+=Number(f.count)||0;an+=Number(f.count)||0}}else if(f.type==="deferred_archive")d+=am}
   if(d<0)d=0;debt=d;
   $("statDone").textContent=n;$("statDebt").textContent=fmt(d)+" د.ع";$("statProfit").textContent=fmt(tp)+" د.ع";
   $("warnBox").hidden=d<debtLimit;
-  completedCount=n;todayProfit=tp;totalCount=Object.keys(mine).filter(id=>mine[id]&&mine[id].status!=="cancelled").length;dailyCount=Object.keys(mine).filter(id=>mine[id]&&Number(mine[id].createdAt||mine[id].acceptedAt||0)>=t0&&mine[id].status!=="cancelled").length;
+  completedCount=n;todayProfit=tp;totalCount=an+Object.keys(mine).filter(id=>mine[id]&&mine[id].status!=="cancelled").length;dailyCount=Object.keys(mine).filter(id=>mine[id]&&Number(mine[id].createdAt||mine[id].acceptedAt||0)>=t0&&mine[id].status!=="cancelled").length;
   renderSide();
  }
  function ui(){
@@ -943,22 +972,32 @@ function heroOf(o){const m={waiting_store:["h-store","بالطريق للمتج�
  }
  function renderSide(){
   const el=$("sideContent");if(!el||!driver)return;
-  const orders=Object.entries(mine).filter(([id,o])=>o&&o.status!=="cancelled").sort((a,b)=>Number((b[1].deliveredAt||b[1].acceptedAt||b[1].createdAt)||0)-Number((a[1].deliveredAt||a[1].acceptedAt||a[1].createdAt)||0));
+  const tOf=o=>Number(o.deliveredAt||o.acceptedAt||o.createdAt||0);
+  const live=Object.entries(mine).filter(([id,o])=>o&&o.status!=="cancelled");
+  const kept=Object.entries(history||{}).filter(([id,o])=>o&&!mine[id]).map(([id,o])=>[id,{...o,status:"delivered"}]);
+  const orders=[...live,...kept].sort((a,b)=>tOf(b[1])-tOf(a[1]));
   const completed=orders.filter(([id,o])=>o.status==="delivered");
   const t0=new Date().setHours(0,0,0,0);
   const today=orders.filter(([id,o])=>Number(o.createdAt||o.acceptedAt||o.deliveredAt||0)>=t0);
-  const cash=Object.values(finance).filter(f=>f&&f.type==="cash_received").reduce((a,f)=>a+Number(f.amount||0),0);
-  const dedT=Object.values(finance).filter(f=>f&&f.type==="deduction").reduce((a,f)=>a+Number(f.amount||0),0),bonT=Object.values(finance).filter(f=>f&&f.type==="bonus").reduce((a,f)=>a+Number(f.amount||0),0);
+  const sumT=t=>Object.values(finance).filter(f=>f&&f.type===t).reduce((a,f)=>a+Number(f.amount||0),0);
+  const cash=sumT("cash_received"),dedT=sumT("deduction"),bonT=sumT("bonus"),total=cash+bonT-dedT;
   const money=n=>fmt(n)+" د.ع";
+  const MN=["كانون الثاني","شباط","آذار","نيسان","أيار","حزيران","تموز","آب","أيلول","تشرين الأول","تشرين الثاني","كانون الأول"];
+  const mon={};
+  completed.forEach(([id,o])=>{const t=Number(o.deliveredAt||o.createdAt||0);if(!t)return;const dt=new Date(t),k=dt.getFullYear()*100+dt.getMonth(),m=mon[k]||(mon[k]={y:dt.getFullYear(),m:dt.getMonth(),p:0,n:0});m.p+=Math.round(Number(o.driverProfit)||0);m.n++});
+  const nowD=new Date(),monthProfit=(mon[nowD.getFullYear()*100+nowD.getMonth()]||{p:0}).p;
+  const months=Object.keys(mon).map(Number).sort((a,b)=>b-a).slice(0,12).map(k=>mon[k]);
   const statusName=o=>({pending:"بانتظار سائق",waiting_store:"بالطريق للمتجر",accepted:"بالطريق للمتجر",arrived_store:"وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"}[o.status]||o.status||"غير معروف");
-  const orderRows=list=>list.length?list.map(([id,o])=>`<div class="side-order"><b>طلب #${esc(id.slice(-6))}</b><br>المتجر: ${esc(o.storeName||"غير محدد")}<br>الحالة: ${esc(statusName(o))}<br>المنطقة: ${esc(o.area||"غير محددة")}<br>${o.status==="delivered"?"ربح السائق: "+money(o.driverProfit||0):""}</div>`).join(""):'<div class="side-empty">لا توجد بيانات لعرضها حالياً.</div>';
+  const dateOf=o=>{const t=tOf(o);return t?new Date(t).toLocaleDateString("ar-IQ",{day:"2-digit",month:"2-digit",year:"numeric"}):""};
+  const orderRows=list=>list.length?list.map(([id,o])=>`<div class="side-order"><b>طلب #${esc(id.slice(-6))}</b> <span style="color:var(--muted)">${esc(dateOf(o))}</span><br>المتجر: ${esc(o.storeName||"غير محدد")}<br>الحالة: ${esc(statusName(o))}<br>المنطقة: ${esc(o.area||"غير محددة")}<br>${o.status==="delivered"?"ربح السائق: "+money(o.driverProfit||0):""}</div>`).join(""):'<div class="side-empty">لا توجد بيانات لعرضها حالياً.</div>';
+  const totalRow=`<div class="side-stat"><span>الرصيد الكلي<small style="display:block;color:var(--muted)">كاش مسدَّد + مكافآت − خصومات</small></span><b>${money(total)}</b></div>`;
   let html="";
-  if(sideTab==="overview")html=`<div class="side-panel"><h3>ملخص الحساب</h3><div class="side-stat"><span>إجمالي الطلبات</span><b>${totalCount}</b></div><div class="side-stat"><span>الطلبات المكتملة</span><b>${completedCount}</b></div><div class="side-stat"><span>طلبات اليوم</span><b>${dailyCount}</b></div><div class="side-stat"><span>أرباح اليوم</span><b>${money(todayProfit)}</b></div><div class="side-stat"><span>الدين الحالي</span><b>${money(debt)}</b></div><div class="side-stat"><span>المبالغ المسددة للإدارة</span><b>${money(cash)}</b></div><div class="side-stat"><span>سقف الدين</span><b>${money(debtLimit)}</b></div><div class="side-stat"><span>حالة السائق</span><b>${isOnline?"متصل":"غير متصل"}</b></div></div>`;
+  if(sideTab==="overview")html=`<div class="side-panel"><h3>ملخص الحساب</h3><div class="side-stat"><span>إجمالي الطلبات</span><b>${totalCount}</b></div><div class="side-stat"><span>الطلبات المكتملة</span><b>${completedCount}</b></div><div class="side-stat"><span>طلبات اليوم</span><b>${dailyCount}</b></div><div class="side-stat"><span>أرباح اليوم</span><b>${money(todayProfit)}</b></div><div class="side-stat"><span>أرباح هذا الشهر</span><b>${money(monthProfit)}</b></div><div class="side-stat"><span>الدين الحالي</span><b>${money(debt)}</b></div>${totalRow}<div class="side-stat"><span>حالة السائق</span><b>${isOnline?"متصل":"غير متصل"}</b></div></div>`;
   else if(sideTab==="history")html=`<div class="side-panel"><h3>حركات السائق</h3><div class="side-empty">سجل الطلبات وحالاتها.</div>${orderRows(orders)}</div>`;
   else if(sideTab==="completed")html=`<div class="side-panel"><h3>الطلبات المكتملة (${completed.length})</h3>${orderRows(completed)}</div>`;
-  else if(sideTab==="debt")html=`<div class="side-panel"><h3>الديون والمحفظة</h3><div class="side-stat"><span>الدين الحالي المستحق</span><b>${money(debt)}</b></div><div class="side-stat"><span>عمولات المنصة المسجلة</span><b>${money(completed.reduce((a,[id,o])=>a+Number(o.platformDeliveryCommission||0),0))}</b></div><div class="side-stat"><span>عمولات المتاجر المسجلة</span><b>${money(completed.reduce((a,[id,o])=>a+Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommissionFixed??settings.storeCommission??500)),0))}</b></div><div class="side-stat"><span>المبالغ المسددة للإدارة</span><b>${money(cash)}</b></div>${dedT?`<div class="side-stat"><span>خصومات الإدارة</span><b>${money(dedT)}</b></div>`:""}${bonT?`<div class="side-stat"><span>مكافآت الإدارة</span><b>${money(bonT)}</b></div>`:""}<div class="side-empty">تصفير الدين أو تسجيل تسديد جديد يتم من لوحة الإدارة، حتى تبقى السجلات المالية موثقة.</div></div>`;
-  else if(sideTab==="today")html=`<div class="side-panel"><h3>طلبات اليوم (${today.length})</h3>${orderRows(today)}</div>`;
-  else html=`<div class="side-panel"><h3>كل الطلبات (${orders.length})</h3>${orderRows(orders)}</div>`;
+  else if(sideTab==="debt")html=`<div class="side-panel"><h3>الديون والمحفظة</h3><div class="side-stat"><span>الدين الحالي المستحق</span><b>${money(debt)}</b></div>${totalRow}${dedT?`<div class="side-stat"><span>خصومات الإدارة</span><b>${money(dedT)}</b></div>`:""}${bonT?`<div class="side-stat"><span>مكافآت الإدارة</span><b>${money(bonT)}</b></div>`:""}<div class="side-empty">تصفير الدين أو تسجيل تسديد جديد يتم من لوحة الإدارة، حتى تبقى السجلات المالية موثقة.</div></div>`;
+  else if(sideTab==="monthly")html=`<div class="side-panel"><h3>الأرباح الشهرية</h3>${months.length?months.map(m=>`<div class="side-stat"><span>${MN[m.m]} ${m.y}<small style="display:block;color:var(--muted)">${m.n} طلب مسلَّم</small></span><b>${money(m.p)}</b></div>`).join(""):'<div class="side-empty">لا توجد أرباح مسجلة بعد.</div>'}<div class="side-empty">تُحسب من الطلبات المسلَّمة وتبقى محفوظة حتى بعد حذف الطلبات من الإدارة.</div></div>`;
+  else html=`<div class="side-panel"><h3>الطلبات (${orders.length})</h3><div class="side-empty">طلبات اليوم: ${today.length}</div>${orderRows(orders)}</div>`;
   el.innerHTML=html;
   document.querySelectorAll("[data-side]").forEach(b=>b.classList.toggle("active",b.dataset.side===sideTab));
  }
