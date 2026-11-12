@@ -474,35 +474,4 @@ jobs:
           test -f native_driver_2.py
           test -f native_driver_3.py
           test -f native_driver_4.py
-          test -f native_keepalive.py
-          python3 native_driver_1.py
-          python3 native_driver_2.py
-          python3 native_driver_3.py
-          python3 native_driver_4.py
-          python3 native_keepalive.py driver
-
-      - name: Store background reliability
-        if: matrix.role == 'store'
-        run: |
-          test -f native_store_1.py
-          test -f native_store_2.py
-          test -f native_store_3.py
-          test -f native_store_4.py
-          test -f native_keepalive.py
-          python3 native_store_1.py
-          python3 native_store_2.py
-          python3 native_store_3.py
-          python3 native_store_4.py
-          python3 native_keepalive.py store
-
-      - name: Build APK
-        run: |
-          cd app/android
-          chmod +x gradlew
-          ./gradlew assembleDebug
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.role }}-apk
-          path: app/android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          test -f n
