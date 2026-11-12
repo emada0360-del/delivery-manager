@@ -870,6 +870,22 @@ $("btnOut").onclick=async()=>{
 };
 
 window.addEventListener("online",()=>{try{flushRecs()}catch(e){}});
+// ---- إشعارات FCM (تصل حتى لو النظام قتل التطبيق) ----
+let pushL=false;
+async function setupPush(path){
+ try{
+  const P=window.Capacitor&&window.Capacitor.Plugins,Push=P&&P.PushNotifications;
+  if(!Push)return;
+  if(!pushL){pushL=true;
+   await Push.addListener("registration",async t=>{try{const u=auth.currentUser;if(!u||!t||!t.value)return;await set(ref(db,path+u.uid),{token:t.value,updatedAt:Date.now(),platform:"android"})}catch(e){console.error("FCM token save",e)}});
+   await Push.addListener("registrationError",e=>console.error("FCM reg error",e));
+  }
+  try{await Push.createChannel({id:"orders",name:"Orders",description:"تنبيهات الطلبات",importance:5,visibility:1,sound:"default",vibration:true})}catch(_){}
+  let p=await Push.checkPermissions();
+  if(p.receive!=="granted")p=await Push.requestPermissions();
+  if(p.receive==="granted")await Push.register();
+ }catch(e){console.error("push setup",e)}
+}
 onAuthStateChanged(auth, async u=>{
  if(!u){
   stops.forEach(f=>{try{f()}catch(e){}});stops.length=0;
@@ -889,6 +905,7 @@ onAuthStateChanged(auth, async u=>{
  $("sname").textContent=store.name;
  $("login").hidden=true;$("app").hidden=false;
  start();
+ setupPush("storePushTokens/");
 });
 
 function start(){

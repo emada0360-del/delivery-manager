@@ -159,6 +159,8 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <button type="button" class="on" data-t="t1">الرئيسية</button>
 <button type="button" data-t="t2">الطلبات</button>
 <button type="button" data-t="t9" class="live">الطلبات الحية</button>
+<button type="button" data-t="t14">خريطة السواق</button>
+<button type="button" data-t="t15">المرتجعات</button>
 <button type="button" data-t="t3">السائقون</button>
 <button type="button" data-t="t4">المتاجر</button>
 <button type="button" data-t="t5">المناطق</button>
@@ -329,6 +331,21 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <div id="callLogs" class="wrap"></div></div>
 </section>
 
+<section id="t15" class="tab" hidden>
+<div class="box"><h3>مبالغ مرجّعة للزبائن</h3>
+<p class="sub">عندما يسجّل السائق عند التسليم أن الزبون له مبلغ يرجع (ما توفرت صرافة)، يظهر هنا. السائق يحتفظ بالمبلغ حتى تنفّذ الإرجاع أو تستلمه منه.</p>
+<div id="rfSum" class="wrap"></div>
+<select id="rfSel" style="margin:8px 0"><option value="pending">المعلّقة</option><option value="done">المُنجزة</option><option value="cancelled">الملغاة</option><option value="all">الكل</option></select>
+<div id="rfList" class="wrap"></div></div>
+</section>
+
+<section id="t14" class="tab" hidden>
+<div class="box"><h3>خريطة السواق المباشرة</h3>
+<p class="sub">تظهر مواقع السواق المتصلين لحظياً. الأخضر: آخر تحديث أقل من دقيقة، البرتقالي: أقل من 5 دقائق، الرمادي: أقدم.</p>
+<div id="dmap" style="height:420px;border-radius:16px;position:relative;z-index:0;margin:10px 0"></div>
+<div id="dList" class="wrap"></div></div>
+</section>
+
 <section id="t13" class="tab" hidden>
 <div class="box"><h3>إغلاق مناطق التوصيل</h3>
 <p class="sub">حدّد على الخريطة المنطقة التي تريد إيقاف الطلب منها (مطر، أرض طينية...) حفاظاً على السائقين. الزبون داخل المنطقة لن يستطيع الطلب، ويظهر له سبب الإغلاق.</p>
@@ -434,7 +451,7 @@ const ST={preparing:"قيد التحضير (بانتظار جاهز من الم�
 
 $("f").innerHTML+=Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
 
-let clogs={},appr={},acts={},codes={},cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
+let rfs={},rfCust={},rfFilter="pending",clogs={},appr={},acts={},codes={},cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
 let showProfitFlag=false;
 
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fde8ec":"#dff5ea";m.style.color=bad?"#b0002a":"#0b7a4e";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
@@ -508,7 +525,7 @@ function scheduleDraw(){
 }
 
 function start(){
- const src={callLogs:v=>clogs=v,customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customers:v=>custers=v,approvedCustomers:v=>appr=v,activations:v=>acts=v,customerCodes:v=>codes=v,bannedDevices:v=>banned=v,finance:v=>fin=v,presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
+ const src={callLogs:v=>clogs=v,customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customers:v=>custers=v,approvedCustomers:v=>appr=v,activations:v=>acts=v,customerCodes:v=>codes=v,bannedDevices:v=>banned=v,finance:v=>fin=v,refunds:v=>rfs=v||{},presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
  const prev={};
  for(const p in src)onValue(ref(db,p),s=>{
    const v=s.val()||{};
@@ -928,7 +945,7 @@ function draw(){
  drawLiveOrders();
  lastNet=liveProfit+archProfit-profitReset;lastReset=profitReset;
  drawProfitTab();
- drawCalls();
+ drawCalls();drawRefunds();
  syncCust();
  checkForced();
 
@@ -1461,6 +1478,92 @@ document.addEventListener("click",e=>{
 });
 
 // ===== إغلاق المناطق =====
+// ---- المرتجعات للزبائن ----
+const RF_ST={pending:"معلّق",done:"تم الإرجاع",cancelled:"ملغي"};
+async function rfLoadCust(id,coid){
+ if(rfCust[id]!==undefined||!coid)return;
+ rfCust[id]=null;
+ try{const v=(await get(ref(db,"customerOrderPrivate/"+coid))).val();rfCust[id]=v||{};drawRefunds()}catch(_){rfCust[id]={}}
+}
+function drawRefunds(){
+ if(!$("rfList"))return;
+ const all=Object.entries(rfs).filter(([,r])=>r&&typeof r.amount==="number").sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
+ const pend=all.filter(([,r])=>r.status==="pending");
+ const byDrv={};
+ pend.forEach(([,r])=>{const n=(users[r.driverId]&&users[r.driverId].name)||r.driverName||"سائق";byDrv[n]=(byDrv[n]||0)+r.amount});
+ $("rfSum").innerHTML=`<div class="dr"><b>معلّقة: ${pend.length}</b><span>الإجمالي ${fmt(pend.reduce((s,[,r])=>s+r.amount,0))} د.ع</span></div>`+Object.entries(byDrv).map(([n,v])=>`<div class="dr"><span>بيد السائق ${esc(n)}</span><b>${fmt(v)} د.ع</b></div>`).join("");
+ const rows=all.filter(([,r])=>rfFilter==="all"||r.status===rfFilter);
+ $("rfList").innerHTML=rows.length?rows.map(([id,r])=>{
+  rfLoadCust(id,r.customerOrderId);
+  const c=rfCust[id]||{},dn=(users[r.driverId]&&users[r.driverId].name)||r.driverName||"—";
+  const st=r.status||"pending",col=st==="done"?"#0f9a63":st==="cancelled"?"#94a3b8":"#d98200";
+  const acts=st==="pending"?`<button data-rf="done" data-id="${esc(id)}" class="green">تم الإرجاع للزبون</button><button data-rf="edit" data-id="${esc(id)}" class="gray">تعديل المبلغ</button><button data-rf="cancel" data-id="${esc(id)}" class="red">إلغاء</button>`:`<button data-rf="reopen" data-id="${esc(id)}" class="gray">إرجاع لمعلّق</button>`;
+  return `<div class="box" style="margin:8px 0"><div class="dr"><b>طلب #${esc(id.slice(-6))}</b>${tm(r.createdAt)}<b style="color:${col}">${RF_ST[st]||st}</b></div>
+  <div style="line-height:1.9"><b style="font-size:18px">${fmt(r.amount)} د.ع</b> <span class="sub">(حساب الطلب ${fmt(r.orderTotal)})</span><br>
+  السائق: ${esc(dn)} ${r.driverPhone?'<a href="tel:'+esc(r.driverPhone)+'">'+esc(r.driverPhone)+'</a>':""}<br>
+  المتجر: ${esc(r.storeName||"—")}<br>
+  الزبون: ${esc(c.name||"—")} ${c.phone?'<a href="tel:'+esc(c.phone)+'">'+esc(c.phone)+'</a>':""}
+  ${r.doneAt?"<br>أُنجز: "+new Date(r.doneAt).toLocaleString("ar-IQ"):""}${r.note?"<br>ملاحظة: "+esc(r.note):""}${r.prevAmount?"<br>المبلغ الأصلي: "+fmt(r.prevAmount):""}</div>
+  <div class="row" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">${acts}</div></div>`}).join(""):'<p class="sub">لا توجد مرتجعات.</p>';
+}
+$("rfSel").onchange=e=>{rfFilter=e.target.value;drawRefunds()};
+document.addEventListener("click",e=>{
+ const b=e.target.closest("[data-rf]");if(!b)return;
+ const id=b.dataset.id,r=rfs[id],act=b.dataset.rf;if(!r)return;
+ run(async()=>{
+  const me=auth.currentUser?auth.currentUser.uid:"";
+  if(act==="done"){
+   const note=prompt("ملاحظة (اختياري): مثلاً أُرجع للزبون نقداً / رصيد","")||"";
+   if(!(await showToastConfirm("تأكيد: تم إرجاع "+fmt(r.amount)+" د.ع للزبون؟")))return;
+   await update(ref(db,"refunds/"+id),{status:"done",doneAt:Date.now(),doneBy:me,note:note.slice(0,200)});
+  }else if(act==="cancel"){
+   const note=prompt("سبب الإلغاء","");if(note===null)return;
+   await update(ref(db,"refunds/"+id),{status:"cancelled",doneAt:Date.now(),doneBy:me,note:note.slice(0,200)});
+  }else if(act==="edit"){
+   const v=prompt("المبلغ الجديد (د.ع)",String(r.amount));if(v===null)return;
+   const n=parseInt(String(v).replace(/\D/g,""),10);
+   if(!n||n<=0||n>500000)throw Error("مبلغ غير صحيح");
+   await update(ref(db,"refunds/"+id),{amount:n,prevAmount:r.prevAmount||r.amount,editedAt:Date.now(),editedBy:me});
+  }else if(act==="reopen"){
+   await update(ref(db,"refunds/"+id),{status:"pending",doneAt:null,doneBy:null});
+  }
+ });
+});
+
+// ---- خريطة السواق المباشرة ----
+let dMap=null,dMarks={},dUnsub=null,dData={};
+function initDriverMap(){
+ if(typeof L==="undefined"){say("تعذر تحميل الخريطة، تحقق من الإنترنت.",1);return}
+ if(!dMap){
+  dMap=L.map("dmap").setView([33.75,44.63],12);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(dMap);
+ }
+ setTimeout(()=>dMap.invalidateSize(),60);
+ if(dUnsub)return;
+ dUnsub=onValue(ref(db,"driverLocations"),s=>{dData=s.val()||{};drawDriverMap()},e=>say("تعذر تحميل مواقع السواق: "+e.message,1));
+}
+function stopDriverMap(){if(dUnsub){try{dUnsub()}catch(_){}dUnsub=null}}
+function drvAge(t){const sec=Math.max(0,Math.round((Date.now()-(Number(t)||0))/1000));return sec<60?sec+" ث":sec<3600?Math.round(sec/60)+" د":Math.round(sec/3600)+" س"}
+function drawDriverMap(){
+ if(!dMap)return;
+ const now=Date.now();
+ for(const id of Object.keys(dMarks)){if(!dData[id]){dMap.removeLayer(dMarks[id]);delete dMarks[id]}}
+ const rows=[];
+ for(const id of Object.keys(dData)){
+  const d=dData[id];if(!d||typeof d.lat!=="number"||typeof d.lng!=="number")continue;
+  const age=now-(Number(d.t)||0),col=age<60000?"#0f9a63":age<300000?"#d98200":"#94a3b8";
+  const u=users[id]||{},name=u.name||u.username||id.slice(0,6);
+  if(dMarks[id]){dMarks[id].setLatLng([d.lat,d.lng]).setStyle({color:col,fillColor:col});dMarks[id].setTooltipContent(name)}
+  else dMarks[id]=L.circleMarker([d.lat,d.lng],{radius:11,color:col,fillColor:col,fillOpacity:.85,weight:3}).addTo(dMap).bindTooltip(name,{permanent:true,direction:"top"});
+  rows.push({id,name,age,d,col});
+ }
+ rows.sort((a,b)=>a.age-b.age);
+ $("dList").innerHTML=rows.length?rows.map(r=>`<div class="dr"><span style="color:${r.col};font-weight:700">●</span><b>${esc(r.name)}</b><span>قبل ${drvAge(r.d.t)}</span><a class="mapA" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${r.d.lat},${r.d.lng}">فتح بالخرائط</a></div>`).join(""):'<p class="sub">لا يوجد سواق متصلون الآن.</p>';
+ if(rows.length&&!dMap._fitDone){dMap._fitDone=true;try{dMap.fitBounds(L.latLngBounds(rows.map(r=>[r.d.lat,r.d.lng])),{padding:[40,40],maxZoom:15})}catch(_){}}
+}
+setInterval(()=>{if(dUnsub)drawDriverMap()},15000);
+$("nav").addEventListener("click",e=>{const b=e.target.closest("[data-t]");if(!b)return;if(b.dataset.t==="t14")setTimeout(initDriverMap,0);else stopDriverMap()});
+
 let zMap=null,zMode="circle",zCenter=null,zPts=[],zDraft=null,zSaved=null;
 function initZoneMap(){
  if(typeof L==="undefined"){say("تعذر تحميل الخريطة، تحقق من الإنترنت.",1);return}

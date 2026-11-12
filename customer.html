@@ -600,6 +600,22 @@ $("aB").onclick=async()=>{
  }catch(e){$("aE").textContent=/invalid|credential|not-found|wrong/.test(e.code||"")?"الرقم أو كلمة المرور غير صحيحة":/in-use/.test(e.code||"")?"الرقم مسجل مسبقاً":e.message}
 };
 $("out").onclick=()=>signOut(auth);
+// ---- إشعارات FCM (تصل حتى لو النظام قتل التطبيق) ----
+let pushL=false;
+async function setupPush(path){
+ try{
+  const P=window.Capacitor&&window.Capacitor.Plugins,Push=P&&P.PushNotifications;
+  if(!Push)return;
+  if(!pushL){pushL=true;
+   await Push.addListener("registration",async t=>{try{const u=auth.currentUser;if(!u||!t||!t.value)return;await set(ref(db,path+u.uid),{token:t.value,updatedAt:Date.now(),platform:"android"})}catch(e){console.error("FCM token save",e)}});
+   await Push.addListener("registrationError",e=>console.error("FCM reg error",e));
+  }
+  try{await Push.createChannel({id:"orders",name:"Orders",description:"تنبيهات الطلبات",importance:5,visibility:1,sound:"default",vibration:true})}catch(_){}
+  let p=await Push.checkPermissions();
+  if(p.receive!=="granted")p=await Push.requestPermissions();
+  if(p.receive==="granted")await Push.register();
+ }catch(e){console.error("push setup",e)}
+}
 onAuthStateChanged(auth,async u=>{
  unsubs.forEach(f=>f());unsubs=[];me=u;
  $("auth").hidden=!!u;$("app").hidden=!u;$("out").hidden=!u;document.body.classList.toggle("authing",!u);
@@ -620,6 +636,7 @@ onAuthStateChanged(auth,async u=>{
  update(ref(db,"customers/"+u.uid),{deviceId:did}).catch(()=>{});
  firstSt=true;renderMe();drawFees();
  initMap();needLoc();
+ setupPush("customerPushTokens/");
  unsubs.push(onValue(ref(db,"restaurants"),s=>{rests=s.val()||{};restsLoaded=true;drawList();drawHist()}));
  unsubs.push(onValue(ref(db,"settings/closedZones"),s=>{zones=Object.values(s.val()||{}).filter(z=>z&&z.active!==false);drawList()},()=>{}));
   unsubs.push(onValue(ref(db,"settings/callTips"),s=>{callTips=s.val()},()=>{}));
@@ -874,6 +891,47 @@ function drawGate(){
  };
 }
 
+// ---- تتبع السائق على الخريطة ----
+let trk=null;
+function closeTrack(){
+ if(!trk)return;
+ try{trk.unsub&&trk.unsub()}catch(e){}
+ try{clearInterval(trk.timer)}catch(e){}
+ try{trk.map&&trk.map.remove()}catch(e){}
+ try{trk.el.remove()}catch(e){}
+ trk=null;
+}
+function openTrack(id){
+ if(typeof L==="undefined"){toast("تعذر تحميل الخريطة، تحقق من الإنترنت",1);return}
+ closeTrack();
+ const o=orders[id]||{};
+ const el=document.createElement("div");
+ el.style.cssText="position:fixed;inset:0;z-index:9999;background:#0b1220;display:flex;flex-direction:column";
+ el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;color:#fff;font-weight:700"><span>📍 تتبع السائق</span><span id="trkAge" style="font-weight:500;font-size:13px;color:#cbd5e1">بانتظار موقع السائق…</span><button id="trkX" style="background:#475569;color:#fff;border:0;border-radius:12px;padding:8px 14px;font-weight:700">إغلاق</button></div><div id="trkMap" style="flex:1;min-height:300px"></div>';
+ document.body.appendChild(el);
+ const map=L.map("trkMap").setView([Number(o.lat)||33.75,Number(o.lng)||44.63],14);
+ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(map);
+ let dest=null;
+ if(typeof o.lat==="number"&&typeof o.lng==="number"){dest=L.marker([o.lat,o.lng]).addTo(map).bindTooltip("موقعك");}
+ const icon=L.divIcon({className:"",html:'<div style="font-size:30px;line-height:30px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))">🛵</div>',iconSize:[30,30],iconAnchor:[15,15]});
+ trk={el,map,drv:null,t:0,timer:null,unsub:null,fitted:false};
+ el.querySelector("#trkX").onclick=closeTrack;
+ trk.unsub=onValue(ref(db,"tracking/"+id),s=>{
+  const v=s.val();if(!v||!trk)return;
+  const ll=[Number(v.lat),Number(v.lng)];if(!isFinite(ll[0])||!isFinite(ll[1]))return;
+  trk.t=Number(v.t)||Date.now();
+  if(trk.drv)trk.drv.setLatLng(ll);else trk.drv=L.marker(ll,{icon}).addTo(map);
+  if(!trk.fitted){trk.fitted=true;try{map.fitBounds(dest?L.latLngBounds([ll,dest.getLatLng()]):L.latLngBounds([ll,ll]),{padding:[50,50],maxZoom:16})}catch(e){}}
+ },()=>{const a=el.querySelector("#trkAge");if(a)a.textContent="تعذر تحميل موقع السائق"});
+ trk.timer=setInterval(()=>{
+  const a=el.querySelector("#trkAge");if(!a||!trk||!trk.t)return;
+  const sec=Math.max(0,Math.round((Date.now()-trk.t)/1000));
+  a.textContent=sec<60?"آخر تحديث قبل "+sec+" ث":"آخر تحديث قبل "+Math.round(sec/60)+" د";
+ },1000);
+ setTimeout(()=>map.invalidateSize(),80);
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-track]");if(b)openTrack(b.dataset.track)});
+
 // ---- إشعارات تغيّر حالة الطلب ----
 const NT={preparing:"المتجر يجهّز طلبك 👨‍🍳",pending:"طلبك جاهز، نبحث لك عن سائق 🛵",accepted:"السائق قبل طلبك وبالطريق للمتجر 🛵",arrived_store:"السائق وصل للمتجر",picked_up:"السائق استلم طلبك وبالطريق إليك 🎉",delivering:"السائق بالطريق إليك 🎉",delivered:"تم تسليم طلبك، بالعافية 🍽️",cancelled:"تم إلغاء طلبك"};
 function cancelMsg(o){if(!o||o.status!=="cancelled")return"";return"المتجر مشغول حالياً، نعتذر عن عدم تنفيذ طلبك"}
@@ -900,6 +958,7 @@ function drawCur(){
  const p=delivered?1:Math.min(1,Math.max(0,(stage-1)/3));
  $("cur").innerHTML=`<div class="live-card"><div class="lc-top"><div><small>طلبك الحالي</small><b>${esc(o.restaurantName)}</b></div><span class="badge ${bc}">${ST[o.status]||esc(o.status)}</span></div>
  ${o.status==="cancelled"?"":`<ol class="route" style="--p:${p}">${route}</ol>`}
+ ${["accepted","arrived_store","picked_up","delivering"].includes(o.status)?`<div class="acts"><button class="g main" data-track="${esc(id)}">📍 تتبع السائق على الخريطة</button></div>`:""}
   ${cancelMsg(o)?`<p class="lnote" style="color:#c0002a;font-weight:700">${esc(cancelMsg(o))}</p>`:""}
  ${o.status==="calling"&&!price?`<p class="lnote">بعد المكالمة سيسجّل المتجر سعر طلبك.</p><div class="acts"><button class="g main" data-redial="${esc(id)}">${ICON("phone")}إعادة الاتصال</button>${o.callAnswered?"":`<button class="l sm" data-cancel="${esc(id)}">إلغاء</button>`}${o.callAnswered||!adminWa?"":`<button class="l" data-support="${esc(id)}">تواصل مع الدعم</button>`}</div>${o.callAnswered?`<p class="lhint">تم الرد على مكالمتك، لا يمكن إلغاء الطلب.</p>`:""}`:""}
  <div class="lrows"><div class="row"><span>سعر الطلب</span><b>${price?fmt(price)+" د.ع"+(o.priceFixed?" (مُصحَّح، كان "+fmt(o.priceOld)+")":""):"بانتظار المتجر"}</b></div>

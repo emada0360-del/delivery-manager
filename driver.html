@@ -471,6 +471,48 @@ function __main(){
   const f=v=>{$("mdl").hidden=true;r(v)};
   $("mdy").onclick=()=>f(true);$("mdn").onclick=()=>f(false);
  });
+  // ---- إرجاع مبلغ للزبون بعد التسليم (الزبون أعطى أكثر وما عندك صرافة) ----
+  const rfDialog=(step,total)=>new Promise(res=>{
+   const el=document.createElement("div");
+   el.style.cssText="position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:300;padding:18px";
+   const box=document.createElement("div");
+   box.style.cssText="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:22px;padding:20px;width:min(100%,360px)";
+   const bs="flex:1;min-height:48px;border:0;border-radius:14px;font-weight:700;font-size:16px;cursor:pointer;font-family:inherit";
+   if(step===1){
+    box.innerHTML='<p style="margin:0 0 6px;font-weight:700;font-size:17px">إرجاع مبلغ للزبون؟</p><p style="margin:0 0 16px;line-height:1.8;color:var(--muted)">إذا الزبون أعطاك أكثر من حساب الطلب وما عندك صرافة، سجّل المبلغ اللي لازم ينرجع له. الإدارة تشوفه وتتابعه.</p><div style="display:flex;gap:10px"><button id="rfY" style="'+bs+';background:#0f9a63;color:#fff">نعم</button><button id="rfN" style="'+bs+';background:var(--raised);color:var(--ink)">لا</button></div>';
+    el.appendChild(box);document.body.appendChild(el);
+    box.querySelector("#rfY").onclick=()=>{el.remove();res(true)};
+    box.querySelector("#rfN").onclick=()=>{el.remove();res(false)};
+   }else{
+    box.innerHTML='<p style="margin:0 0 6px;font-weight:700;font-size:17px">المبلغ المراد إرجاعه</p><p style="margin:0 0 12px;color:var(--muted)">إجمالي حساب الطلب: '+fmt(total)+' د.ع</p><input id="rfA" type="tel" inputmode="numeric" placeholder="مثال: 250" style="width:100%;box-sizing:border-box;min-height:50px;border-radius:14px;border:1px solid var(--line);background:var(--raised);color:var(--ink);font-size:20px;text-align:center;font-family:inherit"><p id="rfE" style="margin:8px 0 0;color:#e5484d;min-height:20px"></p><div style="display:flex;gap:10px;margin-top:8px"><button id="rfOk" style="'+bs+';background:#0f9a63;color:#fff">متابعة</button><button id="rfBack" style="'+bs+';background:var(--raised);color:var(--ink)">رجوع</button></div>';
+    el.appendChild(box);document.body.appendChild(el);
+    const inp=box.querySelector("#rfA");
+    inp.oninput=()=>{inp.value=inp.value.replace(/[٠-٩]/g,x=>x.charCodeAt(0)-1632).replace(/\D/g,"").slice(0,6)};
+    setTimeout(()=>inp.focus(),50);
+    box.querySelector("#rfBack").onclick=()=>{el.remove();res(null)};
+    box.querySelector("#rfOk").onclick=()=>{
+     const n=parseInt(inp.value,10);
+     if(!n||n<=0){box.querySelector("#rfE").textContent="اكتب مبلغاً صحيحاً.";return}
+     if(n>500000){box.querySelector("#rfE").textContent="المبلغ كبير جداً.";return}
+     el.remove();res(n);
+    };
+   }
+  });
+  const refundFlow=async(id,o)=>{
+   try{
+    const total=Math.round(Number(o&&o.customerTotal)||0);
+    for(;;){
+     const want=await rfDialog(1,total);
+     if(!want)return;
+     const amt=await rfDialog(2,total);
+     if(amt===null)continue;
+     if(!(await ask("تأكيد إرجاع "+fmt(amt)+" د.ع للزبون؟")))continue;
+     await set(ref(db,"refunds/"+id),{orderId:id,driverId:uid,driverName:(driver&&driver.name)||"",driverPhone:(driver&&driver.phone)||"",storeId:(o&&o.storeId)||"",storeName:(o&&o.storeName)||"",customerOrderId:(o&&o.customerOrderId)||"",orderTotal:total,amount:amt,status:"pending",createdAt:Date.now()});
+     say("تم تسجيل مبلغ الإرجاع للزبون ("+fmt(amt)+" د.ع). الإدارة تتابعه.");
+     return;
+    }
+   }catch(e){say("تعذر تسجيل المرتجع: "+(e&&(e.code||e.message)||e))}
+  };
  const lerr=e=>{
   const c=e&&e.code||"";
   if(c==="auth/network-request-failed")return "تأكد من الإنترنت وحاول مرة ثانية.";
@@ -1055,6 +1097,7 @@ function heroOf(o){const m={waiting_store:["h-store","بالطريق للمتج�
     if(!res.committed||!v||v.status!==ns){say("تعذر التحديث: حالة الطلب تغيّرت (ربما ألغته الإدارة)");return}
     if(v.customerOrderId)update(ref(db,"customerOrders/"+v.customerOrderId),{status:ns}).catch(()=>{});
     if(ns==="delivered")speak("تم التوصيل بنجاح");else speak("تم تحديث الحالة");
+     if(ns==="delivered")setTimeout(()=>refundFlow(id,v),400);
    }
   }catch(er){say("فشلت العملية: "+(er&&(er.code||er.message)||er))}
   finally{busy=false}
