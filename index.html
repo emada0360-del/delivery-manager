@@ -672,6 +672,8 @@ async function unassignOrder(oid){
   return n;
  });
 }
+const PUSH_WORKER="https://baqubah-push.emada0360.workers.dev";/* ضع هنا رابط الـWorker بعد النشر، مثال: https://baqubah-push.اسمك.workers.dev */
+function wk(kind,id){try{const u=auth.currentUser;if(!u||!PUSH_WORKER)return;u.getIdToken().then(t=>fetch(PUSH_WORKER,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify({kind:kind,id:id}),keepalive:true})).catch(()=>{})}catch(_){}}
 const relg=new Set();
 function checkForced(){
  const now=Date.now();
@@ -705,8 +707,8 @@ document.addEventListener("change",e=>{
  if(sc&&sc.value){const id=sc.dataset.lvc,v=sc.value;sc.value="";if(v==="cc")run(async()=>{if(!(await showToastConfirm("إلغاء طلب الزبون؟")))return;await update(ref(db,"customerOrders/"+id),{status:"cancelled"});say("تم إلغاء طلب الزبون.")});return}
  const s=e.target.closest("select[data-lv]");if(!s||!s.value)return;const id=s.dataset.lv,v=s.value;s.value="";
  if(v==="as")openAssign(id);
- else if(v==="rel")run(async()=>{if(!(await showToastConfirm("إرسال الطلب #"+id.slice(-6)+" للسائقين الآن؟")))return;await runTransaction(ref(db,"orders/"+id),cur=>{if(cur===null)return cur;if(cur.status!=="preparing")return;return{...cur,status:"pending",createdAt:Date.now(),releasedAt:Date.now(),readyAt:Date.now(),releasedByAdmin:true}});say("تم إرسال الطلب للسائقين.")});
- else if(v==="un")run(async()=>{if(!(await showToastConfirm("إلغاء التعيين ورفع الطلب لجميع السائقين؟")))return;await unassignOrder(id);say("تم رفع الطلب للسائقين.")});
+ else if(v==="rel")run(async()=>{if(!(await showToastConfirm("إرسال الطلب #"+id.slice(-6)+" للسائقين الآن؟")))return;await runTransaction(ref(db,"orders/"+id),cur=>{if(cur===null)return cur;if(cur.status!=="preparing")return;return{...cur,status:"pending",createdAt:Date.now(),releasedAt:Date.now(),readyAt:Date.now(),releasedByAdmin:true}});wk("order",id);say("تم إرسال الطلب للسائقين.")});
+ else if(v==="un")run(async()=>{if(!(await showToastConfirm("إلغاء التعيين ورفع الطلب لجميع السائقين؟")))return;await unassignOrder(id);wk("order",id);say("تم رفع الطلب للسائقين.")});
  else if(v==="del")run(async()=>{if(!(await showToastConfirm("حذف الطلب #"+id.slice(-6)+" نهائياً؟")))return;await deleteOrdersArchived({[id]:orders[id]});say("تم حذف الطلب.")});
 });
 const list=r=>Object.entries(users).filter(([,u])=>u&&u.role===r);

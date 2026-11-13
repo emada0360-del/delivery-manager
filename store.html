@@ -410,6 +410,8 @@ function trustedFee(co){
  return{fee:f,km:co.distanceKm!=null?Number(co.distanceKm):null};
 }
 
+const PUSH_WORKER="https://baqubah-push.emada0360.workers.dev";/* ضع هنا رابط الـWorker بعد النشر، مثال: https://baqubah-push.اسمك.workers.dev */
+function wk(kind,id){try{const u=auth.currentUser;if(!u||!PUSH_WORKER)return;u.getIdToken().then(t=>fetch(PUSH_WORKER,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify({kind:kind,id:id}),keepalive:true})).catch(()=>{})}catch(_){}}
 const releasing=new Set();
 async function releaseOrder(id){
  if(releasing.has(id))return;releasing.add(id);
@@ -421,7 +423,7 @@ async function releaseOrder(id){
    return{...cur,status:"pending",createdAt:now,releasedAt:now,readyAt:now};
   });
   const v=r.snapshot&&r.snapshot.val();
-  if(r.committed&&v&&v.status==="pending")say("تم إرسال الطلب للسائقين ✓");
+  if(r.committed&&v&&v.status==="pending"){say("تم إرسال الطلب للسائقين ✓");wk("order",id)}
   else say("تعذر الإرسال: حالة الطلب تغيّرت",1);
  }catch(e){say("تعذر إرسال الطلب للسائقين: "+(e.code||e.message),1)}
  finally{setTimeout(()=>releasing.delete(id),3000)}

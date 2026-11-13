@@ -1131,5 +1131,34 @@ function heroOf(o){const m={waiting_store:["h-store","بالطريق للمتج�
 __load().then(()=>{__main();__d("جاهز");document.getElementById("err").textContent=""})
 .catch(e=>{document.getElementById("err").textContent="خطأ: "+(e&&e.message||e);__d("فشل التحميل")});
 </script>
+<script>
+(function(){
+ try{
+  var P=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.DriverStatus;
+  if(!P||typeof P.openAutostart!=="function")return;
+  var KEY="bgGuideDone_v1";
+  try{if(localStorage.getItem(KEY)==="1")return}catch(_){}
+  function b(txt,m){return '<button data-m="'+m+'" style="display:block;width:100%;margin:6px 0;padding:10px;border:0;border-radius:10px;background:#2563eb;color:#fff;font:inherit">'+txt+'</button>'}
+  setTimeout(function(){
+   if(document.getElementById("bgGuide"))return;
+   var d=document.createElement("div");d.id="bgGuide";
+   d.style.cssText="position:fixed;left:10px;right:10px;bottom:10px;z-index:99999;background:#1b1f27;color:#fff;border:1px solid #3b82f6;border-radius:14px;padding:14px;font:14px/1.6 system-ui,sans-serif;direction:rtl;box-shadow:0 8px 30px rgba(0,0,0,.6)";
+   d.innerHTML='<b>حتى توصلك الطلبات والتطبيق مسكّر</b><div style="margin:4px 0 8px;opacity:.85">اضغط كل زر وفعّل الخيار، ثم ارجع للتطبيق.</div>'
+    +b("١) التشغيل التلقائي (Autostart)","openAutostart")
+    +b("٢) الموقع: «السماح طوال الوقت»","openAppSettings")
+    +b("٣) البطارية: «بدون قيود»","openAppSettings")
+    +'<div style="display:flex;gap:8px;margin-top:6px"><button data-x="done" style="flex:1;padding:10px;border:0;border-radius:10px;background:#16a34a;color:#fff;font:inherit">تم</button><button data-x="later" style="flex:1;padding:10px;border:0;border-radius:10px;background:#374151;color:#fff;font:inherit">لاحقاً</button></div>';
+   d.addEventListener("click",function(e){
+    var el=e.target.closest("button");if(!el)return;
+    var m=el.getAttribute("data-m"),x=el.getAttribute("data-x");
+    if(m){try{Promise.resolve(P[m]({})).catch(function(){})}catch(_){}}
+    if(x==="done"){try{localStorage.setItem(KEY,"1")}catch(_){}d.remove()}
+    if(x==="later")d.remove();
+   });
+   document.body.appendChild(d);
+  },6000);
+ }catch(_){}
+})();
+</script>
 </body>
 </html>

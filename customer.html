@@ -375,6 +375,8 @@ async function iceServers(){
  const ex=[{urls:"turn:free.expressturn.com:3478",username:EX_U,credential:EX_P},{urls:"turn:free.expressturn.com:3478?transport=tcp",username:EX_U,credential:EX_P}];
  return [...ex,{urls:"stun:free.expressturn.com:3478"},{urls:"stun:stun.l.google.com:19302"}];
 }
+const PUSH_WORKER="https://baqubah-push.emada0360.workers.dev";/* ضع هنا رابط الـWorker بعد النشر، مثال: https://baqubah-push.اسمك.workers.dev */
+function wk(kind,id){try{const u=auth.currentUser;if(!u||!PUSH_WORKER)return;u.getIdToken().then(t=>fetch(PUSH_WORKER,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify({kind:kind,id:id}),keepalive:true})).catch(()=>{})}catch(_){}}
 let call=null,onCallEnd=()=>{};
 let spk=false,callName="",callTick=null,wl=null,nearNow=false,proxOn=false,proxSensor=null,nativeLis=false;
 const callAudio=()=>{try{return window.Capacitor.Plugins.CallAudio||null}catch(e){return null}};
@@ -545,7 +547,7 @@ async function dial(oid){
   await set(ref(db,`calls/${oid}/offer`),{type:o.type,sdp:o.sdp});
    c.un.push(onValue(ref(db,`calls/${oid}/busy`),s=>{if(s.val())onBusy(oid)}));
   c.un.push(onValue(ref(db,`calls/${oid}/answer`),async s=>{const a=s.val();if(a&&call===c&&!c.pc.remoteDescription){try{await c.pc.setRemoteDescription(a);flush(c)}catch(e){}}}));
-  await update(ref(db,"customerOrders/"+oid),{ring:serverTimestamp()});
+  await update(ref(db,"customerOrders/"+oid),{ring:serverTimestamp()});wk("call",oid);
   setTimeout(()=>{if(call&&call.oid===oid&&call.pc.connectionState!=="connected"){hangup();noAnswer(oid)}},45000);
  }catch(e){closeCall(true);alert("تعذر بدء المكالمة: "+(e.name==="NotAllowedError"?"اسمح باستخدام المايكروفون":e.message))}
 }
@@ -568,7 +570,7 @@ function onBusy(oid){
  closeCall(true);busyTone();setTimeout(sayBusy,1700);
  ui('المتجر مشغول حالياً<div style="font-size:14px;color:#cbd5e1;margin-top:6px">انتظر قليلاً ثم حاول الاتصال مرة أخرى</div>',[["حسناً",()=>ui(""),"#475569"],["إعادة الاتصال",()=>{ui("");dial(oid)},"#0f9a63"]]);
 }
-function hangup(){if(call)set(ref(db,`calls/${call.oid}/ended`),Date.now()).catch(()=>{});closeCall()}
+function hangup(){if(call){wk("callend",call.oid);set(ref(db,`calls/${call.oid}/ended`),Date.now()).catch(()=>{})}closeCall()}
 function closeCall(quiet){
  ring(false);ui("");stopTick();cMuted=false;cMin=false;
  if(!call){syncProx();releaseWL();return}const c=call;call=null;if(spk)setSpk(false);syncProx();releaseWL();
