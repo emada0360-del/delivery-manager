@@ -480,6 +480,16 @@ function __main(){
   const f=v=>{$("mdl").hidden=true;r(v)};
   $("mdy").onclick=()=>f(true);$("mdn").onclick=()=>f(false);
  });
+const PUSH_WORKER="https://baqubah-push.emada0360.workers.dev";
+async function wcall(kind,payload){
+ const u=auth.currentUser;if(!u)throw Error("سجّل الدخول أولاً");
+ const t=await u.getIdToken();
+ const r=await fetch(PUSH_WORKER,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify(Object.assign({kind:kind},payload||{}))});
+ const j=await r.json().catch(()=>({}));
+ if(!r.ok||j.error)throw Error(j.msg||j.error||("خطأ "+r.status));
+ return j;
+}
+
   // ---- إرجاع مبلغ للزبون بعد التسليم (الزبون أعطى أكثر وما عندك صرافة) ----
   const rfDialog=(step,total)=>new Promise(res=>{
    const el=document.createElement("div");
@@ -488,12 +498,12 @@ function __main(){
    box.style.cssText="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:22px;padding:20px;width:min(100%,360px)";
    const bs="flex:1;min-height:48px;border:0;border-radius:14px;font-weight:700;font-size:16px;cursor:pointer;font-family:inherit";
    if(step===1){
-    box.innerHTML='<p style="margin:0 0 6px;font-weight:700;font-size:17px">إرجاع مبلغ للزبون؟</p><p style="margin:0 0 16px;line-height:1.8;color:var(--muted)">إذا الزبون أعطاك أكثر من حساب الطلب وما عندك صرافة، سجّل المبلغ اللي لازم ينرجع له. الإدارة تشوفه وتتابعه.</p><div style="display:flex;gap:10px"><button id="rfY" style="'+bs+';background:#0f9a63;color:#fff">نعم</button><button id="rfN" style="'+bs+';background:var(--raised);color:var(--ink)">لا</button></div>';
+    box.innerHTML='<p style="margin:0 0 6px;font-weight:700;font-size:17px">باقي للزبون؟</p><p style="margin:0 0 16px;line-height:1.8;color:var(--muted)">إذا الزبون أعطاك أكثر من حساب الطلب وما عندك صرافة، الباقي ينضاف لمحفظة الزبون ويخصمه من طلبه الجاي. المبلغ يبقى على ذمتك بالحساب لين تسلّمه للإدارة.</p><div style="display:flex;gap:10px"><button id="rfY" style="'+bs+';background:#0f9a63;color:#fff">نعم</button><button id="rfN" style="'+bs+';background:var(--raised);color:var(--ink)">لا</button></div>';
     el.appendChild(box);document.body.appendChild(el);
     box.querySelector("#rfY").onclick=()=>{el.remove();res(true)};
     box.querySelector("#rfN").onclick=()=>{el.remove();res(false)};
    }else{
-    box.innerHTML='<p style="margin:0 0 6px;font-weight:700;font-size:17px">المبلغ المراد إرجاعه</p><p style="margin:0 0 12px;color:var(--muted)">إجمالي حساب الطلب: '+fmt(total)+' د.ع</p><input id="rfA" type="tel" inputmode="numeric" placeholder="مثال: 250" style="width:100%;box-sizing:border-box;min-height:50px;border-radius:14px;border:1px solid var(--line);background:var(--raised);color:var(--ink);font-size:20px;text-align:center;font-family:inherit"><p id="rfE" style="margin:8px 0 0;color:#e5484d;min-height:20px"></p><div style="display:flex;gap:10px;margin-top:8px"><button id="rfOk" style="'+bs+';background:#0f9a63;color:#fff">متابعة</button><button id="rfBack" style="'+bs+';background:var(--raised);color:var(--ink)">رجوع</button></div>';
+    box.innerHTML='<p style="margin:0 0 6px;font-weight:700;font-size:17px">الباقي للزبون (يُضاف لمحفظته)</p><p style="margin:0 0 12px;color:var(--muted)">المطلوب من الزبون: '+fmt(total)+' د.ع</p><input id="rfA" type="tel" inputmode="numeric" placeholder="مثال: 250" style="width:100%;box-sizing:border-box;min-height:50px;border-radius:14px;border:1px solid var(--line);background:var(--raised);color:var(--ink);font-size:20px;text-align:center;font-family:inherit"><p id="rfE" style="margin:8px 0 0;color:#e5484d;min-height:20px"></p><div style="display:flex;gap:10px;margin-top:8px"><button id="rfOk" style="'+bs+';background:#0f9a63;color:#fff">متابعة</button><button id="rfBack" style="'+bs+';background:var(--raised);color:var(--ink)">رجوع</button></div>';
     el.appendChild(box);document.body.appendChild(el);
     const inp=box.querySelector("#rfA");
     inp.oninput=()=>{inp.value=inp.value.replace(/[٠-٩]/g,x=>x.charCodeAt(0)-1632).replace(/\D/g,"").slice(0,6)};
@@ -502,27 +512,35 @@ function __main(){
     box.querySelector("#rfOk").onclick=()=>{
      const n=parseInt(inp.value,10);
      if(!n||n<=0){box.querySelector("#rfE").textContent="اكتب مبلغاً صحيحاً.";return}
-     if(n>500000){box.querySelector("#rfE").textContent="المبلغ كبير جداً.";return}
+     const cap=Number((typeof settings==="object"&&settings&&settings.walletMaxCredit)||5000);if(n>cap){box.querySelector("#rfE").textContent="أكبر باقي مسموح "+fmt(cap)+" د.ع. إذا أكثر، رجّعه نقداً أو راجع الإدارة.";return}
      el.remove();res(n);
     };
    }
   });
   const refundFlow=async(id,o)=>{
-   try{
-    const total=Math.round(Number(o&&o.customerTotal)||0);
-    for(;;){
-     const want=await rfDialog(1,total);
-     if(!want)return;
-     const amt=await rfDialog(2,total);
-     if(amt===null)continue;
-     if(!(await ask("تأكيد إرجاع "+fmt(amt)+" د.ع للزبون؟")))continue;
-     await set(ref(db,"refunds/"+id),{orderId:id,driverId:uid,driverName:(driver&&driver.name)||"",driverPhone:(driver&&driver.phone)||"",storeId:(o&&o.storeId)||"",storeName:(o&&o.storeName)||"",customerOrderId:(o&&o.customerOrderId)||"",orderTotal:total,amount:amt,status:"pending",createdAt:Date.now()});
-     say("تم تسجيل مبلغ الإرجاع للزبون ("+fmt(amt)+" د.ع). الإدارة تتابعه.");
-     return;
-    }
-   }catch(e){say("تعذر تسجيل المرتجع: "+(e&&(e.code||e.message)||e))}
-  };
- const lerr=e=>{
+    // طلب المتجر ما فيه باقي للمحفظة؛ فقط طلبات تطبيق الزبون
+    if(!(o&&o.customerOrder===true))return;
+    try{
+     const total=Math.max(0,Math.round(Number(o.customerTotal)||0)-Math.round(Number(o.walletUsed)||0));
+     for(;;){
+      const want=await rfDialog(1,total);
+      if(!want)return;
+      const amt=await rfDialog(2,total);
+      if(amt===null)continue;
+      if(!(await ask("تأكيد إضافة "+fmt(amt)+" د.ع لمحفظة الزبون؟")))continue;
+      try{
+       await wcall("wallet_credit",{orderId:id,amount:amt,driverName:(driver&&driver.name)||"",driverPhone:(driver&&driver.phone)||""});
+       say("تمت إضافة "+fmt(amt)+" د.ع لمحفظة الزبون. المبلغ ينحسب على ذمتك.");
+       return;
+      }catch(er){
+       const msg=(er&&er.message)||String(er);
+       if(/مسبقاً|انتهت|مو إلك|لسه/.test(msg)){say(msg);return}
+       if(!(await ask("تعذر إضافة الباقي ("+msg+"). نعيد المحاولة؟")))return;
+      }
+     }
+    }catch(e){say("تعذر إضافة الباقي: "+(e&&(e.code||e.message)||e))}
+   };
+  const lerr=e=>{
   const c=e&&e.code||"";
   if(c==="auth/network-request-failed")return "تأكد من الإنترنت وحاول مرة ثانية.";
   if(c==="auth/too-many-requests")return "محاولات كثيرة، انتظر شوي وحاول.";
@@ -781,11 +799,11 @@ function __main(){
    if(o&&o.status==="delivered"){
     n++;
     const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommissionFixed??settings.storeCommission??500));
-    d+=Math.round(Number(o.platformDeliveryCommission)||0)+Math.round(sc)+(o.storeDeferred===true?Math.max(0,Math.round((Number(o.itemPrice)||0)-sc)):0);
+    d+=Math.round(Number(o.platformDeliveryCommission)||0)+Math.round(sc)+(o.storeDeferred===true?Math.max(0,Math.round((Number(o.itemPrice)||0)-sc)):0)+Math.round(Number(o.walletChange)||0)-Math.round(Number(o.walletUsed)||0);
     if(Number(o.deliveredAt)>=t0)tp+=Math.round(Number(o.driverProfit)||0);
    }
   }
-  for(const id in finance){const f=finance[id];if(!f)continue;const am=Math.round(Number(f.amount)||0);if(f.type==="cash_received"||f.type==="bonus")d-=am;else if(f.type==="deduction"||f.type==="archive"){d+=am;if(f.type==="archive"){n+=Number(f.count)||0;an+=Number(f.count)||0}}else if(f.type==="deferred_archive")d+=am}
+  for(const id in finance){const f=finance[id];if(!f)continue;const am=Math.round(Number(f.amount)||0);if(f.type==="cash_received"||f.type==="bonus")d-=am;else if(f.type==="deduction"||f.type==="archive"){d+=am+(f.type==="archive"?Math.round(Number(f.walletNet)||0):0);if(f.type==="archive"){n+=Number(f.count)||0;an+=Number(f.count)||0}}else if(f.type==="deferred_archive")d+=am}
   if(d<0)d=0;debt=d;
   $("statDone").textContent=n;$("statDebt").textContent=fmt(d)+" د.ع";$("statProfit").textContent=fmt(tp)+" د.ع";
   $("warnBox").hidden=d<debtLimit;
@@ -805,15 +823,15 @@ function __main(){
  }
  function finBox(o){
   const sc=Number(o.storeCommission!==undefined?o.storeCommission:(settings.storeCommissionFixed??settings.storeCommission??500));
-  const def=o.storeDeferred===true,fee=Number(o.deliveryFee)||0,pc=Math.round(fee*PC()),payStore=Math.round((Number(o.itemPrice)||0)-sc),collect=Math.round(Number(o.customerTotal)||0),profit=Math.round(fee-pc);
+  const def=o.storeDeferred===true,fee=Number(o.deliveryFee)||0,pc=Math.round(fee*PC()),payStore=Math.round((Number(o.itemPrice)||0)-sc),collect=Math.max(0,Math.round(Number(o.customerTotal)||0)-Math.round(Number(o.walletUsed)||0)),profit=Math.round(fee-pc),wu=Math.round(Number(o.walletUsed)||0),wch=Math.round(Number(o.walletChange)||0);
   return `<div class="fin-box">
    ${def?`<div class="fin-row f-pay"><span>المتجر آجل:</span><b>لا تدفع له</b></div>`:`<div class="fin-row f-pay"><span>تدفع للمتجر:</span><b>${fmt(payStore)} د.ع</b></div>`}
-   <div class="fin-row f-get"><span>تستلم من الزبون:</span><b>${fmt(collect)} د.ع</b></div>
+   <div class="fin-row f-get"><span>تستلم من الزبون:</span><b>${fmt(collect)} د.ع</b></div>${wu>0?`<div class="fin-row"><span>خصم محفظة الزبون:</span><b>${fmt(wu)} د.ع</b></div>`:""}
    <div class="fin-row f-profit"><span>ربحك الصافي (الكروة):</span><b>${fmt(profit)} د.ع</b></div>
   </div>
   <div class="debt-box">
    <div class="fin-row" style="margin-bottom:5px"><span>عمولة المنصة (${+(PC()*100).toFixed(1)}%):</span><b>${fmt(pc)} د.ع</b></div>
-   ${def?`<div class="fin-row"><span>تسوية مبلغ المتجر:</span><b>عن طريق الإدارة</b></div>`:`<div class="fin-row" style="margin-bottom:5px"><span>عمولة المتجر (ثابتة):</span><b>${fmt(sc)} د.ع</b></div><div class="fin-row"><span>سيضاف لدينك:</span><b>${fmt(pc+sc)} د.ع</b></div>`}
+   ${def?`<div class="fin-row"><span>تسوية مبلغ المتجر:</span><b>عن طريق الإدارة</b></div>`:`<div class="fin-row" style="margin-bottom:5px"><span>عمولة المتجر (ثابتة):</span><b>${fmt(sc)} د.ع</b></div><div class="fin-row"><span>سيضاف لدينك:</span><b>${fmt(pc+sc)} د.ع</b></div>`}${wu>0?`<div class="fin-row" style="margin-top:5px"><span>محفظة الزبون (تنخصم من دينك):</span><b>-${fmt(wu)} د.ع</b></div>`:""}${wch>0?`<div class="fin-row" style="margin-top:5px"><span>باقي الزبون (يُضاف لدينك):</span><b>+${fmt(wch)} د.ع</b></div>`:""}
   </div>`;
  }
  function getDist(a,b,c,d){

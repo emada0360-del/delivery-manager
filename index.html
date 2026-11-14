@@ -356,10 +356,11 @@ header{background:linear-gradient(180deg,#0d131a,#111a24);box-shadow:0 8px 28px 
 </section>
 
 <section id="t15" class="tab" hidden>
+<div class="box"><h3>محافظ الزبائن</h3><p class="sub">الباقي اللي يضيفه السائق مباشرة لمحفظة الزبون (بدون موافقة الإدارة). تراقبه هنا وتصحّحه عند الخطأ. المبلغ ينحسب على ذمة السائق ويُخصم من دينه عند استخدام الزبون له.</p><div id="walSum" class="wrap"></div><div id="walList" class="wrap"></div></div>
 <div class="box"><h3>مبالغ مرجّعة للزبائن</h3>
 <p class="sub">عندما يسجّل السائق عند التسليم أن الزبون له مبلغ يرجع (ما توفرت صرافة)، يظهر هنا. السائق يحتفظ بالمبلغ حتى تنفّذ الإرجاع أو تستلمه منه.</p>
 <div id="rfSum" class="wrap"></div>
-<select id="rfSel" style="margin:8px 0"><option value="pending">المعلّقة</option><option value="done">المُنجزة</option><option value="cancelled">الملغاة</option><option value="all">الكل</option></select>
+<select id="rfSel" style="margin:8px 0"><option value="pending">المعلّقة</option><option value="wallet">في المحفظة</option><option value="done">المُنجزة</option><option value="cancelled">الملغاة</option><option value="all">الكل</option></select>
 <div id="rfList" class="wrap"></div></div>
 </section>
 
@@ -483,7 +484,7 @@ function stageChip(o){
 
 $("f").innerHTML+=Object.entries(ST).filter(([k])=>k!=="waiting_store"&&k!=="delivering").map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
 
-let rfs={},rfCust={},rfFilter="pending",clogs={},appr={},acts={},codes={},cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
+let wal={},rfs={},rfCust={},rfFilter="pending",clogs={},appr={},acts={},codes={},cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
 let showProfitFlag=false;
 
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fde8ec":"#dff5ea";m.style.color=bad?"#b0002a":"#0b7a4e";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
@@ -557,7 +558,7 @@ function scheduleDraw(){
 }
 
 function start(){
- const src={callLogs:v=>clogs=v,customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customers:v=>custers=v,approvedCustomers:v=>appr=v,activations:v=>acts=v,customerCodes:v=>codes=v,bannedDevices:v=>banned=v,finance:v=>fin=v,refunds:v=>rfs=v||{},presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
+ const src={callLogs:v=>clogs=v,customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customers:v=>custers=v,approvedCustomers:v=>appr=v,activations:v=>acts=v,customerCodes:v=>codes=v,bannedDevices:v=>banned=v,finance:v=>fin=v,refunds:v=>rfs=v||{},wallets:v=>wal=v||{},presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
  const prev={};
  for(const p in src)onValue(ref(db,p),s=>{
    const v=s.val()||{};
@@ -705,6 +706,14 @@ async function unassignOrder(oid){
  });
 }
 const PUSH_WORKER="https://baqubah-push.emada0360.workers.dev";/* ضع هنا رابط الـWorker بعد النشر، مثال: https://baqubah-push.اسمك.workers.dev */
+async function adminW(kind,payload){
+ const u=auth.currentUser;if(!u)throw Error("سجّل الدخول");
+ const t=await u.getIdToken();
+ const r=await fetch(PUSH_WORKER,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify(Object.assign({kind:kind},payload||{}))});
+ const j=await r.json().catch(()=>({}));
+ if(!r.ok||j.error)throw Error(j.msg||j.error||("خطأ "+r.status));
+ return j;
+}
 function wk(kind,id){try{const u=auth.currentUser;if(!u||!PUSH_WORKER)return;u.getIdToken().then(t=>fetch(PUSH_WORKER,{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+t},body:JSON.stringify({kind:kind,id:id}),keepalive:true})).catch(()=>{})}catch(_){}}
 const relg=new Set();
 function checkForced(){
@@ -747,11 +756,12 @@ const list=r=>Object.entries(users).filter(([,u])=>u&&u.role===r);
 const online=id=>!!(pres[id]&&pres[id].online===true&&Date.now()-(Number(pres[id].lastSeen)||0)<180000);
 const deliveredOrders=id=>Object.values(orders).filter(o=>o&&o.driverId===id&&o.status==="delivered");
 const orderComm=o=>(Number(o.platformDeliveryCommission)||0)+(Number(o.storeCommission)||0);
+const orderDebt=o=>orderComm(o)+(Number(o.walletChange)||0)-(Number(o.walletUsed)||0);
 
 // المستحق = عمولات الطلبات المسلّمة الحالية + العمولات المؤرشفة (طلبات انحذفت) - الكاش المستلم
 const getDebt=id=>{
-  const live = deliveredOrders(id).reduce((s,o)=>s+orderComm(o),0);
-  const archived = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="archive").reduce((s,f)=>s+(Number(f.amount)||0),0);
+  const live = deliveredOrders(id).reduce((s,o)=>s+orderDebt(o),0);
+  const archived = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="archive").reduce((s,f)=>s+(Number(f.amount)||0)+(Number(f.walletNet)||0),0);
   const paid = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="cash_received").reduce((s,f)=>s+(Number(f.amount)||0),0);
   const ded = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="deduction").reduce((s,f)=>s+(Number(f.amount)||0),0);
   const bon = Object.values(fin).filter(f=>f&&f.userId===id&&f.type==="bonus").reduce((s,f)=>s+(Number(f.amount)||0),0);
@@ -823,7 +833,7 @@ async function deleteOrdersArchived(map){
   }
   if(o&&o.status==="delivered"){
    const c=orderComm(o);
-   const k=o.driverId||"_none";agg[k]=agg[k]||{amount:0,count:0};agg[k].amount+=c;agg[k].count++;
+   const k=o.driverId||"_none";agg[k]=agg[k]||{amount:0,count:0,wallet:0};agg[k].amount+=c;agg[k].wallet+=(Number(o.walletChange)||0)-(Number(o.walletUsed)||0);agg[k].count++;
     if(o.driverId)upd["driverHistory/"+o.driverId+"/"+id]={status:"delivered",createdAt:Number(o.createdAt)||0,deliveredAt:Number(o.deliveredAt)||Number(o.createdAt)||Date.now(),driverProfit:Math.round(Number(o.driverProfit)||0),deliveryFee:Number(o.deliveryFee)||0,storeName:String(o.storeName||""),area:String(o.area||"")};
     if(o.storeDeferred===true){const p=dealPay(o);if(o.driverId)aggD[o.driverId]=(aggD[o.driverId]||0)+p;if(o.storeId)aggS[o.storeId]=(aggS[o.storeId]||0)+p}
   }
@@ -831,7 +841,7 @@ async function deleteOrdersArchived(map){
  const now=Date.now();
  for(const [uid,a] of Object.entries(agg)){
   const key=push(ref(db,"finance")).key;
-  upd["finance/"+key]={type:"archive",userId:uid,userName:(users[uid]&&users[uid].name)||"",amount:a.amount,count:a.count,note:"عمولات طلبات محذوفة",createdAt:now};
+  upd["finance/"+key]={type:"archive",userId:uid,userName:(users[uid]&&users[uid].name)||"",amount:a.amount,walletNet:a.wallet||0,count:a.count,note:"عمولات طلبات محذوفة",createdAt:now};
  }
  for(const [uid,a] of Object.entries(aggD)){const key=push(ref(db,"finance")).key;upd["finance/"+key]={type:"deferred_archive",userId:uid,userName:(users[uid]&&users[uid].name)||"",amount:a,note:"مبالغ متاجر آجلة لطلبات محذوفة",createdAt:now}}
  for(const [uid,a] of Object.entries(aggS)){const key=push(ref(db,"finance")).key;upd["finance/"+key]={type:"store_archive",userId:uid,userName:(users[uid]&&users[uid].name)||"",amount:a,note:"مستحقات طلبات آجلة محذوفة",createdAt:now}}
@@ -979,7 +989,7 @@ function draw(){
  drawLiveOrders();
  lastNet=liveProfit+archProfit-profitReset;lastReset=profitReset;
  drawProfitTab();
- drawCalls();drawRefunds();
+ drawCalls();drawRefunds();drawWallets();
  syncCust();
  checkForced();
 
@@ -1075,7 +1085,7 @@ function drawLiveOrders(){
   const tagClass=["accepted","arrived_store","picked_up","delivering"].includes(o.status)?"g":"y";
   const driver=name?`<b>${esc(name)}</b>${o.driverId?chipOf(o.driverId):""}`:'<span class="tm">بانتظار سائق</span>';
   const payBox=(def?'<span class="tag y">💳 آجل</span>':'<span class="tag g">💵 نقدي</span>')
-   +dr("يستلمه السائق من الزبون",fmt(tot)+" د.ع")
+   +dr("يستلمه السائق من الزبون",fmt(Math.max(0,tot-(Number(o.walletUsed)||0)))+" د.ع"+(Number(o.walletUsed)>0?" (بعد خصم محفظة "+fmt(o.walletUsed)+")":""))
    +dr("يدفعه السائق للمتجر",def?"لا شيء (آجل، الإدارة تسدّد للمتجر)":fmt(payStore)+" د.ع نقداً")
    +(cust?`<div style="margin-top:8px"><button type="button" data-dfo="${esc(id)}" data-on="${def?0:1}" class="${def?"org":"blue"}">${def?"إغلاق الآجل (دفع نقدي للمتجر)":"تفعيل الدفع الآجل لهذا الطلب"}</button></div>`:'<div class="tm" style="margin-top:6px">طلب متجر: يدفع السائق للمتجر نقداً.</div>');
   const custBox=cust?cpTag(id)+dr("البعد عن المتجر",o.distanceKm!=null?Number(o.distanceKm).toFixed(1)+" كم":"—")+mapA(cpos(id),"موقع الزبون")
@@ -1103,7 +1113,7 @@ function drawOrders(){
   const drv=dn?`<div class="pc2"><b>${esc(dn)}</b>${dp?`<a href="tel:${esc(dp)}" dir="ltr">${esc(dp)}</a>`:""}</div>`:'<span class="tm">بانتظار سائق</span>';
   const opts=Object.entries(ST).filter(([k])=>!["waiting_store","delivering"].includes(k)||o.status===k).map(([k,v])=>`<option value="${k}" ${o.status===k?"selected":""}>${v}</option>`).join("");
   return `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(o.storeName)}${o.customerOrder?' <span class="tag b">طلب زبون</span>':''}</td><td>${esc(o.area)}</td>
-  <td><div class="pc2"><b>${fmt(item)} د.ع</b><small>توصيل ${fmt(fee)} · المجموع ${fmt(tot)}</small></div></td>
+  <td><div class="pc2"><b>${fmt(item)} د.ع</b><small>توصيل ${fmt(fee)} · المجموع ${fmt(tot)}${Number(o.walletUsed)>0?` · محفظة -${fmt(o.walletUsed)}`:""}${Number(o.walletChange)>0?` · باقي للمحفظة +${fmt(o.walletChange)}`:""}</small></div></td>
   <td>${drv}</td>
   <td>${stageChip(o)}${o.forcedAssign?' <span class="tag b">تلقائي</span>':''}</td>
   <td><div class="pc2"><span>${tm(o.createdAt)}</span><small>آخر حركة: ${tm(o.statusUpdatedAt||o.deliveredAt||o.updatedAt)}</small></div></td>
@@ -1250,6 +1260,7 @@ document.addEventListener("click",e=>{
       if(st==="delivered"){upd.deliveredAt=now;const oo=orders[d.ss]||{};
         if(oo.driverId&&oo.platformDeliveryCommission===undefined){const fee=Number(oo.deliveryFee)||0,pc=Math.round(fee*(Number(settings.driverCommissionPercent??10)/100));upd.platformDeliveryCommission=pc;upd.driverProfit=fee-pc}}
       await update(ref(db,"orders/"+d.ss),upd);
+      if(st==="cancelled"&&Number((orders[d.ss]||{}).walletUsed)>0)adminW("wallet_release",{orderId:d.ss}).catch(()=>{});
       say("تم التحديث.");
     }
   }
@@ -1520,7 +1531,7 @@ document.addEventListener("click",e=>{
 
 // ===== إغلاق المناطق =====
 // ---- المرتجعات للزبائن ----
-const RF_ST={pending:"معلّق",done:"تم الإرجاع",cancelled:"ملغي"};
+const RF_ST={pending:"معلّق",wallet:"في محفظة الزبون",done:"تم الإرجاع",cancelled:"ملغي"};
 async function rfLoadCust(id,coid){
  if(rfCust[id]!==undefined||!coid)return;
  rfCust[id]=null;
@@ -1537,8 +1548,8 @@ function drawRefunds(){
  $("rfList").innerHTML=rows.length?rows.map(([id,r])=>{
   rfLoadCust(id,r.customerOrderId);
   const c=rfCust[id]||{},dn=(users[r.driverId]&&users[r.driverId].name)||r.driverName||"—";
-  const st=r.status||"pending",col=st==="done"?"#0f9a63":st==="cancelled"?"#94a3b8":"#d98200";
-  const acts=st==="pending"?`<button data-rf="done" data-id="${esc(id)}" class="green">تم الإرجاع للزبون</button><button data-rf="edit" data-id="${esc(id)}" class="gray">تعديل المبلغ</button><button data-rf="cancel" data-id="${esc(id)}" class="red">إلغاء</button>`:`<button data-rf="reopen" data-id="${esc(id)}" class="gray">إرجاع لمعلّق</button>`;
+  const st=r.status||"pending",col=st==="done"?"#0f9a63":st==="wallet"?"#1a6fd4":st==="cancelled"?"#94a3b8":"#d98200";
+  const acts=r.via==="wallet"?`<button data-wfix="edit" data-id="${esc(id)}" class="gray">تعديل المبلغ</button><button data-wfix="cancel" data-id="${esc(id)}" class="red">إلغاء الباقي</button>`:st==="pending"?`<button data-rf="done" data-id="${esc(id)}" class="green">تم الإرجاع للزبون</button><button data-rf="edit" data-id="${esc(id)}" class="gray">تعديل المبلغ</button><button data-rf="cancel" data-id="${esc(id)}" class="red">إلغاء</button>`:`<button data-rf="reopen" data-id="${esc(id)}" class="gray">إرجاع لمعلّق</button>`;
   return `<div class="box" style="margin:8px 0"><div class="dr"><b>طلب #${esc(id.slice(-6))}</b>${tm(r.createdAt)}<b style="color:${col}">${RF_ST[st]||st}</b></div>
   <div style="line-height:1.9"><b style="font-size:18px">${fmt(r.amount)} د.ع</b> <span class="sub">(حساب الطلب ${fmt(r.orderTotal)})</span><br>
   السائق: ${esc(dn)} ${r.driverPhone?'<a href="tel:'+esc(r.driverPhone)+'">'+esc(r.driverPhone)+'</a>':""}<br>
@@ -1567,6 +1578,46 @@ document.addEventListener("click",e=>{
    await update(ref(db,"refunds/"+id),{amount:n,prevAmount:r.prevAmount||r.amount,editedAt:Date.now(),editedBy:me});
   }else if(act==="reopen"){
    await update(ref(db,"refunds/"+id),{status:"pending",doneAt:null,doneBy:null});
+  }
+ });
+});
+
+
+// ---- محافظ الزبائن (مراقبة وتصحيح) ----
+function drawWallets(){
+ if(!$("walList"))return;
+ const rows=Object.entries(wal).filter(([,w])=>w&&typeof w.balance==="number").sort((a,b)=>(b[1].updatedAt||0)-(a[1].updatedAt||0));
+ const total=rows.reduce((s,[,w])=>s+(w.balance||0),0);
+ const wl=Object.values(rfs).filter(r=>r&&r.via==="wallet"&&r.status==="wallet");
+ $("walSum").innerHTML=`<div class="dr"><b>إجمالي أرصدة الزبائن</b><span>${fmt(total)} د.ع</span></div><div class="dr"><b>باقي مضاف (سجلات فعّالة)</b><span>${wl.length} · ${fmt(wl.reduce((s,r)=>s+(Number(r.amount)||0),0))} د.ع</span></div>`;
+ $("walList").innerHTML=rows.length?rows.map(([uid,w])=>{
+  const c=custers[uid]||{};
+  return `<div class="box" style="margin:8px 0"><div class="dr"><b>${esc(c.name||"زبون")}</b><span>${c.phone?`<a href="tel:${esc(c.phone)}" dir="ltr">${esc(c.phone)}</a>`:""}</span></div>
+  <div style="font-size:20px;font-weight:700;margin:6px 0">${fmt(w.balance)} د.ع</div>
+  <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button data-wadj="${esc(uid)}" class="gray">تعديل الرصيد</button><button data-whist="${esc(uid)}" class="gray">السجل</button></div>
+  <div id="wh-${esc(uid)}" class="sub" style="margin-top:8px"></div></div>`}).join(""):'<p class="sub">لا توجد محافظ بعد.</p>';
+}
+document.addEventListener("click",e=>{
+ const b=e.target.closest("[data-wadj],[data-whist],[data-wfix]");if(!b)return;
+ run(async()=>{
+  if(b.dataset.wadj){
+   const uid=b.dataset.wadj,v=prompt("المبلغ (موجب للإضافة، سالب للخصم) د.ع","");if(v===null)return;
+   const n=parseInt(String(v).replace(/[^\d-]/g,""),10);if(!n)throw Error("مبلغ غير صحيح");
+   const note=prompt("السبب (مطلوب)","");if(!note)throw Error("اكتب السبب");
+   if(!(await showToastConfirm("تأكيد تعديل الرصيد بمقدار "+fmt(n)+" د.ع؟")))return;
+   const r=await adminW("wallet_adjust",{customerUid:uid,amount:n,note});say("تم. الرصيد الجديد "+fmt(r.balance)+" د.ع");
+  }else if(b.dataset.whist){
+   const uid=b.dataset.whist,box=$("wh-"+uid);if(!box)return;
+   const tx=Object.entries((await get(ref(db,"walletTx/"+uid))).val()||{}).sort((a,c)=>(c[1].at||0)-(a[1].at||0)).slice(0,15);
+   const TY={change:"باقي من السائق",use:"استخدام بطلب",release:"إرجاع (طلب ملغي)",adjust:"تعديل إدارة",fix:"تصحيح إدارة"};
+   box.innerHTML=tx.length?tx.map(([k,t])=>`<div class="dr"><span>${TY[t.type]||esc(t.type)}${t.orderId?" #"+esc(String(t.orderId).slice(-5)):""}${t.note?" · "+esc(t.note):""}</span><b style="color:${t.amount<0?"#c0002a":"#0f9a63"}">${t.amount>0?"+":""}${fmt(t.amount)}</b></div><div class="sub">${tm(t.at)}</div>`).join(""):"لا توجد حركات.";
+  }else if(b.dataset.wfix){
+   const id=b.dataset.id,r=rfs[id];if(!r)return;
+   let n;
+   if(b.dataset.wfix==="cancel"){if(!(await showToastConfirm("إلغاء الباقي ("+fmt(r.amount)+" د.ع) وسحبه من محفظة الزبون؟")))return;n=0}
+   else{const v=prompt("المبلغ الصحيح (د.ع)",String(r.amount));if(v===null)return;n=parseInt(String(v).replace(/\D/g,""),10);if(!(n>=0))throw Error("مبلغ غير صحيح")}
+   const note=prompt("السبب","")||"";
+   const res=await adminW("wallet_set_change",{orderId:id,amount:n,note});say("تم التصحيح. رصيد الزبون "+fmt(res.balance)+" د.ع");
   }
  });
 });
