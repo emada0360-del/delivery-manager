@@ -224,6 +224,17 @@ main{max-width:560px;margin:auto;padding:14px 14px calc(var(--nav) + 24px + env(
 #tipsM li{position:relative;padding:9px 0;padding-inline-start:22px;line-height:1.8;font-size:14.5px;border-bottom:1px dashed var(--ln)}
 #tipsM li:last-child{border-bottom:0}
 #tipsM li::before{content:"";position:absolute;inset-inline-start:2px;top:19px;width:8px;height:8px;border-radius:50%;background:var(--go)}
+
+/* ================= premium layer ================= */
+html{-webkit-tap-highlight-color:transparent;scroll-behavior:smooth}
+body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-feature-settings:"tnum" 1,"lnum" 1}
+button{transition:transform .15s ease,box-shadow .2s ease,filter .2s ease,background-color .2s ease}
+button:not(:disabled):active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){button{transition:none}html{scroll-behavior:auto}}
+:root{--shadow:0 1px 2px #0f1b2a0a,0 6px 16px #0f1b2a0d,0 20px 44px #0f1b2a12}
+
+button.g{background-image:linear-gradient(180deg,#ffffff26,#ffffff00)}
+.live-card{border:1px solid var(--ln,#e3e8ef)}
 </style>
 </head><body>
 <script>
@@ -955,7 +966,7 @@ function drawCur(){
  const [id,o]=act,price=Number(o.price)||0,stage=STAGE[o.status]??1,fee=Number(o.deliveryFee)||0;
  const bc=o.status==="cancelled"?"c":(o.status==="calling"?"w":"");
  const delivered=o.status==="delivered";
- const names=["التحضير","السائق للمتجر","بالطريق إليك","التسليم"],ics=["store","scooter","pin","home"];
+ const names=["التحضير","السائق","بالطريق","التسليم"],ics=["store","scooter","pin","home"];
  const route=names.map((n,k)=>{const c=(stage>k+1||delivered)?"d":stage===k+1?"n":"";return `<li class="${c}"><i>${ICON(c==="d"?"check":ics[k])}</i>${n}</li>`}).join("");
  const p=delivered?1:Math.min(1,Math.max(0,(stage-1)/3));
  $("cur").innerHTML=`<div class="live-card"><div class="lc-top"><div><small>طلبك الحالي</small><b>${esc(o.restaurantName)}</b></div><span class="badge ${bc}">${ST[o.status]||esc(o.status)}</span></div>

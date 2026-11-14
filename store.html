@@ -229,6 +229,34 @@ input,select,textarea{height:40px;padding:0 12px;border-radius:11px;margin:3px 0
 .sw.on{background:#0f9a63;justify-content:flex-start}
 .sw.on i{transform:translateX(66px)}
 .sw[hidden]{display:none}
+
+/* ================= premium layer ================= */
+html{-webkit-tap-highlight-color:transparent;scroll-behavior:smooth}
+body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-feature-settings:"tnum" 1,"lnum" 1}
+button{transition:transform .15s ease,box-shadow .2s ease,filter .2s ease,background-color .2s ease}
+button:not(:disabled):active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){button{transition:none}html{scroll-behavior:auto}}
+:root{--shadow:0 1px 2px #0f1b2a0a,0 6px 16px #0f1b2a0d,0 20px 44px #0f1b2a12}
+header{background:linear-gradient(180deg,#0d131a,#111a24);box-shadow:0 8px 28px #0d131a40}
+
+#btnCreate,.ok2{background-image:linear-gradient(180deg,#ffffff26,#ffffff00);box-shadow:0 6px 18px -6px #0f1b2a55}
+.box,.card{border:1px solid var(--line,#e1e7ef)}
+/* chat: header icon + bottom sheet (no floating button over the app) */
+#chHdr{position:relative;width:34px;height:34px;padding:0;border:0;border-radius:999px;background:#ffffff14;color:#fff;font-size:15px;line-height:1;display:inline-flex;align-items:center;justify-content:center;flex:none}
+#chBadge{display:none;position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--brand,#d9002f);color:#fff;font-size:11px;font-weight:700;align-items:center;justify-content:center;box-shadow:0 0 0 2px #0d131a}
+#cpBack{position:fixed;inset:0;background:#0d131a99;opacity:0;pointer-events:none;transition:opacity .25s ease;z-index:79}
+#cpBack.open{opacity:1;pointer-events:auto}
+#cpSheet{position:fixed;left:0;right:0;bottom:0;max-height:62vh;display:flex;flex-direction:column;background:#fff;color:var(--ink,#0f1b2a);border-radius:24px 24px 0 0;box-shadow:0 -12px 40px #0d131a40;transform:translateY(105%);transition:transform .28s cubic-bezier(.2,.8,.2,1);z-index:80;padding:6px 16px calc(16px + env(safe-area-inset-bottom,0px));direction:rtl}
+#cpSheet.open{transform:none}
+#cpSheet::before{content:"";display:block;width:42px;height:4px;border-radius:99px;background:var(--line,#e1e7ef);margin:6px auto 10px;flex:none}
+.cp-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:16px;flex:none}
+.cp-h button{width:32px;height:32px;padding:0;border:0;border-radius:999px;background:var(--raised,#f4f6f9);color:var(--ink,#0f1b2a)}
+#cpL{overflow:auto;display:flex;flex-direction:column;gap:8px}
+.cp-r{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-radius:16px;background:var(--raised,#f4f6f9)}
+.cp-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cp-t small{color:var(--muted,#5b6e83);font-size:12px}
+.cp-r button{padding:8px 16px;border:0;border-radius:999px;background:var(--brand,#d9002f);color:#fff;font-weight:600}
+.cp-e{padding:18px;text-align:center;color:var(--muted,#5b6e83)}
 </style>
 </head>
 <body>
@@ -1078,7 +1106,7 @@ function card(id,o,isHistory){
  const q=priv[id]||{}, ts=Number(o.createdAt)||0;
  const lvlMap={preparing:1,pending:2,waiting_store:3,accepted:3,arrived_store:3,picked_up:4,delivering:4,delivered:5};
  const lvl=lvlMap[o.status]||1;
- const names=["تجهيز","سائق","استلام","تسليم"];
+ const names=["التحضير","السائق","بالطريق","التسليم"];
  let top="";
  if(!isHistory){
   if(o.status==="preparing")top=`<div class="elapsed"><span>المتبقي لتجهيز الطلب</span><b class="pr" data-ts="${Number(o.prepReadyAt)||ts}"></b></div>`;
@@ -1109,7 +1137,6 @@ function card(id,o,isHistory){
   const cr=o.cancelRequest;
   if(cr&&cr.state==="rejected")actionHtml+=`<p class="meta" style="text-align:center;margin-top:8px;color:#b0002a">رفضت الإدارة طلب الإلغاء</p>`;
   else if(cr&&!cr.state&&!isHistory)actionHtml+=`<p class="meta" style="text-align:center;margin-top:8px">تم إرسال طلب الإلغاء، بانتظار موافقة الإدارة</p>`;
-  else if(!cr&&!isHistory&&["preparing","pending","accepted","waiting_store","arrived_store"].includes(o.status))actionHtml+=`<div class="actions"><button type="button" class="ok2" style="background:#e8edf3;color:#b0002a" data-creq="${esc(id)}">طلب إلغاء الطلب</button></div>`;
  }
  const storeCom=Number(o.storeCommission!==undefined?o.storeCommission:getStoreCom());
  const receiveAmt=Math.max(0,(Number(o.itemPrice)||0)-storeCom);
@@ -1128,11 +1155,6 @@ function card(id,o,isHistory){
 }
 
 // زر «جاهز» (الضغطة الوحيدة المطلوبة من المتجر بعد تسجيل السعر)
-$("activeOrders").addEventListener("click",async e=>{const c=e.target.closest("[data-creq]");if(!c)return;
- const why=(prompt("سبب إلغاء الطلب (مطلوب):")||"").trim().slice(0,120);if(!why)return;
- c.disabled=true;
- try{await update(ref(db,"orders/"+c.dataset.creq+"/cancelRequest"),{reason:why,at:Date.now()});say("تم إرسال طلب الإلغاء للإدارة")}
- catch(er){c.disabled=false;say("تعذر إرسال طلب الإلغاء: "+(er.code||er.message),1)}});
 $("activeOrders").addEventListener("click",e=>{const b=e.target.closest("[data-ready]");if(!b)return;b.disabled=true;releaseOrder(b.dataset.ready)});
 
 // ---- إعادة الاتصال عند رجوع التطبيق من الخلفية (نفس منطق تطبيق السائق)
@@ -1174,18 +1196,33 @@ function openChat(oid,role,myUid){
 }
 
 (function(){
- const w=document.createElement("div");w.style.cssText="position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:900;direction:rtl";
- w.innerHTML='<button id="cpB" type="button" style="background:#d9002f;color:#fff;border:0;border-radius:14px;padding:12px 16px;font-weight:700">💬 دردشات الزبائن</button><div id="cpL" hidden style="margin-top:8px;max-height:50vh;overflow:auto;width:min(320px,86vw);background:#151d27;color:#fff;border-radius:14px;padding:10px"></div>';
- document.body.appendChild(w);
- const B=w.querySelector("#cpB"),L=w.querySelector("#cpL");
+ const hb=document.createElement("button");hb.type="button";hb.id="chHdr";hb.setAttribute("aria-label","دردشات الزبائن");
+ hb.innerHTML='<span>💬</span><b id="chBadge"></b>';
+ const out=document.getElementById("btnOut");
+ if(out&&out.parentNode)out.parentNode.insertBefore(hb,out);else document.body.appendChild(hb);
+ const back=document.createElement("div");back.id="cpBack";
+ const sh=document.createElement("div");sh.id="cpSheet";
+ sh.innerHTML='<div class="cp-h"><b>دردشات الزبائن</b><button type="button" id="cpX" aria-label="إغلاق">✕</button></div><div id="cpL"></div>';
+ document.body.appendChild(back);document.body.appendChild(sh);
+ const L=sh.querySelector("#cpL"),X=sh.querySelector("#cpX"),BG=hb.querySelector("#chBadge");
  const live=()=>Object.entries(typeof cOrders==="object"&&cOrders||{}).filter(([,o])=>o&&!["delivered","cancelled"].includes(o.status)&&(o.callAnswered||o.price));
- function paint(){const a=live();B.textContent="💬 دردشات الزبائن ("+a.length+")";if(L.hidden)return;L.innerHTML="";if(!a.length){L.textContent="لا توجد طلبات حالياً";return}
-  a.forEach(([id,o])=>{const r=document.createElement("div");r.style.cssText="padding:8px 0;border-bottom:1px solid #2a3441";const t=document.createElement("div");t.textContent="طلب #"+String(id).slice(-5)+" - "+(o.customerName||"زبون");r.appendChild(t);
-   
-   const c=document.createElement("button");c.type="button";c.textContent="دردشة";c.style.cssText="margin:6px 6px 0 0;padding:6px 12px;border:0;border-radius:10px;background:#2a3441;color:#fff";c.onclick=()=>openChat(id,"s",uid);r.appendChild(c);
-   
-   L.appendChild(r)})}
- B.onclick=()=>{L.hidden=!L.hidden;paint()};setInterval(paint,3000);
+ let open=false;
+ function paint(){
+  const a=live();BG.textContent=a.length;BG.style.display=a.length?"flex":"none";
+  if(!open)return;L.innerHTML="";
+  if(!a.length){const e=document.createElement("div");e.className="cp-e";e.textContent="لا توجد طلبات حالياً";L.appendChild(e);return}
+  a.forEach(([id,o])=>{
+   const r=document.createElement("div");r.className="cp-r";
+   const t=document.createElement("div");t.className="cp-t";
+   const n=document.createElement("b");n.textContent=o.customerName||"زبون";
+   const m=document.createElement("small");m.textContent="طلب #"+String(id).slice(-5);
+   t.appendChild(n);t.appendChild(m);
+   const c=document.createElement("button");c.type="button";c.textContent="دردشة";
+   c.onclick=()=>{setOpen(false);openChat(id,"s",uid)};
+   r.appendChild(t);r.appendChild(c);L.appendChild(r)})}
+ function setOpen(v){open=v;sh.classList.toggle("open",v);back.classList.toggle("open",v);if(v)paint()}
+ hb.onclick=()=>setOpen(!open);back.onclick=()=>setOpen(false);X.onclick=()=>setOpen(false);
+ paint();setInterval(paint,3000);
 })();
 </script>
 </body>

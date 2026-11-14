@@ -140,6 +140,30 @@ bdi{direction:ltr;unicode-bidi:isolate}
 .lo-f{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}.lo-f select{margin:0;flex:1;min-width:160px}
 #zmap{height:360px;border-radius:16px;position:relative;z-index:0;margin:10px 0}
 .upl{display:inline-block;padding:8px 14px;border-radius:12px;background:var(--info);color:#fff;font-weight:600;font-size:13px;cursor:pointer;margin-top:4px}
+
+/* ================= premium layer ================= */
+html{-webkit-tap-highlight-color:transparent;scroll-behavior:smooth}
+body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-feature-settings:"tnum" 1,"lnum" 1}
+button{transition:transform .15s ease,box-shadow .2s ease,filter .2s ease,background-color .2s ease}
+button:not(:disabled):active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){button{transition:none}html{scroll-behavior:auto}}
+:root{--shadow:0 1px 2px #0f1b2a0a,0 6px 16px #0f1b2a0d,0 20px 44px #0f1b2a12}
+header{background:linear-gradient(180deg,#0d131a,#111a24);box-shadow:0 8px 28px #0d131a40}
+
+.grn,.blue,.red,.org{background-image:linear-gradient(180deg,#ffffff24,#ffffff00)}
+/* chat icon inside the header */
+#chHdr{margin-inline-start:auto;margin-inline-end:8px;padding:8px 12px;font-size:15px;line-height:1}
+/* order stage chip */
+.stg{display:flex;flex-direction:column;gap:5px;min-width:132px}
+.stg-bar{display:flex;gap:4px}
+.stg-bar i{flex:1;height:5px;border-radius:99px;background:var(--line,#e1e7ef)}
+.stg-bar i.d{background:var(--go,#0f9a63)}
+.stg-bar i.n{background:var(--amber,#b86e00)}
+.stg b{font-size:13px}
+.stg small{color:var(--muted,#5b6e83);font-size:11px}
+.pc2{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pc2 small{color:var(--muted,#5b6e83);font-size:11px}
+.pc2 a{color:var(--info,#1a6fd4);text-decoration:none;font-size:12px}
 </style>
 </head>
 <body>
@@ -447,9 +471,17 @@ const waLink=(ph,txt)=>{let p=String(ph||"").replace(/\D/g,"");if(p.startsWith("
 const fmt=n=>Number(n||0).toLocaleString("en-US");
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const tm=t=>t?`<span class="tm">${new Date(t).toLocaleString("ar-IQ",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}</span>`:'<span class="tm">—</span>';
-const ST={preparing:"قيد التحضير (بانتظار جاهز من المتجر)",pending:"جاهز - بانتظار سائق",waiting_store:"السائق بالطريق للمتجر",accepted:"السائق بالطريق للمتجر",arrived_store:"السائق وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
+const ST={preparing:"قيد التحضير",pending:"جاهز، بانتظار سائق",waiting_store:"السائق بالطريق للمتجر",accepted:"السائق بالطريق للمتجر",arrived_store:"السائق وصل للمتجر",picked_up:"بالطريق للزبون",delivering:"بالطريق للزبون",delivered:"تم التسليم",cancelled:"ملغي"};
+const STG={preparing:1,pending:2,waiting_store:2,accepted:2,arrived_store:2,picked_up:3,delivering:3,delivered:4};
+const STGN=["التحضير","السائق","بالطريق","التسليم"];
+const STNORM=s=>s==="waiting_store"?"accepted":s==="delivering"?"picked_up":s;
+function stageChip(o){
+ if(o.status==="cancelled")return '<span class="tag r">ملغي</span>';
+ const n=STG[o.status]||1,dl=o.status==="delivered";
+ const bar=STGN.map((t,i)=>`<i class="${dl||i+1<n?"d":i+1===n?"n":""}" title="${t}"></i>`).join("");
+ return `<div class="stg"><div class="stg-bar">${bar}</div><b>${ST[o.status]||esc(o.status)}</b><small>${n}/4 · ${STGN[n-1]}</small></div>`}
 
-$("f").innerHTML+=Object.entries(ST).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+$("f").innerHTML+=Object.entries(ST).filter(([k])=>k!=="waiting_store"&&k!=="delivering").map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
 
 let rfs={},rfCust={},rfFilter="pending",clogs={},appr={},acts={},codes={},cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
 let showProfitFlag=false;
@@ -1062,15 +1094,22 @@ function drawLiveOrders(){
 
 function drawOrders(){
  const t=$("q").value.trim().toLowerCase(),f=$("f").value;
- const rows=Object.entries(orders).filter(([id,o])=>o&&(!f||o.status===f)&&[id,o.storeName,o.area,o.driverName].join(" ").toLowerCase().includes(t))
+ const rows=Object.entries(orders).filter(([id,o])=>o&&(!f||STNORM(o.status)===f)&&[id,o.storeName,o.area,o.driverName,o.driverPhone].join(" ").toLowerCase().includes(t))
   .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0)).slice(0,100);
- $("orders").innerHTML=table(["الطلب","المتجر","المنطقة","وقت الطلب","آخر حركة","الحالة","إجراءات"],rows.map(([id,o])=>
-  `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(o.storeName)}${o.customerOrder?' <span class="tag b">طلب زبون</span>':''}</td><td>${esc(o.area)}</td>
-  <td>${tm(o.createdAt)}</td><td>${tm(o.statusUpdatedAt||o.deliveredAt||o.updatedAt)}</td>
-  <td>${ST[o.status]||esc(o.status)}${o.forcedAssign?' <span class="tag b">تلقائي</span>':''}</td>
-  <td><select data-s="${esc(id)}">${Object.entries(ST).filter(([k])=>k!=="waiting_store"||o.status===k).map(([k,v])=>`<option value="${k}" ${o.status===k?"selected":""}>${v}</option>`).join("")}</select>
+ $("orders").innerHTML=table(["الطلب","المتجر","المنطقة","السعر","السائق","المرحلة","الوقت","إجراءات"],rows.map(([id,o])=>{
+  const item=Number(o.itemPrice)||Number(o.price)||0,fee=Number(o.deliveryFee)||0,tot=Number(o.customerTotal)||item+fee;
+  const dro=o.driverId&&typeof users==="object"&&users?users[o.driverId]:null;
+  const dn=o.driverName||(dro&&dro.name)||"",dp=String(o.driverPhone||(dro&&(dro.phone||dro.username))||"");
+  const drv=dn?`<div class="pc2"><b>${esc(dn)}</b>${dp?`<a href="tel:${esc(dp)}" dir="ltr">${esc(dp)}</a>`:""}</div>`:'<span class="tm">بانتظار سائق</span>';
+  const opts=Object.entries(ST).filter(([k])=>!["waiting_store","delivering"].includes(k)||o.status===k).map(([k,v])=>`<option value="${k}" ${o.status===k?"selected":""}>${v}</option>`).join("");
+  return `<tr><td><bdi>#${esc(id.slice(-6))}</bdi></td><td>${esc(o.storeName)}${o.customerOrder?' <span class="tag b">طلب زبون</span>':''}</td><td>${esc(o.area)}</td>
+  <td><div class="pc2"><b>${fmt(item)} د.ع</b><small>توصيل ${fmt(fee)} · المجموع ${fmt(tot)}</small></div></td>
+  <td>${drv}</td>
+  <td>${stageChip(o)}${o.forcedAssign?' <span class="tag b">تلقائي</span>':''}</td>
+  <td><div class="pc2"><span>${tm(o.createdAt)}</span><small>آخر حركة: ${tm(o.statusUpdatedAt||o.deliveredAt||o.updatedAt)}</small></div></td>
+  <td><select data-s="${esc(id)}">${opts}</select>
   <button type="button" data-ss="${esc(id)}">حفظ</button>
-  <button type="button" data-del="${esc(id)}" data-kind="order" class="red">حذف</button></td></tr>`),"لا توجد طلبات.");
+  <button type="button" data-del="${esc(id)}" data-kind="order" class="red">حذف</button></td></tr>`}),"لا توجد طلبات.");
 }
 $("q").oninput=drawOrders;$("f").onchange=drawOrders;
 
@@ -1640,8 +1679,9 @@ document.addEventListener("click",e=>{
 // ---- عرض دردشات الزبائن للإدارة ----
 (function(){
  const b=document.createElement("button");b.type="button";b.textContent="💬 الدردشات";
- b.style.cssText="position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:900;background:#0d131a;color:#fff;border:0;border-radius:14px;padding:12px 16px;font-weight:700";
- document.body.appendChild(b);
+ b.id="chHdr";b.textContent="💬";b.setAttribute("aria-label","الدردشات");
+ const hd=document.getElementById("hd"),ob=document.getElementById("out");
+ if(hd&&ob)hd.insertBefore(b,ob);else document.body.appendChild(b);
  const p=document.createElement("div");p.hidden=true;
  p.style.cssText="position:fixed;inset:0;z-index:9999;background:#0d131a;color:#fff;direction:rtl;padding:12px;padding-top:calc(12px + env(safe-area-inset-top,0px));overflow:auto";
  document.body.appendChild(p);

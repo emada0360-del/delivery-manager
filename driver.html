@@ -285,7 +285,16 @@ main{padding:6px 10px 0}
 .sw.on i{transform:translateX(66px)}
 .sw[hidden]{display:none}
 </style>
-<style>#headerStatus{display:none!important}</style>
+<style>#headerStatus{display:none!important}
+/* ================= premium layer ================= */
+html{-webkit-tap-highlight-color:transparent;scroll-behavior:smooth}
+body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;font-feature-settings:"tnum" 1,"lnum" 1}
+button{transition:transform .15s ease,box-shadow .2s ease,filter .2s ease,background-color .2s ease}
+button:not(:disabled):active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){button{transition:none}html{scroll-behavior:auto}}
+:root{--shadow:0 14px 36px #0009}
+.grn{background-image:linear-gradient(180deg,#ffffff2e,#ffffff00)}
+</style>
 </head>
 <body>
 <script>
