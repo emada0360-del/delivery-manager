@@ -113,7 +113,7 @@ body:has(:is(#sideStatus,#btnStatus).on) .ill-off{display:none}
 #emptyText{font-size:14px;line-height:1.9;max-width:290px;color:var(--muted)}
 
 /* ---------- Order cards ---------- */
-.card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:16px;margin-bottom:14px}
+.card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
 .card.waiting{border-color:var(--amber)}
 .card>.row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
 .card>.row>b{font-size:12.5px;font-weight:600;color:var(--muted);direction:ltr;background:var(--raised);padding:5px 11px;border-radius:9px}
@@ -181,7 +181,7 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
 .grn{background:var(--go);color:var(--on-go)}.gry{background:var(--raised);color:var(--ink)}.red{background:var(--brand-soft);color:var(--brand)}
 
 /* ---------- Login ---------- */
-#login{max-width:400px;margin:9vh auto 0;padding:26px 22px;background:var(--surface);border:1px solid var(--line);border-radius:26px;box-shadow:var(--shadow);width:calc(100% - 28px)}
+#login{max-width:400px;margin:9vh auto 0;padding:26px 22px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);width:calc(100% - 28px)}
 #login .av{display:block;width:76px;height:76px;margin:0 auto 14px}
 #login h2{text-align:center;margin:0 0 20px;font-size:22px;font-weight:700}
 #login button{width:100%;padding:15px;margin-top:6px;font-size:16px}
@@ -190,7 +190,7 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
 
 /* ---------- Confirm dialog ---------- */
 #mdl{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:200;padding:18px}
-#mdl>div{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:22px;padding:20px;width:min(100%,360px)}
+#mdl>div{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:20px;width:min(100%,360px)}
 #mdl p{margin:0 0 18px;line-height:1.8}
 #mdl .mr{display:flex;gap:10px}
 #mdl .mr button{flex:1;min-height:48px}
@@ -210,7 +210,7 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
 
 /* ---------- Status hero + tabs ---------- */
 .hero{display:grid;grid-template-columns:auto 1fr;column-gap:14px;align-items:center;margin:6px 0 4px}
-.hero-ic{width:56px;height:56px;grid-row:span 2;border-radius:18px;display:grid;place-items:center;background:var(--hc)}
+.hero-ic{width:56px;height:56px;grid-row:span 2;border-radius:12px;display:grid;place-items:center;background:var(--hc)}
 .hero-ic::before{content:"";width:28px;height:28px;background:#fff;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat}
 .h-new{--hc:var(--go)}.h-wait{--hc:var(--amber)}.h-store{--hc:var(--info)}.h-at{--hc:var(--go)}.h-cust{--hc:#14b8a6}
 .h-new .hero-ic,.h-wait .hero-ic{--m:var(--m-clock)}.h-store .hero-ic,.h-at .hero-ic{--m:var(--m-store)}.h-cust .hero-ic{--m:var(--m-user)}
@@ -238,7 +238,7 @@ body.menu-open #sidebar{transform:none}body.menu-open #sidebarShade{display:bloc
 .lock{opacity:.55;filter:saturate(.5)}
 #wmdl{position:fixed;inset:0;z-index:100;background:#000b;display:flex;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px)}
 #wmdl[hidden]{display:none}
-#wmdl>div{background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:28px 22px 22px;width:100%;max-width:340px;text-align:center;box-shadow:var(--shadow)}
+#wmdl>div{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px 22px 22px;width:100%;max-width:340px;text-align:center;box-shadow:var(--shadow)}
 #wmdl .wi{width:58px;height:58px;margin:0 auto 12px;border-radius:50%;background:var(--amber-soft);color:var(--amber);display:flex;align-items:center;justify-content:center;font-size:30px}
 #wmdl p{margin:0 0 4px;font-size:17px;line-height:1.8;font-weight:600}
 #wmdl .wt{font-size:46px;font-weight:700;color:var(--amber);direction:ltr;margin:8px 0 4px}
@@ -292,11 +292,18 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 button{transition:transform .15s ease,box-shadow .2s ease,filter .2s ease,background-color .2s ease}
 button:not(:disabled):active{transform:scale(.97)}
 @media (prefers-reduced-motion:reduce){button{transition:none}html{scroll-behavior:auto}}
-:root{--shadow:0 14px 36px #0009}
-.grn{background-image:linear-gradient(180deg,#ffffff2e,#ffffff00)}
+:root{--shadow:0 6px 18px #0007}
+
+/* ---- pro layer: هدوء بصري وثبات ---- */
+:focus-visible{outline:2px solid var(--br,var(--brand,#d9002f));outline-offset:2px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.ix{width:18px;height:18px;display:inline-block;flex:none;vertical-align:-3px}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="ix-chat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.2A8 8 0 1 1 21 12z"/></g></symbol><symbol id="ix-camera" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></g></symbol><symbol id="ix-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5L19.5 7"/></g></symbol><symbol id="ix-x" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></g></symbol><symbol id="ix-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9.5 16.5h-19L12 3.5z"/><path d="M12 10v4.5M12 17.5v.5"/></g></symbol><symbol id="ix-wifioff" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01"/><path d="M3 3l18 18"/></g></symbol><symbol id="ix-pin" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></g></symbol></defs></svg>
+<script>window.ico=function(n,s){return '<svg class="ix"'+(s?' style="width:'+s+'px;height:'+s+'px"':"")+' aria-hidden="true"><use href="#ix-'+n+'"/></svg>'};</script>
+
 <script>
 (function(){
  var ever=false,tm=null,vis=function(){return document.visibilityState!=="hidden"};
@@ -304,7 +311,7 @@ button:not(:disabled):active{transform:scale(.97)}
  st.textContent="#netFull{position:fixed;inset:0;z-index:100000;background:#0d131a;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center;font-family:system-ui,Tahoma,Arial,sans-serif}#netFull[hidden],#netBar[hidden]{display:none}#netFull .i{font-size:60px;line-height:1}#netFull b{font-size:24px}#netFull p{margin:0;color:#b8c4d3;line-height:1.9;font-size:15px}#netFull button{border:0;border-radius:14px;padding:14px 32px;background:#d9002f;color:#fff;font:700 16px system-ui,Tahoma,Arial,sans-serif}#netBar{position:fixed;top:0;left:0;right:0;z-index:100000;background:#b0002a;color:#fff;text-align:center;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;font:600 14px system-ui,Tahoma,Arial,sans-serif;pointer-events:none}";
  document.head.appendChild(st);
  var full=document.createElement("div");full.id="netFull";full.hidden=true;
- full.innerHTML='<div class="i">📡</div><b>فشل اتصالك بالإنترنت</b><p id="netMsg">تأكد من الواي فاي أو بيانات الجوال، ثم اضغط إعادة المحاولة.</p><button type="button" id="netRetry">إعادة المحاولة</button>';
+ full.innerHTML='<div class="i"><svg class="ix" style="width:34px;height:34px"><use href="#ix-wifioff"/></svg></div><b>فشل اتصالك بالإنترنت</b><p id="netMsg">تأكد من الواي فاي أو بيانات الجوال، ثم اضغط إعادة المحاولة.</p><button type="button" id="netRetry">إعادة المحاولة</button>';
  var bar=document.createElement("div");bar.id="netBar";bar.hidden=true;bar.textContent="فشل اتصالك بالإنترنت، جارٍ إعادة الاتصال...";
  document.body.appendChild(full);document.body.appendChild(bar);
  function hide(){full.hidden=true;bar.hidden=true}
@@ -498,12 +505,12 @@ async function wcall(kind,payload){
    box.style.cssText="background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:22px;padding:20px;width:min(100%,360px)";
    const bs="flex:1;min-height:48px;border:0;border-radius:14px;font-weight:700;font-size:16px;cursor:pointer;font-family:inherit";
    if(step===1){
-    box.innerHTML='<p style="margin:0 0 6px;font-weight:700;font-size:17px">باقي للزبون؟</p><p style="margin:0 0 16px;line-height:1.8;color:var(--muted)">إذا الزبون أعطاك أكثر من حساب الطلب وما عندك صرافة، الباقي ينضاف لمحفظة الزبون ويخصمه من طلبه الجاي. المبلغ يبقى على ذمتك بالحساب لين تسلّمه للإدارة.</p><div style="display:flex;gap:10px"><button id="rfY" style="'+bs+';background:#0f9a63;color:#fff">نعم</button><button id="rfN" style="'+bs+';background:var(--raised);color:var(--ink)">لا</button></div>';
+    box.innerHTML='<p style="margin:0 0 6px;font-weight:700;font-size:17px">باقي للزبون؟</p><p style="margin:0 0 16px;line-height:1.8;color:var(--muted)">ما عندك صرافة؟ الباقي ينضاف لمحفظة الزبون.</p><div style="display:flex;gap:10px"><button id="rfY" style="'+bs+';background:#0f9a63;color:#fff">نعم</button><button id="rfN" style="'+bs+';background:var(--raised);color:var(--ink)">لا</button></div>';
     el.appendChild(box);document.body.appendChild(el);
     box.querySelector("#rfY").onclick=()=>{el.remove();res(true)};
     box.querySelector("#rfN").onclick=()=>{el.remove();res(false)};
    }else{
-    box.innerHTML='<p style="margin:0 0 6px;font-weight:700;font-size:17px">الباقي للزبون (يُضاف لمحفظته)</p><p style="margin:0 0 12px;color:var(--muted)">المطلوب من الزبون: '+fmt(total)+' د.ع</p><input id="rfA" type="tel" inputmode="numeric" placeholder="مثال: 250" style="width:100%;box-sizing:border-box;min-height:50px;border-radius:14px;border:1px solid var(--line);background:var(--raised);color:var(--ink);font-size:20px;text-align:center;font-family:inherit"><p id="rfE" style="margin:8px 0 0;color:#e5484d;min-height:20px"></p><div style="display:flex;gap:10px;margin-top:8px"><button id="rfOk" style="'+bs+';background:#0f9a63;color:#fff">متابعة</button><button id="rfBack" style="'+bs+';background:var(--raised);color:var(--ink)">رجوع</button></div>';
+    box.innerHTML='<p style="margin:0 0 6px;font-weight:700;font-size:17px">مبلغ الباقي</p><p style="margin:0 0 12px;color:var(--muted)">المطلوب من الزبون: '+fmt(total)+' د.ع</p><input id="rfA" type="tel" inputmode="numeric" placeholder="مثال: 250" style="width:100%;box-sizing:border-box;min-height:50px;border-radius:14px;border:1px solid var(--line);background:var(--raised);color:var(--ink);font-size:20px;text-align:center;font-family:inherit"><p id="rfE" style="margin:8px 0 0;color:#e5484d;min-height:20px"></p><div style="display:flex;gap:10px;margin-top:8px"><button id="rfOk" style="'+bs+';background:#0f9a63;color:#fff">متابعة</button><button id="rfBack" style="'+bs+';background:var(--raised);color:var(--ink)">رجوع</button></div>';
     el.appendChild(box);document.body.appendChild(el);
     const inp=box.querySelector("#rfA");
     inp.oninput=()=>{inp.value=inp.value.replace(/[٠-٩]/g,x=>x.charCodeAt(0)-1632).replace(/\D/g,"").slice(0,6)};
@@ -512,7 +519,7 @@ async function wcall(kind,payload){
     box.querySelector("#rfOk").onclick=()=>{
      const n=parseInt(inp.value,10);
      if(!n||n<=0){box.querySelector("#rfE").textContent="اكتب مبلغاً صحيحاً.";return}
-     const cap=Number((typeof settings==="object"&&settings&&settings.walletMaxCredit)||5000);if(n>cap){box.querySelector("#rfE").textContent="أكبر باقي مسموح "+fmt(cap)+" د.ع. إذا أكثر، رجّعه نقداً أو راجع الإدارة.";return}
+     const cap=Number((typeof settings==="object"&&settings&&settings.walletMaxCredit)||5000);if(n>cap){box.querySelector("#rfE").textContent="الحد الأقصى "+fmt(cap)+" د.ع.";return}
      el.remove();res(n);
     };
    }
@@ -527,15 +534,15 @@ async function wcall(kind,payload){
       if(!want)return;
       const amt=await rfDialog(2,total);
       if(amt===null)continue;
-      if(!(await ask("تأكيد إضافة "+fmt(amt)+" د.ع لمحفظة الزبون؟")))continue;
+      if(!(await ask("إضافة "+fmt(amt)+" د.ع لمحفظة الزبون؟")))continue;
       try{
        await wcall("wallet_credit",{orderId:id,amount:amt,driverName:(driver&&driver.name)||"",driverPhone:(driver&&driver.phone)||""});
-       say("تمت إضافة "+fmt(amt)+" د.ع لمحفظة الزبون. المبلغ ينحسب على ذمتك.");
+       say("تمت الإضافة");
        return;
       }catch(er){
        const msg=(er&&er.message)||String(er);
        if(/مسبقاً|انتهت|مو إلك|لسه/.test(msg)){say(msg);return}
-       if(!(await ask("تعذر إضافة الباقي ("+msg+"). نعيد المحاولة؟")))return;
+       if(!(await ask("تعذر الإرسال: "+msg+". إعادة المحاولة؟")))return;
       }
      }
     }catch(e){say("تعذر إضافة الباقي: "+(e&&(e.code||e.message)||e))}
@@ -890,7 +897,7 @@ function heroOf(o){const m={waiting_store:["h-store","بالطريق للمتج�
  function arriveCheck(o){
   const sp=storePosOf(o);
   if(!sp)return{ok:true};
-  if(pos.lat==null||(pos.t&&Date.now()-pos.t>120000))return{ok:false,why:"فعّل الموقع (GPS) وانتظر ثوانٍ حتى يُحدَّد مكانك، ثم اضغط «وصلت للمتجر»."};
+  if(pos.lat==null||(pos.t&&Date.now()-pos.t>120000))return{ok:false,why:"فعّل الـGPS وانتظر ثواني، ثم اضغط «وصلت للمتجر»."};
   const d=getDist(pos.lat,pos.lng,sp.lat,sp.lng);
   return d>ARRIVE_M?{ok:false,d,why:"أنت بعيد عن المتجر ("+Math.round(d)+" م). لازم تكون ضمن "+ARRIVE_M+" م ثم اضغط «وصلت للمتجر»."}:{ok:true,d};
  }
@@ -900,7 +907,7 @@ function heroOf(o){const m={waiting_store:["h-store","بالطريق للمتج�
   const q=privData[id]||{};
   const sp=parseLL((String(q.note||"").match(/https?:\/\/\S+/)||[""])[0]);
   if(!sp)return{ok:true};                     // طلب متجر أو بلا موقع: لا يمكن التحقق
-  if(pos.lat==null||(pos.t&&Date.now()-pos.t>120000))return{ok:false,why:"فعّل الموقع (GPS) وانتظر ثوانٍ حتى يُحدَّد مكانك، ثم اضغط «تم التوصيل للزبون»."};
+  if(pos.lat==null||(pos.t&&Date.now()-pos.t>120000))return{ok:false,why:"فعّل الـGPS وانتظر ثواني، ثم اضغط «تم التوصيل للزبون»."};
   const d=getDist(pos.lat,pos.lng,sp.lat,sp.lng);
   return d>DELIVER_M?{ok:false,d,why:"أنت بعيد عن موقع الزبون ("+Math.round(d)+" م). لازم تكون ضمن "+DELIVER_M+" م ثم اضغط «تم التوصيل للزبون»."}:{ok:true,d};
  }
@@ -1035,7 +1042,7 @@ function heroOf(o){const m={waiting_store:["h-store","بالطريق للمتج�
     $("emptyText").textContent="وصلت إلى الحد الأعلى للدين. راجع الإدارة لتفعيل استقبال الطلبات.";
    }else{
     $("emptyTitle").textContent="يرجى الانتظار، سيصلك طلب قريباً";
-    $("emptyText").textContent="أنت متصل الآن. عند توفر طلب جديد سيظهر هنا مع تفاصيله وأزرار القبول والرفض.";
+    $("emptyText").textContent="أنت متصل. الطلبات الجديدة تظهر هنا.";
    }
   }
  }

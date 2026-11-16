@@ -39,7 +39,7 @@ nav button.on{background:var(--ink);color:#fff}
 nav button.live{color:var(--go)}nav button.live.on{background:var(--go);color:#fff}
 main{max-width:1200px;margin:auto;padding:16px;margin-bottom:110px}
 
-.box{background:var(--surface);border-radius:22px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.box{background:var(--surface);border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
 .box h3{margin:0 0 14px;font-size:17px;font-weight:700}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
 .grid .box{margin:0;text-align:right;padding:16px;font-size:13.5px;color:var(--muted)}
@@ -83,7 +83,7 @@ td input.pc{margin:0;width:90px;min-height:40px;padding:6px 10px;display:inline-
 #actionToast.show{bottom:12px}
 #actionToast button{padding:10px 18px;font-size:14px}
 #editModal{position:fixed;inset:0;background:#0d131a99;display:flex;align-items:center;justify-content:center;z-index:1500;padding:12px}
-#editForm{background:var(--surface);border-radius:24px;padding:20px;width:min(96%,440px);max-height:90vh;overflow:auto;box-shadow:var(--shadow)}
+#editForm{background:var(--surface);border-radius:16px;padding:20px;width:min(96%,440px);max-height:90vh;overflow:auto;box-shadow:var(--shadow)}
 #editForm h3{margin:0 0 14px}
 #editForm .mr{display:flex;gap:8px;margin-top:4px}
 #editForm .mr button{flex:1;padding:13px}
@@ -94,7 +94,7 @@ td input.pc{margin:0;width:90px;min-height:40px;padding:6px 10px;display:inline-
  main{padding:12px}
  table,thead,tbody,tr,td{display:block;width:100%}
  thead{display:none}
- tr{background:var(--surface);border-radius:18px;padding:6px 14px;margin-bottom:10px;box-shadow:var(--shadow)}
+ tr{background:var(--surface);border-radius:12px;padding:6px 14px;margin-bottom:10px;box-shadow:var(--shadow)}
  .box table tr{background:var(--raised);box-shadow:none}
  td{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line);text-align:left}
  td::before{content:attr(data-l);color:var(--muted);font-size:12.5px;font-weight:500;flex:none;text-align:right}
@@ -116,7 +116,7 @@ td a{color:var(--info);font-weight:600;text-decoration:none}
 bdi{direction:ltr;unicode-bidi:isolate}
 
 #asModal{position:fixed;inset:0;background:#0d131a99;display:flex;align-items:flex-end;justify-content:center;z-index:1500}
-#asBox{background:var(--surface);border-radius:24px 24px 0 0;padding:18px;width:min(100%,520px);max-height:85vh;overflow:auto}
+#asBox{background:var(--surface);border-radius:16px 24px 0 0;padding:18px;width:min(100%,520px);max-height:85vh;overflow:auto}
 #asBox h3{margin:0 0 4px}
 .drow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px dashed var(--line)}
 .drow:last-child{border-bottom:0}
@@ -129,7 +129,7 @@ bdi{direction:ltr;unicode-bidi:isolate}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <style id="v2css">
 #liveOrders.wrap{overflow:visible}
-.lo{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px;margin:0 0 12px}
+.lo{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin:0 0 12px}
 .lo-h{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}.lo-h bdi{font-weight:700;font-size:16px}
 .lo-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
 .lo-s{background:var(--raised);border-radius:14px;padding:10px 12px}
@@ -147,10 +147,9 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 button{transition:transform .15s ease,box-shadow .2s ease,filter .2s ease,background-color .2s ease}
 button:not(:disabled):active{transform:scale(.97)}
 @media (prefers-reduced-motion:reduce){button{transition:none}html{scroll-behavior:auto}}
-:root{--shadow:0 1px 2px #0f1b2a0a,0 6px 16px #0f1b2a0d,0 20px 44px #0f1b2a12}
-header{background:linear-gradient(180deg,#0d131a,#111a24);box-shadow:0 8px 28px #0d131a40}
+:root{--shadow:0 1px 2px #0f1b2a0d,0 4px 12px #0f1b2a0a}
+header{background:#0d131a}
 
-.grn,.blue,.red,.org{background-image:linear-gradient(180deg,#ffffff24,#ffffff00)}
 /* chat icon inside the header */
 #chHdr{margin-inline-start:auto;margin-inline-end:8px;padding:8px 12px;font-size:15px;line-height:1}
 /* order stage chip */
@@ -164,9 +163,17 @@ header{background:linear-gradient(180deg,#0d131a,#111a24);box-shadow:0 8px 28px 
 .pc2{display:flex;flex-direction:column;gap:3px;min-width:0}
 .pc2 small{color:var(--muted,#5b6e83);font-size:11px}
 .pc2 a{color:var(--info,#1a6fd4);text-decoration:none;font-size:12px}
+
+/* ---- pro layer: هدوء بصري وثبات ---- */
+:focus-visible{outline:2px solid var(--br,var(--brand,#d9002f));outline-offset:2px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.ix{width:18px;height:18px;display:inline-block;flex:none;vertical-align:-3px}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="ix-chat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.2A8 8 0 1 1 21 12z"/></g></symbol><symbol id="ix-camera" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></g></symbol><symbol id="ix-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5L19.5 7"/></g></symbol><symbol id="ix-x" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></g></symbol><symbol id="ix-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9.5 16.5h-19L12 3.5z"/><path d="M12 10v4.5M12 17.5v.5"/></g></symbol><symbol id="ix-wifioff" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01"/><path d="M3 3l18 18"/></g></symbol><symbol id="ix-pin" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></g></symbol></defs></svg>
+<script>window.ico=function(n,s){return '<svg class="ix"'+(s?' style="width:'+s+'px;height:'+s+'px"':"")+' aria-hidden="true"><use href="#ix-'+n+'"/></svg>'};</script>
+
 <section id="login" class="box">
 <h2>دخول الإدارة</h2>
 <form id="lf" onsubmit="return false;">
@@ -279,7 +286,7 @@ header{background:linear-gradient(180deg,#0d131a,#111a24);box-shadow:0 8px 28px 
 <button type="button" id="cb" class="grn">تسجيل الكاش</button></div>
 <div class="box"><h3>سجل الكاش والخصومات والمكافآت</h3>
 <p class="sub">الحذف يخفي السجل من العرض فقط، ولا يغيّر ديون السائقين.</p>
-<div class="row2" style="margin-bottom:10px"><button type="button" data-clr="fin" class="red">🗑 حذف السجل</button><button type="button" data-clr="finx" class="gray">إظهار المحذوف</button></div>
+<div class="row2" style="margin-bottom:10px"><button type="button" data-clr="fin" class="red">حذف السجل</button><button type="button" data-clr="finx" class="gray">إظهار المحذوف</button></div>
 <div id="fin" class="wrap"></div></div>
 </section>
 
@@ -297,12 +304,12 @@ header{background:linear-gradient(180deg,#0d131a,#111a24);box-shadow:0 8px 28px 
 <p class="sub">التصفير يُسجَّل في السجل بالتاريخ والوقت ولا يمسح الطلبات.</p>
 <div class="row2"><button type="button" data-szall="1" class="org">تصفير ديون المتاجر</button><button type="button" data-pzero="1" class="red">تصفير الأرباح</button></div>
 <button type="button" id="btnToggleProfit2" class="gray">إظهار / إخفاء الأرباح</button>
-<button type="button" data-devreset="1" class="red" style="margin-top:8px;width:100%">🧹 تصفير كل الحسابات (وضع التطوير)</button>
+<button type="button" data-devreset="1" class="red" style="margin-top:8px;width:100%">تصفير كل الحسابات (وضع التطوير)</button>
 <p class="sub">يمسح السجل المالي والطلبات المُسلَّمة فقط، فترجع كل المربعات صفر. الطلبات الجارية والمستخدمون والإعدادات تبقى. لا يمكن التراجع.</p></div>
 <div class="box"><h3>ديون المتاجر الآجلة</h3><div id="pfStores" class="wrap"></div></div>
 <div class="box"><h3>التفاصيل المالية (الأحدث أولاً)</h3>
 <p class="sub">الحذف يخفي التفاصيل من العرض فقط، ولا يغيّر الأرباح أو الديون أو الأرصدة.</p>
-<div class="row2" style="margin-bottom:10px"><button type="button" data-clr="pf" class="red">🗑 حذف التفاصيل المالية</button><button type="button" data-clr="pfx" class="gray">إظهار المحذوف</button></div>
+<div class="row2" style="margin-bottom:10px"><button type="button" data-clr="pf" class="red">حذف التفاصيل المالية</button><button type="button" data-clr="pfx" class="gray">إظهار المحذوف</button></div>
 <div id="pfLedger" class="wrap"></div></div>
 </section>
 
@@ -349,7 +356,7 @@ header{background:linear-gradient(180deg,#0d131a,#111a24);box-shadow:0 8px 28px 
 <p class="sub">كل مكالمة يُرد عليها تُسجَّل تلقائياً. المكالمات المرفوضة تُلغي الطلب تلقائياً وتظهر هنا بدون تسجيل صوتي.</p>
 <input type="search" id="clSearch" placeholder="ابحث برقم الطلب أو اسم الزبون أو رقمه" autocomplete="off" style="margin:0 0 10px">
 <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:13px"><input type="checkbox" id="clOnlyCanc" style="width:18px;height:18px;min-height:0;margin:0;flex:none;accent-color:#0d131a"> إظهار طلبات الزبائن الملغاة فقط</label>
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button type="button" id="btnDelCanc" style="background:#b0002a">🗑 حذف كل الطلبات الملغاة</button><button type="button" id="btnDelRecs" style="background:#b0002a">🗑 حذف التسجيلات مع الطلبات المُجاب عليها</button></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><button type="button" id="btnDelCanc" style="background:#b0002a">حذف كل الطلبات الملغاة</button><button type="button" id="btnDelRecs" style="background:#b0002a">حذف التسجيلات مع الطلبات المُجاب عليها</button></div>
 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;font-size:13px"><label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="recAutoOn" checked style="width:18px;height:18px;min-height:0;margin:0;accent-color:#0d131a"> حذف تلقائي بعد</label><input type="number" id="recDays" min="1" max="365" value="7" style="width:70px;margin:0"> <span>يوم</span><button type="button" id="btnRecAuto" class="grn">حفظ</button></div>
 <audio id="clAudio" controls style="width:100%;margin-bottom:10px;display:none"></audio>
 <div id="callLogs" class="wrap"></div></div>
@@ -596,7 +603,7 @@ function renderCust(){
    <td><input type="checkbox" id="cv-${esc(id)}" ${u.custVisible?"checked":""} style="width:22px;height:22px"></td>
    <td><input id="cm-${esc(id)}" dir="ltr" value="${esc(u.menuUrl||"")}" placeholder="https://..."></td>
    <td><input id="cl-${esc(id)}" dir="ltr" value="${esc(u.custLat!=null?u.custLat+","+u.custLng:(()=>{const p=parseLatLng(u.mapUrl);return p?p.lat+","+p.lng:""})())}" placeholder="33.7500,44.6300"></td>
-   <td>${u.imgV?imgThumb(id,u.imgV):""}<label class="upl">📷 ${u.imgV?"تغيير الصورة":"رفع صورة"}<input type="file" accept="image/*" data-up="${esc(id)}" hidden></label>${u.imgV?` <button type="button" data-ud="${esc(id)}" class="red">حذف</button>`:""}</td>
+   <td>${u.imgV?imgThumb(id,u.imgV):""}<label class="upl">${u.imgV?"تغيير الصورة":"رفع صورة"}<input type="file" accept="image/*" data-up="${esc(id)}" hidden></label>${u.imgV?` <button type="button" data-ud="${esc(id)}" class="red">حذف</button>`:""}</td>
    <td><button type="button" data-cs="${esc(id)}" class="grn">حفظ</button></td></tr>`),"لا توجد متاجر.");
  }
  if(!feeDirty&&!(ae&&ae.closest&&ae.closest("#feeRows"))){const f=Array.isArray(settings.custFees)?settings.custFees:[];$("custFees").value=f.map(x=>x.km+":"+x.fee).join(",");renderFeeRows()}
@@ -607,12 +614,12 @@ function renderCust(){
   return `<tr><td><b>${esc(c.name)}</b> ${bn?'<span class="tag r">محظور</span>':''}</td><td dir="ltr">${esc(c.phone)}</td>
   <td><span class="tag ${ok?"g":"y"}">${ok?"مفعّل":"بانتظار التفعيل"}</span></td>
   <td dir="ltr"><b>${ok?"—":esc(code||"...")}</b></td>
-  <td><div class="acts">${ok?`<button type="button" data-na="${esc(id)}" class="org">إيقاف التفعيل</button>`:`<a class="tag b" target="_blank" href="${esc(waLink(c.phone,msg))}">📲 إرسال الرمز</a><button type="button" data-ap="${esc(id)}" class="grn">تفعيل مباشر</button><button type="button" data-nc="${esc(id)}" class="gray">رمز جديد</button>`}
+  <td><div class="acts">${ok?`<button type="button" data-na="${esc(id)}" class="org">إيقاف التفعيل</button>`:`<a class="tag b" target="_blank" href="${esc(waLink(c.phone,msg))}">إرسال الرمز</a><button type="button" data-ap="${esc(id)}" class="grn">تفعيل مباشر</button><button type="button" data-nc="${esc(id)}" class="gray">رمز جديد</button>`}
   <button type="button" data-${bn?"ub":"bn"}="${esc(id)}" class="${bn?"grn":"red"}">${bn?"فك الحظر":"حظر"}</button>${bn?"":`<button type="button" data-dc="${esc(id)}" class="red">حذف</button>`}</div></td></tr>`}),"لا يوجد زبائن.");
 }
 function renderCancelReqs(){
  const rows=Object.entries(orders).filter(([id,o])=>o&&o.cancelRequest&&!o.cancelRequest.state&&!["delivered","cancelled"].includes(o.status));
- const h=rows.length?`<div class="box" style="border:2px solid var(--amber)"><h3>⚠️ طلبات إلغاء من المتاجر (${rows.length})</h3>${table(["الطلب","المتجر","السبب","الوقت","إجراءات"],rows.map(([id,o])=>`<tr><td><bdi>#${esc(id.slice(-6))}</bdi><div class="tm">${esc(ST[o.status]||o.status)}</div></td><td>${esc(o.storeName)}</td><td>${esc(o.cancelRequest.reason)}</td><td>${tm(o.cancelRequest.at)}</td><td><div class="acts"><button type="button" data-cra="${esc(id)}" class="red">موافقة وإلغاء</button><button type="button" data-crr="${esc(id)}" class="gray">رفض</button></div></td></tr>`),"")}</div>`:"";
+ const h=rows.length?`<div class="box" style="border:2px solid var(--amber)"><h3>طلبات إلغاء من المتاجر (${rows.length})</h3>${table(["الطلب","المتجر","السبب","الوقت","إجراءات"],rows.map(([id,o])=>`<tr><td><bdi>#${esc(id.slice(-6))}</bdi><div class="tm">${esc(ST[o.status]||o.status)}</div></td><td>${esc(o.storeName)}</td><td>${esc(o.cancelRequest.reason)}</td><td>${tm(o.cancelRequest.at)}</td><td><div class="acts"><button type="button" data-cra="${esc(id)}" class="red">موافقة وإلغاء</button><button type="button" data-crr="${esc(id)}" class="gray">رفض</button></div></td></tr>`),"")}</div>`:"";
  [1,9].forEach(n=>{const el=$("cancelReqs"+n);if(el&&el._h!==h){el._h=h;el.innerHTML=h}});
 }
 const cancelStat=id=>{const so=Object.values(orders).filter(o=>o&&o.storeId===id),cn=so.filter(o=>o.cancelRequest&&o.cancelRequest.state==="approved").length,rq=so.filter(o=>o.cancelRequest).length;return `<span class="tag ${cn>=3?"r":"g"}">${cn} / ${so.length}</span><div class="tm">طلبات إلغاء: ${rq}</div>`};
@@ -624,7 +631,7 @@ $("t10").addEventListener("click",e=>{
   const u=users[d.cs],vis=$("cv-"+d.cs).checked,mu=$("cm-"+d.cs).value.trim();
   if(mu&&!/^https?:\/\//i.test(mu))throw new Error("رابط المنيو يجب أن يبدأ بـ https://");
   const cm=($("cl-"+d.cs).value||"").match(/(-?\d+(?:\.\d+)?)\s*[,،\s]\s*(-?\d+(?:\.\d+)?)/),lat=cm?+cm[1]:null,lng=cm?+cm[2]:null;
-  if(vis&&lat==null)throw new Error("حدد إحداثيات المتجر (مثال: 33.7500,44.6300). انسخها من خرائط Google بالضغط المطول على الموقع.");
+  if(vis&&lat==null)throw new Error("إحداثيات المتجر، مثل 33.7500,44.6300 (انسخها من خرائط Google بالضغط المطول).");
   await update(ref(db),{["users/"+d.cs+"/custLat"]:lat,["users/"+d.cs+"/custLng"]:lng,["users/"+d.cs+"/custVisible"]:vis,["users/"+d.cs+"/menuUrl"]:mu,
    ["restaurants/"+d.cs]:vis?{name:u.name,type:u.storeType||"restaurant",menuUrl:mu,mapUrl:u.mapUrl||"",lat:lat,lng:lng,isOpen:u.isActive!==false,...(u.imgV?{imgV:u.imgV}:{})}:null});
   say("تم الحفظ.");
@@ -946,7 +953,7 @@ document.addEventListener("click",e=>{
   for(const [id,l] of Object.entries(clogs)){if(l&&l.cancelled===true&&(!cord[id]||cord[id].status==="cancelled"))ids.add(id)}
   const arr=[...ids];
   if(!arr.length){say("لا توجد طلبات ملغاة للحذف.");return}
-  if(!confirm("سيتم حذف "+arr.length+" طلب ملغى نهائياً مع سجل مكالمته وتسجيله الصوتي. لا يمكن التراجع. متابعة؟"))return;
+  if(!confirm("سيتم حذف "+arr.length+" طلب ملغى مع مكالمته وتسجيله. لا يمكن التراجع. متابعة؟"))return;
   run(async()=>{
    for(let i=0;i<arr.length;i+=80){const u={};
     for(const id of arr.slice(i,i+80)){u["customerOrders/"+id]=null;u["callLogs/"+id]=null;u["callRecData/"+id]=null;u["calls/"+id]=null;u["customerOrderPrivate/"+id]=null}
@@ -1067,7 +1074,7 @@ $("btnPrintAreas").onclick=()=>{
 };
 
 function storePos(sid,o){const u=users[sid]||{};if(u.custLat!=null&&u.custLng!=null&&isFinite(+u.custLat)&&isFinite(+u.custLng))return{lat:+u.custLat,lng:+u.custLng};return parseLatLng((o&&o.storeMapUrl)||u.mapUrl)}
-const mapA=(p,t)=>p?`<a class="mapA" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${p.lat},${p.lng}">📍 ${t}</a>`:'<span class="tm">الموقع غير محدد</span>';
+const mapA=(p,t)=>p?`<a class="mapA" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${p.lat},${p.lng}">${t}</a>`:'<span class="tm">الموقع غير محدد</span>';
 function drawLiveOrders(){
  const live=Object.entries(orders).filter(([id,o])=>o&&!["delivered","cancelled"].includes(o.status)).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
  const calling=Object.entries(cord).filter(([id,o])=>o&&o.status==="calling"&&!o.price&&!orders[id]&&Date.now()-(Number(o.createdAt)||0)<30*60000);
@@ -1084,7 +1091,7 @@ function drawLiveOrders(){
   const dro=o.driverId?users[o.driverId]:null,name=o.driverName||(dro&&dro.name)||"",phone=o.driverPhone||(dro&&(dro.phone||dro.username))||"";
   const tagClass=["accepted","arrived_store","picked_up","delivering"].includes(o.status)?"g":"y";
   const driver=name?`<b>${esc(name)}</b>${o.driverId?chipOf(o.driverId):""}`:'<span class="tm">بانتظار سائق</span>';
-  const payBox=(def?'<span class="tag y">💳 آجل</span>':'<span class="tag g">💵 نقدي</span>')
+  const payBox=(def?'<span class="tag y">آجل</span>':'<span class="tag g">نقدي</span>')
    +dr("يستلمه السائق من الزبون",fmt(Math.max(0,tot-(Number(o.walletUsed)||0)))+" د.ع"+(Number(o.walletUsed)>0?" (بعد خصم محفظة "+fmt(o.walletUsed)+")":""))
    +dr("يدفعه السائق للمتجر",def?"لا شيء (آجل، الإدارة تسدّد للمتجر)":fmt(payStore)+" د.ع نقداً")
    +(cust?`<div style="margin-top:8px"><button type="button" data-dfo="${esc(id)}" data-on="${def?0:1}" class="${def?"org":"blue"}">${def?"إغلاق الآجل (دفع نقدي للمتجر)":"تفعيل الدفع الآجل لهذا الطلب"}</button></div>`:'<div class="tm" style="margin-top:6px">طلب متجر: يدفع السائق للمتجر نقداً.</div>');
@@ -1185,7 +1192,7 @@ function openEdit(kind,id){
   if(kind==="area"){
     title="تعديل المنطقة";
     html=fld("name","اسم المنطقة",item.name,"text","required")+fld("fee","أجرة التوصيل (د.ع)",item.fee,"number",'min="0" step="250" required');
-    note="التعديل يسري على الطلبات الجديدة فقط، والطلبات السابقة تبقى بأجرتها القديمة.";
+    note="يسري على الطلبات الجديدة فقط.";
   }else{
     const phone=item.phone||(/^[0-9+]+$/.test(item.username||"")?item.username:"");
     if(kind==="store"){
@@ -1195,7 +1202,7 @@ function openEdit(kind,id){
       title="تعديل السائق";
       html=fld("name","اسم السائق",item.name,"text","required")+fld("phone","رقم هاتف السائق (يظهر للمتجر والإدارة)",phone,"tel");
     }
-    note="رقم الدخول وكلمة المرور ما تتغير من هنا. التعديل يحدّث الطلبات الجارية فقط.";
+    note="الرقم وكلمة المرور ما تتغير من هنا. التعديل للطلبات الجارية فقط.";
   }
   $("editTitle").textContent=title;$("editFields").innerHTML=html;$("editNote").textContent=note;
   $("editModal").hidden=false;
@@ -1387,7 +1394,7 @@ async function resetWallet(id){
 function normMap(u){
  u=(u||"").trim();if(!u)return{url:"",p:null};
  const p=parseLatLng(u);
- if(!p)throw Error("تعذر قراءة الإحداثيات من الرابط. استخدم الرابط الكامل من خرائط غوغل (ليس المختصر) أو اكتب الإحداثيات مثل 33.7500,44.6300");
+ if(!p)throw Error("ما قدرت أقرأ الإحداثيات. استخدم الرابط الكامل أو اكتب مثل 33.7500,44.6300");
  return{url:"https://www.google.com/maps?q="+p.lat+","+p.lng,p};
 }
 const cpv={};
@@ -1471,7 +1478,7 @@ async function autoClean(){
 }
 
 // ===== نصائح الاتصال + صور المتاجر =====
-const DEF_TIPS=["راجع منيو المتجر قبل الاتصال حتى لا تنسى شيئاً من طلبك.","المكالمة مسجّلة بالكامل لأغراض الجودة.","لا داعي لإعطاء رقم هاتفك للمتجر؛ فالسائق والإدارة لديهما المعلومات الكافية لإيصال الطلب إليك بأسرع وقت."];
+const DEF_TIPS=["راجع منيو المتجر قبل الاتصال حتى لا تنسى شيئاً من طلبك.","المكالمة مسجّلة بالكامل لأغراض الجودة.","ما تحتاج تعطي المتجر رقمك. السائق عنده كل المعلومات."];
 const rimgC={};
 function imgThumb(id,v){
  const c=rimgC[id];
@@ -1522,7 +1529,7 @@ document.addEventListener("click",e=>{
  run(async()=>{
   const o=orders[id];if(!o)throw Error("الطلب غير موجود.");
   if(["delivered","cancelled"].includes(o.status))throw Error("الطلب منتهٍ.");
-  if(!(await showToastConfirm(on?"تفعيل الدفع الآجل؟ لن يدفع السائق للمتجر نقداً، والإدارة تسدّد للمتجر لاحقاً.":"إغلاق الآجل؟ سيدفع السائق للمتجر نقداً.")))return;
+  if(!(await showToastConfirm(on?"تفعيل الدفع الآجل؟ الإدارة تسدّد للمتجر لاحقاً.":"إغلاق الآجل؟ سيدفع السائق للمتجر نقداً.")))return;
   const u={["orders/"+id+"/storeDeferred"]:on?true:null},su=users[o.storeId];
   if(on&&su&&!su.deferSince)u["users/"+o.storeId+"/deferSince"]=Date.now();
   await update(ref(db),u);say(on?"تم تفعيل الدفع الآجل لهذا الطلب.":"تم إغلاق الآجل، الدفع نقدي.");
@@ -1729,8 +1736,8 @@ document.addEventListener("click",e=>{
 
 // ---- عرض دردشات الزبائن للإدارة ----
 (function(){
- const b=document.createElement("button");b.type="button";b.textContent="💬 الدردشات";
- b.id="chHdr";b.textContent="💬";b.setAttribute("aria-label","الدردشات");
+ const b=document.createElement("button");b.type="button";b.textContent="الدردشات";
+ b.id="chHdr";b.innerHTML=ico("chat",18);b.setAttribute("aria-label","الدردشات");
  const hd=document.getElementById("hd"),ob=document.getElementById("out");
  if(hd&&ob)hd.insertBefore(b,ob);else document.body.appendChild(b);
  const p=document.createElement("div");p.hidden=true;
@@ -1755,7 +1762,7 @@ document.addEventListener("click",e=>{
   p.innerHTML="";p.appendChild(head("دردشات الزبائن والمتاجر"));
   const all=Object.entries((typeof cord==="object"&&cord)||{}).filter(([,o])=>o&&(o.callAnswered||o.price)).sort((x,y)=>(y[1].createdAt||0)-(x[1].createdAt||0)).slice(0,100);
   if(!all.length){p.appendChild(document.createTextNode("لا توجد طلبات بها دردشة بعد"));return}
-  all.forEach(([id,o])=>{const r=btn((o.restaurantName||"متجر")+" - #"+String(id).slice(-5)+(o.cancelAsk?" ⚠️ طلب إلغاء":""),()=>openOne(id,o));r.style.cssText+=";display:block;width:100%;text-align:right";p.appendChild(r)});
+  all.forEach(([id,o])=>{const r=btn((o.restaurantName||"متجر")+" - #"+String(id).slice(-5)+(o.cancelAsk?" (طلب إلغاء)":""),()=>openOne(id,o));r.style.cssText+=";display:block;width:100%;text-align:right";p.appendChild(r)});
  }
  b.onclick=()=>{p.hidden=false;list()};
 })();

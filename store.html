@@ -47,7 +47,7 @@ header h2{margin:0;font-size:16px;font-weight:600;white-space:nowrap;overflow:hi
 main{max-width:560px;margin:auto;padding:16px}
 
 /* ---------- panels ---------- */
-.box{background:var(--surface);border-radius:24px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.box{background:var(--surface);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow)}
 .box h3{margin:0 0 16px;font-size:18px;font-weight:700}
 #announcement{background:var(--amber-soft);color:var(--amber);font-weight:500;box-shadow:none;padding:14px 16px;font-size:14px;line-height:1.8}
 #login{max-width:400px;margin:10vh auto 0;width:calc(100% - 32px);padding:28px 22px}
@@ -69,7 +69,7 @@ main{max-width:560px;margin:auto;padding:16px}
 .dropdown-empty{padding:16px;text-align:center;color:var(--muted);font-size:14px}
 
 /* ---------- receipt ---------- */
-.summary-box{background:var(--raised);border-radius:18px;padding:6px 16px;margin:4px 0 18px}
+.summary-box{background:var(--raised);border-radius:12px;padding:6px 16px;margin:4px 0 18px}
 .summary-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 0;font-size:14px;color:var(--muted);border-bottom:1px dashed var(--line)}
 .summary-row b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
 .summary-row:last-child{border-bottom:0}
@@ -79,7 +79,7 @@ main{max-width:560px;margin:auto;padding:16px}
 #btnCreate{width:100%;min-height:56px;font-size:16.5px;border-radius:16px}
 
 /* ---------- order cards ---------- */
-.card{background:var(--surface);border-radius:22px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card{background:var(--surface);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
 .card-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
 .card-top b{font-size:13px;font-weight:600;color:var(--muted);background:var(--raised);padding:5px 11px;border-radius:9px;direction:ltr}
 .badge{padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700}
@@ -89,7 +89,7 @@ main{max-width:560px;margin:auto;padding:16px}
 .badge.canc{background:var(--brand-soft);color:var(--brand)}
 
 /* dispatch clock: countdown to automatic assignment */
-.dispatch{display:flex;align-items:center;gap:14px;background:var(--raised);border-radius:18px;padding:12px 14px;margin-bottom:14px}
+.dispatch{display:flex;align-items:center;gap:14px;background:var(--raised);border-radius:12px;padding:12px 14px;margin-bottom:14px}
 .cd{--p:0;flex:none;width:68px;height:68px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--brand) calc(var(--p)*1%),var(--line) 0)}
 .cd::before{content:"";grid-area:1/1;width:54px;height:54px;border-radius:50%;background:var(--surface)}
 .cd-t{grid-area:1/1;position:relative;font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;font-feature-settings:"tnum";direction:ltr}
@@ -111,7 +111,7 @@ main{max-width:560px;margin:auto;padding:16px}
 .st.now,.st.done{color:var(--ink)}
 
 /* driver */
-.drv{background:var(--info-soft);border-radius:18px;padding:13px 14px;margin:0 0 14px}
+.drv{background:var(--info-soft);border-radius:12px;padding:13px 14px;margin:0 0 14px}
 .drv-row{display:flex;align-items:center;gap:12px}
 .drv-av{width:42px;height:42px;border-radius:50%;background:var(--info);color:#fff;display:grid;place-items:center;font-weight:700;flex:none}
 .drv-meta{flex:1;min-width:0}
@@ -132,7 +132,7 @@ main{max-width:560px;margin:auto;padding:16px}
 #activeContainer>h3,#historyContainer h3{font-size:16px;margin:4px 4px 12px}
 
 /* ===== v2: تبويبات عرضية ===== */
-#tabs{position:sticky;top:0;z-index:15;display:flex;gap:6px;background:var(--surface);padding:6px;border-radius:18px;margin:0 0 16px;box-shadow:var(--shadow)}
+#tabs{position:sticky;top:0;z-index:15;display:flex;gap:6px;background:var(--surface);padding:6px;border-radius:12px;margin:0 0 16px;box-shadow:var(--shadow)}
 #tabs button{flex:1;position:relative;border:0;background:none;color:var(--muted);padding:12px 6px;border-radius:13px;font:700 14px inherit;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
 #tabs button.on{background:var(--brand);color:#fff}
 #tabs .plusIc{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:var(--brand);color:#fff;font-size:26px;font-weight:800;line-height:1;padding-bottom:3px}
@@ -173,7 +173,7 @@ main{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;padding:8
 .chip.wait{background:#d98a00}.chip.ask{background:#e0284a}.chip.go{background:#2f7df6}.chip.at{background:#0e9f9a}.chip.cust{background:#8a4dff}
 #activeOrders{flex:1;min-height:0;display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -10px;padding:0 10px}
 #activeOrders::-webkit-scrollbar{display:none}
-#activeOrders .card{flex:0 0 94%;scroll-snap-align:center;height:100%;margin:0;overflow-y:auto;scrollbar-width:none;padding:10px 12px;border-radius:18px}
+#activeOrders .card{flex:0 0 94%;scroll-snap-align:center;height:100%;margin:0;overflow-y:auto;scrollbar-width:none;padding:10px 12px;border-radius:12px}
 #activeOrders .card::-webkit-scrollbar{display:none}
 #historyContainer{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none}
 #historyContainer .card{padding:10px 12px;margin-bottom:8px;border-radius:16px}
@@ -189,7 +189,7 @@ main{flex:1;min-height:0;width:100%;display:flex;flex-direction:column;padding:8
 .meta{font-size:12.5px;line-height:1.6;margin:0}
 .actions{margin-top:auto;padding-top:8px;position:sticky;bottom:0;background:var(--surface)}
 .actions button{min-height:44px;font-size:14.5px;padding:8px}
-#createBox{flex:1;min-height:0;overflow-y:auto;margin:0;padding:12px;border-radius:18px;scrollbar-width:none}
+#createBox{flex:1;min-height:0;overflow-y:auto;margin:0;padding:12px;border-radius:12px;scrollbar-width:none}
 #createBox h3{display:none}
 #createBox label{font-size:12px}
 input,select,textarea{height:40px;padding:0 12px;border-radius:11px;margin:3px 0 8px;font-size:14px}
@@ -236,17 +236,16 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-r
 button{transition:transform .15s ease,box-shadow .2s ease,filter .2s ease,background-color .2s ease}
 button:not(:disabled):active{transform:scale(.97)}
 @media (prefers-reduced-motion:reduce){button{transition:none}html{scroll-behavior:auto}}
-:root{--shadow:0 1px 2px #0f1b2a0a,0 6px 16px #0f1b2a0d,0 20px 44px #0f1b2a12}
-header{background:linear-gradient(180deg,#0d131a,#111a24);box-shadow:0 8px 28px #0d131a40}
+:root{--shadow:0 1px 2px #0f1b2a0d,0 4px 12px #0f1b2a0a}
+header{background:#0d131a}
 
-#btnCreate,.ok2{background-image:linear-gradient(180deg,#ffffff26,#ffffff00);box-shadow:0 6px 18px -6px #0f1b2a55}
 .box,.card{border:1px solid var(--line,#e1e7ef)}
 /* chat: header icon + bottom sheet (no floating button over the app) */
 #chHdr{position:relative;width:34px;height:34px;padding:0;border:0;border-radius:999px;background:#ffffff14;color:#fff;font-size:15px;line-height:1;display:inline-flex;align-items:center;justify-content:center;flex:none}
 #chBadge{display:none;position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--brand,#d9002f);color:#fff;font-size:11px;font-weight:700;align-items:center;justify-content:center;box-shadow:0 0 0 2px #0d131a}
 #cpBack{position:fixed;inset:0;background:#0d131a99;opacity:0;pointer-events:none;transition:opacity .25s ease;z-index:79}
 #cpBack.open{opacity:1;pointer-events:auto}
-#cpSheet{position:fixed;left:0;right:0;bottom:0;max-height:62vh;display:flex;flex-direction:column;background:#fff;color:var(--ink,#0f1b2a);border-radius:24px 24px 0 0;box-shadow:0 -12px 40px #0d131a40;transform:translateY(105%);transition:transform .28s cubic-bezier(.2,.8,.2,1);z-index:80;padding:6px 16px calc(16px + env(safe-area-inset-bottom,0px));direction:rtl}
+#cpSheet{position:fixed;left:0;right:0;bottom:0;max-height:62vh;display:flex;flex-direction:column;background:#fff;color:var(--ink,#0f1b2a);border-radius:16px 24px 0 0;box-shadow:0 -12px 40px #0d131a40;transform:translateY(105%);transition:transform .28s cubic-bezier(.2,.8,.2,1);z-index:80;padding:6px 16px calc(16px + env(safe-area-inset-bottom,0px));direction:rtl}
 #cpSheet.open{transform:none}
 #cpSheet::before{content:"";display:block;width:42px;height:4px;border-radius:99px;background:var(--line,#e1e7ef);margin:6px auto 10px;flex:none}
 .cp-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:16px;flex:none}
@@ -257,9 +256,18 @@ header{background:linear-gradient(180deg,#0d131a,#111a24);box-shadow:0 8px 28px 
 .cp-t small{color:var(--muted,#5b6e83);font-size:12px}
 .cp-r button{padding:8px 16px;border:0;border-radius:999px;background:var(--brand,#d9002f);color:#fff;font-weight:600}
 .cp-e{padding:18px;text-align:center;color:var(--muted,#5b6e83)}
+.busy-note{margin:6px 0;padding:10px 14px;border-radius:14px;background:#fff4e0;color:#8a5200;font-weight:600;font-size:13px;line-height:1.5;border:1px solid #f1d9a8}
+
+/* ---- pro layer: هدوء بصري وثبات ---- */
+:focus-visible{outline:2px solid var(--br,var(--brand,#d9002f));outline-offset:2px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.ix{width:18px;height:18px;display:inline-block;flex:none;vertical-align:-3px}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="ix-chat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.2A8 8 0 1 1 21 12z"/></g></symbol><symbol id="ix-camera" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></g></symbol><symbol id="ix-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5L19.5 7"/></g></symbol><symbol id="ix-x" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></g></symbol><symbol id="ix-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l9.5 16.5h-19L12 3.5z"/><path d="M12 10v4.5M12 17.5v.5"/></g></symbol><symbol id="ix-wifioff" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 19.5h.01"/><path d="M3 3l18 18"/></g></symbol><symbol id="ix-pin" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></g></symbol></defs></svg>
+<script>window.ico=function(n,s){return '<svg class="ix"'+(s?' style="width:'+s+'px;height:'+s+'px"':"")+' aria-hidden="true"><use href="#ix-'+n+'"/></svg>'};</script>
+
 
 <section id="login" class="box">
 <h2>دخول المتجر</h2>
@@ -451,7 +459,7 @@ async function releaseOrder(id){
    return{...cur,status:"pending",createdAt:now,releasedAt:now,readyAt:now};
   });
   const v=r.snapshot&&r.snapshot.val();
-  if(r.committed&&v&&v.status==="pending"){say("تم إرسال الطلب للسائقين ✓");wk("order",id)}
+  if(r.committed&&v&&v.status==="pending"){say("تم إرسال الطلب للسائقين");wk("order",id)}
   else say("تعذر الإرسال: حالة الطلب تغيّرت",1);
  }catch(e){say("تعذر إرسال الطلب للسائقين: "+(e.code||e.message),1)}
  finally{setTimeout(()=>releasing.delete(id),3000)}
@@ -638,7 +646,7 @@ function ringPrime(){try{if(!ringAu){ringUrl=ringUrl||ringWav();ringAu=new Audio
 document.addEventListener("pointerdown",function f(){ringPrime();try{ringAu.muted=true;ringAu.play().then(()=>{ringAu.pause();ringAu.currentTime=0;ringAu.muted=false}).catch(()=>{ringAu.muted=false})}catch(e){}document.removeEventListener("pointerdown",f)},{once:true});
 const bgMode=()=>{try{return window.Capacitor.Plugins.BackgroundMode||null}catch(e){return null}};
 function ringNotify(on){try{const P=window.Capacitor&&window.Capacitor.Plugins;if(!P||!P.LocalNotifications)return;
- if(on)window.notifyApp("📞 مكالمة من زبون","اضغط للرد",7001);else P.LocalNotifications.cancel({notifications:[{id:7001}]}).catch(()=>{})}catch(e){}}
+ if(on)window.notifyApp("مكالمة من زبون","اضغط للرد",7001);else P.LocalNotifications.cancel({notifications:[{id:7001}]}).catch(()=>{})}catch(e){}}
 const storeCall=()=>{try{return window.Capacitor.Plugins.StoreCall||null}catch(e){return null}};
 function ring(on){
  if(on){try{if(alarmTimer){clearInterval(alarmTimer);alarmTimer=null}window.Capacitor.Plugins.StoreAlarm.stop()}catch(e){}}
@@ -653,7 +661,7 @@ function ring(on){
  // المسار الأصلي (APK): نغمة رنين الهاتف + إشعار ملء الشاشة فوق القفل
  if(sc){
   let started=false;
-  try{sc.ring({title:"📞 مكالمة من زبون",body:"اضغط للرد"}).then(r=>{started=true;if(r&&r.ok===false)jsRing()}).catch(()=>{if(!started)jsRing()})}catch(e){jsRing();return}
+  try{sc.ring({title:"مكالمة من زبون",body:"اضغط للرد"}).then(r=>{started=true;if(r&&r.ok===false)jsRing()}).catch(()=>{if(!started)jsRing()})}catch(e){jsRing();return}
   return}
  jsRing();
 }
@@ -771,7 +779,7 @@ async function answerCall(oid){
   const a=await c.pc.createAnswer();if(call!==c)return;await c.pc.setLocalDescription(a);if(call!==c)return;
   await set(ref(db,`calls/${oid}/answer`),{type:a.type,sdp:a.sdp});
   const ans=Date.now();set(ref(db,`calls/${oid}/answeredAt`),ans).catch(()=>{});update(ref(db,"customerOrders/"+oid),{callAnswered:true,callAnsweredAt:ans}).catch(()=>{});
- }catch(e){const gone=!call||/closed/i.test((e&&e.message)||"");closeCall(true);const den=e&&(e.name==="NotAllowedError"||/denied/i.test(e.message||""));if(gone&&!den){ui("انتهت المكالمة قبل الرد",[["حسناً",()=>ui("")]]);return}alert(den?"المايكروفون غير مسموح للتطبيق. فعّله من: إعدادات الهاتف ← التطبيقات ← تطبيق المتجر ← الأذونات ← الميكروفون ← سماح. الحين اكتب السعر وأرسل الطلب.":"تعذر الرد: "+e.message);if(den)decideUI(oid)}
+ }catch(e){const gone=!call||/closed/i.test((e&&e.message)||"");closeCall(true);const den=e&&(e.name==="NotAllowedError"||/denied/i.test(e.message||""));if(gone&&!den){ui("انتهت المكالمة قبل الرد",[["حسناً",()=>ui("")]]);return}alert(den?"الميكروفون مغلق. فعّله من إعدادات الهاتف. هسه اكتب السعر وأرسل الطلب.":"تعذر الرد: "+e.message);if(den)decideUI(oid)}
 }
 function hangup(){if(call)set(ref(db,`calls/${call.oid}/ended`),Date.now()).catch(()=>{});closeCall()}
 function closeCall(quiet){
@@ -785,19 +793,25 @@ function closeCall(quiet){
 // ---- استقبال طلبات الزبائن ----
 let cOrders={},ringing=null,priceFor=null,curRing=null,lastBusy=false;
 const handled=new Set();
+// المتجر يبقى مشغولاً للمتصلين الجدد من لحظة الرد على زبون لين يكتب السعر ويضغط تأكيد (أو يلغي)
+const PRICE_HOLD_MS=30*60000;
+function awaitingPrice(except){
+ const n=Date.now();
+ return Object.entries(cOrders).some(([id,o])=>id!==except&&o&&o.status==="calling"&&o.callAnswered&&!o.price&&!orders[id]&&n-(Number(o.callAnsweredAt)||Number(o.createdAt)||0)<PRICE_HOLD_MS);
+}
 // المتجر مشغول: بمكالمة أو يرنّ عليه اتصال آخر
 function busyReply(id){const now=Date.now();set(ref(db,`calls/${id}/busy`),now).catch(()=>{})}
-setInterval(()=>{const b=!!call||!!curRing;if(b||b!==lastBusy){lastBusy=b;try{const sc=storeCall();if(sc&&sc.setBusy)sc.setBusy({busy:b}).catch(()=>{})}catch(e){}}},1000);
+setInterval(()=>{const b=!!call||!!curRing||awaitingPrice();if(b||b!==lastBusy){lastBusy=b;try{const sc=storeCall();if(sc&&sc.setBusy)sc.setBusy({busy:b}).catch(()=>{})}catch(e){}}},1000);
 function cq(){
  const need=Object.entries(cOrders).filter(([id,o])=>o.status==="calling"&&!o.price&&!orders[id]&&Date.now()-(Number(o.createdAt)||0)<30*60000);
  let b=document.getElementById("cqBar");
  if(!b){b=document.createElement("div");b.id="cqBar";b.style.cssText="margin:6px 0";document.getElementById("tabs").after(b);b.onclick=e=>{const x=e.target.closest("[data-pr]");if(x)decideUI(x.dataset.pr)}}
- b.innerHTML=need.map(([id])=>`<button data-pr="${esc(id)}" style="width:100%;margin-bottom:6px;background:#0f9a63">📞 طلب زبون #${esc(id.slice(-5))} — اضغط للتحضير أو الإلغاء</button>`).join("");
+ b.innerHTML=(need.some(([,o])=>o.callAnswered)?'<div class="busy-note">المتجر مشغول للمتصلين الجدد لين تكتب السعر وتضغط تأكيد</div>':"")+need.map(([id])=>`<button data-pr="${esc(id)}" style="width:100%;margin-bottom:6px;background:#0f9a63">طلب زبون #${esc(id.slice(-5))} — اضغط للتحضير أو الإلغاء</button>`).join("");
  for(const [id,o] of need){
   if(!o.ring||Date.now()-o.ring>=45000)continue;
   const key=id+o.ring;if(handled.has(key))continue;
   handled.add(key);
-  if(call||(curRing&&curRing!==id)){busyReply(id);continue}
+  if(call||(curRing&&curRing!==id)||awaitingPrice(id)){busyReply(id);continue}
   ringing=key;curRing=id;ring(true);showIncoming(id);
   let un=null;
   un=onValue(ref(db,`calls/${id}/ended`),sn=>{if(sn.val()&&curRing===id&&!call){curRing=null;ring(false);ui("");try{un&&un()}catch(e){}}});
@@ -816,10 +830,11 @@ async function confirmCustomerOrder(id,p,mins){
  const pm=Math.max(1,Math.min(120,Number(mins)||15));
  const cpct=getCustPct(),com=Math.min(p,cpct!==null?Math.round(p*cpct/100):getStoreCom()),now=Date.now();
  const cl=(co.lat!=null&&co.lng!=null&&isFinite(+co.lat)&&isFinite(+co.lng))?Number(co.lat).toFixed(5)+","+Number(co.lng).toFixed(5):"";
- const note="طلب من تطبيق الزبون"+(cl?" - موقع الزبون: https://www.google.com/maps?q="+cl:"");
+ const ad=(co.area&&co.district)?String(co.area).slice(0,40)+" - "+String(co.district).slice(0,40):"";
+ const note="طلب من تطبيق الزبون"+(ad?" - "+ad:"")+(cl?" - موقع الزبون: https://www.google.com/maps?q="+cl:"");
  const km=tf.km!=null?tf.km:null;
  await update(ref(db),{
-  ["orders/"+id]:{storeId:uid,storeName:store.name,storePhone:storePhoneOf(),areaId:"customer-app",area:"زبون التطبيق"+(km!=null?" · "+Number(km).toFixed(1)+" كم":""),...(km!=null?{distanceKm:Number(km)}:{}),itemPrice:p,deliveryFee:fee,customerTotal:p+fee,storeCommission:com,amountToReceive:p-com,...(store.deferred===true?{storeDeferred:true}:{}),storeMapUrl:store.mapUrl||"",status:"preparing",prepMinutes:pm,prepReadyAt:now+pm*60000,createdAt:now,customerOrder:true,orderType:"customer",customerOrderId:id},
+  ["orders/"+id]:{storeId:uid,storeName:store.name,storePhone:storePhoneOf(),areaId:"customer-app",area:(ad||"زبون التطبيق")+(km!=null?" · "+Number(km).toFixed(1)+" كم":""),...(km!=null?{distanceKm:Number(km)}:{}),itemPrice:p,deliveryFee:fee,customerTotal:p+fee,storeCommission:com,amountToReceive:p-com,...(store.deferred===true?{storeDeferred:true}:{}),storeMapUrl:store.mapUrl||"",status:"preparing",prepMinutes:pm,prepReadyAt:now+pm*60000,createdAt:now,customerOrder:true,orderType:"customer",customerOrderId:id},
   ["orderPrivate/"+id]:{storeId:uid,note},
   ["customerOrders/"+id+"/price"]:p,["customerOrders/"+id+"/priceAt"]:now,["customerOrders/"+id+"/status"]:"preparing"
  });
@@ -863,7 +878,7 @@ function decideUI(id){
  const B=(k,t,c,x)=>`<button data-k="${k}" ${x||""} style="width:100%;border:0;border-radius:12px;padding:14px;margin-top:8px;font:700 16px inherit;color:#fff;background:${c}">${t}</button>`;
  const RS=["الوجبة غير متوفرة","المتجر مشغول حالياً","خارج وقت العمل","زبون مزعج","سبب آخر"];
  let reason="",other="";
- const home=()=>{d.innerHTML=box(`<b style="font-size:17px">انتهت المكالمة</b><div style="margin:6px 0 10px;color:#5b6b7d;font-size:14px">طلب #${esc(id.slice(-5))} — ماذا تريد؟</div>${B("prep","✅ تحضير الطلب","#0f9a63")}${B("cancel","❌ إلغاء الطلب","#d9002f")}`)};
+ const home=()=>{d.innerHTML=box(`<b style="font-size:17px">انتهت المكالمة</b><div style="margin:6px 0 10px;color:#5b6b7d;font-size:14px">طلب #${esc(id.slice(-5))} — ماذا تريد؟</div>${B("prep","تحضير الطلب","#0f9a63")}${B("cancel","إلغاء الطلب","#d9002f")}`)};
  const confPrep=()=>{d.innerHTML=box(`<b style="font-size:17px">تأكيد تحضير الطلب؟</b><div style="margin:6px 0 4px;color:#5b6b7d;font-size:14px">بعد التأكيد تكتب السعر وترسل الطلب.</div>${B("prepYes","نعم، تحضير","#0f9a63")}${B("back","رجوع","#8a97a6")}`)};
  const pickReason=()=>{d.innerHTML=box(`<b style="font-size:17px">سبب إلغاء الطلب</b><div style="margin:10px 0 0">${RS.map((t,i)=>`<button data-k="r${i}" style="width:100%;border:2px solid ${reason===t?"#d9002f":"#d5dbe3"};background:${reason===t?"#fde8ec":"#fff"};color:#0f1b2a;border-radius:12px;padding:12px;margin-top:6px;font:700 15px inherit">${t}</button>`).join("")}</div>${reason==="سبب آخر"?`<input id="decOther" placeholder="اكتب السبب" value="${esc(other)}" style="width:100%;padding:12px;margin-top:8px;border:1px solid #ccd;border-radius:10px;font:inherit">`:""}<div id="decErr" style="color:#c0002a;font-size:13px;min-height:16px;margin-top:6px"></div>${B("toConf","متابعة","#d9002f")}${B("back","رجوع","#8a97a6")}`)};
  const confCancel=()=>{d.innerHTML=box(`<b style="font-size:17px">تأكيد إلغاء الطلب؟</b><div style="margin:8px 0 4px;color:#0f1b2a;font-size:14px">السبب: <b>${esc(reason)}</b></div><div style="color:#5b6b7d;font-size:13px">سيصل الإلغاء للزبون وللإدارة مع تسجيل المكالمة.</div>${B("cancelYes","تأكيد الإلغاء","#d9002f")}${B("back2","رجوع","#8a97a6")}`)};
@@ -1114,7 +1129,7 @@ function card(id,o,isHistory){
    const t0=o.status==="pending"?(Number(o.readyAt)||ts):(Number(o.acceptedAt)||ts);
    top=`<div class="elapsed"><span>${o.status==="pending"?"بانتظار سائق منذ":"منذ قبول السائق"}</span><b class="el" data-ts="${t0}"></b></div>`;
   }
-  top+=`<div class="steps" style="--fill:${Math.min(1,Math.max(0,(lvl-1)/3))*75}%">${names.map((n,k)=>`<div class="st ${lvl>k+1?'done':lvl===k+1?'now':''}"><i>${lvl>k+1?'✓':k+1}</i>${n}</div>`).join("")}</div>`;
+  top+=`<div class="steps" style="--fill:${Math.min(1,Math.max(0,(lvl-1)/3))*75}%">${names.map((n,k)=>`<div class="st ${lvl>k+1?'done':lvl===k+1?'now':''}"><i>${lvl>k+1?ico("check",12):k+1}</i>${n}</div>`).join("")}</div>`;
  }
  let badgeCls="pending";
  if(["accepted","arrived_store","picked_up","delivering","waiting_store"].includes(o.status))badgeCls="acc";
@@ -1129,7 +1144,7 @@ function card(id,o,isHistory){
  }
  let actionHtml="";
  if(o.status==="preparing"){
-  actionHtml=`<div class="actions"><button type="button" class="ok2" data-ready="${esc(id)}">✓ جاهز</button></div>`;
+  actionHtml=`<div class="actions"><button type="button" class="ok2" data-ready="${esc(id)}">جاهز</button></div>`;
  }else if(o.status==="pending"&&!isHistory){
   actionHtml=`<p class="meta" style="text-align:center;margin-top:8px">الطلب ظاهر للسائقين الآن، لا تحتاج أي إجراء.</p>`;
  }
@@ -1184,7 +1199,7 @@ function openChat(oid,role,myUid){
  const old=document.getElementById("chatBox");if(old)old.remove();
  const d=document.createElement("div");d.id="chatBox";
  d.style.cssText="position:fixed;inset:0;z-index:9999;background:#0d131a;display:flex;flex-direction:column;direction:rtl;color:#fff;font-family:inherit";
- d.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;padding:14px;padding-top:calc(14px + env(safe-area-inset-top,0px));background:#151d27"><b>الدردشة</b><button id="chX" type="button" style="background:#2a3441;color:#fff;border:0;border-radius:10px;padding:8px 14px">إغلاق</button></div><div id="chL" style="flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px"></div><div style="display:flex;gap:8px;padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));background:#151d27"><label style="background:#2a3441;border-radius:12px;padding:10px 12px">📷<input id="chF" type="file" accept="image/*" hidden></label><input id="chT" placeholder="اكتب رسالة" style="flex:1;min-width:0;border:0;border-radius:12px;padding:10px;background:#1f2933;color:#fff"><button id="chS" type="button" style="background:#d9002f;color:#fff;border:0;border-radius:12px;padding:10px 16px">إرسال</button></div>';
+ d.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;padding:14px;padding-top:calc(14px + env(safe-area-inset-top,0px));background:#151d27"><b>الدردشة</b><button id="chX" type="button" style="background:#2a3441;color:#fff;border:0;border-radius:10px;padding:8px 14px">إغلاق</button></div><div id="chL" style="flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px"></div><div style="display:flex;gap:8px;padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));background:#151d27"><label style="background:#2a3441;border-radius:12px;padding:10px 12px">'+ico("camera",20)+'<input id="chF" type="file" accept="image/*" hidden></label><input id="chT" placeholder="اكتب رسالة" style="flex:1;min-width:0;border:0;border-radius:12px;padding:10px;background:#1f2933;color:#fff"><button id="chS" type="button" style="background:#d9002f;color:#fff;border:0;border-radius:12px;padding:10px 16px">إرسال</button></div>';
  document.body.appendChild(d);
  const L=d.querySelector("#chL"),T=d.querySelector("#chT"),cref=ref(db,"chats/"+oid);
  const un=onValue(cref,s=>{const v=s.val()||{};L.innerHTML="";Object.values(v).sort((a,b)=>(a.at||0)-(b.at||0)).forEach(m=>{const b=document.createElement("div");b.style.cssText="max-width:78%;padding:8px 12px;border-radius:14px;word-break:break-word;"+(m.from===role?"align-self:flex-start;background:#d9002f":"align-self:flex-end;background:#2a3441");if(m.img&&String(m.img).startsWith("data:image/")){const i=document.createElement("img");i.src=m.img;i.style.cssText="max-width:100%;border-radius:10px;display:block";b.appendChild(i)}if(m.text){const t=document.createElement("div");t.textContent=m.text;b.appendChild(t)}L.appendChild(b)});L.scrollTop=L.scrollHeight},()=>{L.textContent="تعذر تحميل الدردشة"});
@@ -1197,12 +1212,12 @@ function openChat(oid,role,myUid){
 
 (function(){
  const hb=document.createElement("button");hb.type="button";hb.id="chHdr";hb.setAttribute("aria-label","دردشات الزبائن");
- hb.innerHTML='<span>💬</span><b id="chBadge"></b>';
+ hb.innerHTML='<span>'+ico("chat",18)+'</span><b id="chBadge"></b>';
  const out=document.getElementById("btnOut");
  if(out&&out.parentNode)out.parentNode.insertBefore(hb,out);else document.body.appendChild(hb);
  const back=document.createElement("div");back.id="cpBack";
  const sh=document.createElement("div");sh.id="cpSheet";
- sh.innerHTML='<div class="cp-h"><b>دردشات الزبائن</b><button type="button" id="cpX" aria-label="إغلاق">✕</button></div><div id="cpL"></div>';
+ sh.innerHTML='<div class="cp-h"><b>دردشات الزبائن</b><button type="button" id="cpX" aria-label="إغلاق">'+ico("x",16)+'</button></div><div id="cpL"></div>';
  document.body.appendChild(back);document.body.appendChild(sh);
  const L=sh.querySelector("#cpL"),X=sh.querySelector("#cpX"),BG=hb.querySelector("#chBadge");
  const live=()=>Object.entries(typeof cOrders==="object"&&cOrders||{}).filter(([,o])=>o&&!["delivered","cancelled"].includes(o.status)&&(o.callAnswered||o.price));
