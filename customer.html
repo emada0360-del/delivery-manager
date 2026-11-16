@@ -726,6 +726,15 @@ function openPicker(){
  setTimeout(()=>{map.invalidateSize();if(loc)map.setView([loc.lat,loc.lng],16)},120);
 }
 // كل قراءة GPS جديدة: يتحدث الموقع تلقائياً إذا تغيّر مكان الزبون
+let pollT=null,settleT=null;const POLL_MS=300000;
+function settle(){stopWatches();clearTimeout(settleT);settleT=null;if(!pollT)pollT=setInterval(pollOnce,POLL_MS)}
+async function pollOnce(){
+ if(typeof me==="undefined"||!me)return;
+ const NG=NGp();
+ if(NG){try{onFix(await TO(NG.getCurrentPosition({enableHighAccuracy:true,timeout:25000,maximumAge:0}),30000))}catch(e){onGeoErr(e)}return}
+ if(navigator.geolocation&&window.isSecureContext!==false)navigator.geolocation.getCurrentPosition(onFix,onGeoErr,{enableHighAccuracy:true,timeout:25000,maximumAge:0});
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&me&&loc&&Date.now()-(loc.t||0)>POLL_MS)pollOnce()});
 function onFix(p){
  try{
   if(!p||!p.coords)return;
@@ -742,13 +751,14 @@ function onFix(p){
   clearTimeout(trackT);
   if(first||!$("locGate").hidden){map.setView([la,ln],16);setTimeout(()=>map.invalidateSize(),60)}
   $("locGate").hidden=true;
+  if(ac<=100)settle();else if(!settleT)settleT=setTimeout(settle,45000);
  }catch(e){}
 }
 function onGeoErr(e){
  try{
   const code=e&&e.code;
   $("gHint").textContent=code===1?"إذن الموقع مرفوض. فعّله من إعدادات الهاتف ثم اضغط إعادة التحديد.":"الـGPS مطفي أو ما يلتقط. فعّله وانتظر قليلاً.";
-  if(!loc||!loc.gps||Date.now()-(loc.t||0)>180000){if(loc)loc.gps=false;$("locGate").hidden=false;drawList()}
+  if(!loc||!loc.gps||Date.now()-(loc.t||0)>720000){if(loc)loc.gps=false;$("locGate").hidden=false;drawList()}
  }catch(x){}
 }
 function startTracking(){
@@ -843,7 +853,7 @@ $("list").onclick=async e=>{
   if(reqApp&&!approved)return toast("حسابك بانتظار التفعيل من الإدارة",1);
   if(Object.values(orders).some(isLive))return toast("لديك طلب جارٍ بالفعل",1);
   const r=rests[b.dataset.c],q=quote(r);if(!q.ok)return toast(q.why||"الاتصال غير متاح حالياً",1);
-   if(!loc||!loc.gps||Date.now()-(loc.t||0)>300000){needLoc();return toast("الموقع غير محدد. فعّل الـGPS وانتظر.",1)}
+   if(!loc||!loc.gps||Date.now()-(loc.t||0)>480000){needLoc();return toast("الموقع غير محدد. فعّل الـGPS وانتظر.",1)}
     if(!addrOk())return toast("اكتب المنطقة والحي أول.",1);
     if(!(await askTips(r)))return;
    if(Object.values(orders).some(isLive))return toast("لديك طلب جارٍ بالفعل",1);
