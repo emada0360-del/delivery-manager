@@ -614,7 +614,7 @@ function renderCust(){
   return `<tr><td><b>${esc(c.name)}</b> ${bn?'<span class="tag r">محظور</span>':''}</td><td dir="ltr">${esc(c.phone)}</td>
   <td><span class="tag ${ok?"g":"y"}">${ok?"مفعّل":"بانتظار التفعيل"}</span></td>
   <td dir="ltr"><b>${ok?"—":esc(code||"...")}</b></td>
-  <td><div class="acts">${ok?`<button type="button" data-na="${esc(id)}" class="org">إيقاف التفعيل</button>`:`<a class="tag b" target="_blank" href="${esc(waLink(c.phone,msg))}">إرسال الرمز</a><button type="button" data-ap="${esc(id)}" class="grn">تفعيل مباشر</button><button type="button" data-nc="${esc(id)}" class="gray">رمز جديد</button>`}
+  <td><div class="acts"><button type="button" data-pw="${esc(id)}" class="gray">كلمة مرور جديدة</button>${ok?`<button type="button" data-na="${esc(id)}" class="org">إيقاف التفعيل</button>`:`<a class="tag b" target="_blank" href="${esc(waLink(c.phone,msg))}">إرسال الرمز</a><button type="button" data-ap="${esc(id)}" class="grn">تفعيل مباشر</button><button type="button" data-nc="${esc(id)}" class="gray">رمز جديد</button>`}
   <button type="button" data-${bn?"ub":"bn"}="${esc(id)}" class="${bn?"grn":"red"}">${bn?"فك الحظر":"حظر"}</button>${bn?"":`<button type="button" data-dc="${esc(id)}" class="red">حذف</button>`}</div></td></tr>`}),"لا يوجد زبائن.");
 }
 function renderCancelReqs(){
@@ -645,6 +645,14 @@ $("t10").addEventListener("click",e=>{
  });
  if(d.bn&&confirm("حظر رقم وجهاز هذا الزبون؟"))run(async()=>{const c=custers[d.bn],rec={name:c.name,phone:c.phone,at:Date.now()},u={["bannedDevices/ph_"+c.phone]:rec,["approvedCustomers/"+d.bn]:null,["activations/"+d.bn]:null};if(c.deviceId)u["bannedDevices/"+c.deviceId]=rec;await update(ref(db),u);say("تم حظر الرقم والجهاز.")});
  if(d.nc)run(async()=>{await update(ref(db),{["customerCodes/"+d.nc]:newCode(),["activations/"+d.nc]:null});say("تم إنشاء رمز جديد.")});
+ if(d.pw)run(async()=>{
+  const c=custers[d.pw]||{};
+  const v=prompt("كلمة المرور الجديدة للزبون (6 أحرف أو أكثر)",String(Math.floor(100000+Math.random()*900000)));
+  if(v===null)return;const pw=v.trim();if(pw.length<6)throw Error("6 أحرف على الأقل");
+  await adminW("customer_set_password",{customerUid:d.pw,password:pw});
+  say("تم تغيير كلمة المرور.");
+  if(c.phone)window.open(waLink(c.phone,"كلمة مرورك الجديدة لتطبيق Baqubah Delivery: "+pw),"_blank");
+ });
  if(d.ap)run(async()=>{await set(ref(db,"approvedCustomers/"+d.ap),true);say("تم تفعيل الزبون.")});
  if(d.na)run(async()=>{await update(ref(db),{["approvedCustomers/"+d.na]:null,["activations/"+d.na]:null,["customerCodes/"+d.na]:newCode()});say("تم إيقاف التفعيل.")});
  if(b.id==="btnApproveAll"&&confirm("تفعيل جميع الزبائن الحاليين؟"))run(async()=>{const u={};Object.keys(custers).forEach(k=>{u["approvedCustomers/"+k]=true});await update(ref(db),u);say("تم تفعيل الجميع.")});

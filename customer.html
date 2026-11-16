@@ -312,6 +312,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
   <div class="err" id="aE"></div>
   <button id="aB" style="width:100%">دخول</button>
   <p class="sw"><a href="#" id="aS">ليس لديك حساب؟ إنشاء حساب</a></p>
+   <p class="sw"><a href="#" id="aF">نسيت كلمة المرور؟</a></p>
  </div>
 </section>
 
@@ -639,6 +640,15 @@ let uid;
  }catch(e){$("aE").textContent=/invalid|credential|not-found|wrong/.test(e.code||"")?"الرقم أو كلمة المرور غير صحيحة":/in-use/.test(e.code||"")?"الرقم مسجل مسبقاً":e.message}
 };
 $("out").onclick=()=>signOut(auth);
+$("aF").onclick=async e=>{
+ e.preventDefault();
+ let n=adminWa;
+ if(!n){try{n=String((await get(ref(db,"settings/adminWhatsapp"))).val()||"")}catch(x){}}
+ let p=String(n).replace(/\D/g,"");if(p.startsWith("0"))p="964"+p.slice(1);
+ if(!p){$("aE").textContent="راسل الدعم حتى يغيّرون كلمة المرور.";return}
+ const ph=$("aP").value.replace(/\D/g,"");
+ window.open("https://wa.me/"+p+"?text="+encodeURIComponent("مرحباً، نسيت كلمة المرور."+(ph?" رقمي: "+ph:"")),"_blank");
+};
 // ---- إشعارات FCM (تصل حتى لو النظام قتل التطبيق) ----
 let pushL=false;
 async function setupPush(path){
@@ -944,7 +954,7 @@ function drawGate(){
  const msg="مرحباً، أريد رمز تفعيل حسابي في Baqubah Delivery. الاسم: "+((prof&&prof.name)||"")+" الرقم: "+((prof&&prof.phone)||"");
  let p=adminWa.replace(/\D/g,"");if(p.startsWith("0"))p="964"+p.slice(1);
  g.dataset.drawn="1";
- g.innerHTML=`<div class="box" style="border:2px solid #b86e0055"><b>⏳ حسابك بانتظار التفعيل</b><p class="hint" style="margin:6px 0 10px">لحماية الخدمة ما نفعّل الحساب إلا بعد التأكد من رقمك. راسل الدعم عبر واتساب حتى يوصلك رمز التفعيل، وبعدها اكتبه هنا.</p>${p?`<button class="g full" id="gWa">${ICON("chat")}مراسلة الدعم للحصول على الرمز</button>`:'<p class="hint">سيتواصل معك فريقنا قريباً.</p>'}<input id="gCode" type="tel" inputmode="numeric" maxlength="6" dir="ltr" placeholder="رمز التفعيل (6 أرقام)" style="margin-top:8px"><div class="err" id="gErr"></div><button class="full" id="gGo">تفعيل الحساب</button></div>`;
+ g.innerHTML=`<div class="box" style="border:2px solid #b86e0055"><b>حسابك بانتظار التفعيل</b><p class="hint" style="margin:6px 0 10px">راسل الدعم على واتساب حتى يوصلك رمز التفعيل، واكتبه هنا.</p>${p?`<button class="g full" id="gWa">${ICON("chat")}مراسلة الدعم للحصول على الرمز</button>`:'<p class="hint">سيتواصل معك فريقنا قريباً.</p>'}<input id="gCode" type="tel" inputmode="numeric" maxlength="6" dir="ltr" placeholder="رمز التفعيل (6 أرقام)" style="margin-top:8px"><div class="err" id="gErr"></div><button class="full" id="gGo">تفعيل الحساب</button></div>`;
  const b=$("gWa");if(b)b.onclick=()=>window.open("https://wa.me/"+p+"?text="+encodeURIComponent(msg),"_blank");
  $("gGo").onclick=async()=>{
   const v=$("gCode").value.replace(/\D/g,"");
