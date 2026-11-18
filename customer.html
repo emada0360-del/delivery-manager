@@ -304,15 +304,22 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
 <section id="auth" hidden>
  <div class="a-hero"><div class="logo"><svg class="ic"><use href="#i-scooter"/></svg></div><h1>Baqubah Delivery</h1><p>اطلب من متجرك المفضل وإحنا نوصلها لك</p></div>
- <div class="a-card">
+ <div class="a-card" id="aMain">
   <h3 id="aT">تسجيل الدخول</h3>
-  <input id="aN" placeholder="الاسم" hidden>
-  <input id="aP" type="tel" inputmode="numeric" maxlength="11" placeholder="رقم الهاتف (07XXXXXXXXX)" dir="ltr">
-  <input id="aW" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)">
+  <p class="hint">اكتب اسمك ورقمك، وبعدها يوصلك رمز التحقق على واتساب.</p>
+  <input id="aN" placeholder="الاسم" autocomplete="name" maxlength="40">
+  <input id="aP" type="tel" inputmode="numeric" maxlength="11" placeholder="رقم الهاتف (07XXXXXXXXX)" dir="ltr" autocomplete="tel">
   <div class="err" id="aE"></div>
   <button id="aB" style="width:100%">دخول</button>
-  <p class="sw"><a href="#" id="aS">ليس لديك حساب؟ إنشاء حساب</a></p>
-   <p class="sw"><a href="#" id="aF">نسيت كلمة المرور؟</a></p>
+ </div>
+ <div class="a-card" id="aStep2" hidden>
+  <h3>رمز التحقق</h3>
+  <p class="hint">اطلب الرمز من الدعم على واتساب. يوصلك على نفس الرقم.</p>
+  <button id="aRW" class="g full" style="width:100%;margin-bottom:10px">اطلب الرمز على واتساب</button>
+  <input id="aRC" type="tel" inputmode="numeric" maxlength="6" placeholder="الرمز (6 أرقام)" dir="ltr" autocomplete="one-time-code">
+  <div class="err" id="aRE"></div>
+  <button id="aRB" style="width:100%">تأكيد</button>
+  <p class="sw"><a href="#" id="aRX">تغيير الاسم أو الرقم</a></p>
  </div>
 </section>
 
@@ -371,7 +378,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js";
-import {getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+import {getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,signInWithCustomToken,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 import {getDatabase,serverTimestamp,goOnline,goOffline,ref,set,update,push,onValue,onChildAdded,get,query,orderByChild,equalTo} from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
 const cfg={apiKey:"AIzaSyCFRVDAqu-daYJf_yIVMrFMPF95F6inhpc",authDomain:"baqubah-delivery-e729e.firebaseapp.com",databaseURL:"https://baqubah-delivery-e729e-default-rtdb.europe-west1.firebasedatabase.app/",projectId:"baqubah-delivery-e729e",storageBucket:"baqubah-delivery-e729e.firebasestorage.app",messagingSenderId:"450084520701",appId:"1:450084520701:web:719e2040338540ce36f494"};
 const app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);
@@ -616,39 +623,47 @@ function closeCall(quiet){
  if(!quiet)onCallEnd(c);
 }
 
-// ---- تسجيل ----
-let reg=false,pendingReg=null;
-$("aS").onclick=e=>{e.preventDefault();reg=!reg;$("aN").hidden=!reg;$("aT").textContent=reg?"إنشاء حساب":"تسجيل الدخول";$("aB").textContent=reg?"إنشاء الحساب":"دخول";$("aS").textContent=reg?"لدي حساب":"ليس لديك حساب؟ إنشاء حساب"};
+// ---- الدخول: اسم + رقم، ورمز تحقق من الإدارة على واتساب ----
+let lg={name:"",phone:""};
+try{const s=JSON.parse(localStorage.getItem("custLogin")||"{}");$("aN").value=s.name||"";$("aP").value=s.phone||""}catch(e){}
+async function wpub(kind,payload){
+ const r=await fetch(PUSH_WORKER,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(Object.assign({kind:kind},payload))});
+ const j=await r.json().catch(()=>({}));
+ if(!r.ok||j.error)throw Error(j.msg||"تعذر الاتصال. جرّب مرة ثانية.");
+ return j;
+}
 $("aB").onclick=async()=>{
- $("aE").textContent="";const ph=$("aP").value.replace(/\D/g,""),pw=$("aW").value,nm=$("aN").value.trim();
+ $("aE").textContent="";
+ const nm=$("aN").value.trim().replace(/\s+/g," "),ph=$("aP").value.replace(/\D/g,"");
+ if(nm.length<2){$("aE").textContent="اكتب اسمك";return}
+ if(!/^07\d{9}$/.test(ph)){$("aE").textContent="رقم الهاتف لازم يكون 11 رقم ويبدأ بـ 07";return}
+ $("aB").disabled=true;
  try{
-  if(!/^07\d{9}$/.test(ph))throw Error("رقم الهاتف لازم يكون 11 رقم ويبدأ بـ 07");
-  if(reg&&!nm)throw Error("اكتب اسمك");
-  if(pw.length<6)throw Error("كلمة المرور 6 أحرف على الأقل");
-  const em="c"+ph+"@baqubah.app";
-  if(reg){
-   pendingReg=(async()=>{
-let uid;
-    try{uid=(await createUserWithEmailAndPassword(auth,em,pw)).user.uid}
-    catch(e){if(e.code!=="auth/email-already-in-use")throw e;uid=(await signInWithEmailAndPassword(auth,em,pw)).user.uid}
-    const ex=await get(ref(db,"customers/"+uid));
-    if(!ex.exists())await set(ref(db,"customers/"+uid),{name:nm,phone:ph,createdAt:Date.now()});
-   })();
-   try{await pendingReg}finally{pendingReg=null}
-  }
-  else await signInWithEmailAndPassword(auth,em,pw);
- }catch(e){$("aE").textContent=/invalid|credential|not-found|wrong/.test(e.code||"")?"الرقم أو كلمة المرور غير صحيحة":/in-use/.test(e.code||"")?"الرقم مسجل مسبقاً":e.message}
+  await wpub("login_request",{name:nm,phone:ph});
+  lg={name:nm,phone:ph};
+  try{localStorage.setItem("custLogin",JSON.stringify(lg))}catch(e){}
+  $("aMain").hidden=true;$("aStep2").hidden=false;$("aRE").textContent="";$("aRC").value="";
+ }catch(e){$("aE").textContent=(e&&e.message)||"تعذر الإرسال"}
+ $("aB").disabled=false;
 };
-$("out").onclick=()=>signOut(auth);
-$("aF").onclick=async e=>{
- e.preventDefault();
+$("aRX").onclick=e=>{e.preventDefault();$("aStep2").hidden=true;$("aMain").hidden=false};
+$("aRW").onclick=async()=>{
  let n=adminWa;
  if(!n){try{n=String((await get(ref(db,"settings/adminWhatsapp"))).val()||"")}catch(x){}}
  let p=String(n).replace(/\D/g,"");if(p.startsWith("0"))p="964"+p.slice(1);
- if(!p){$("aE").textContent="راسل الدعم حتى يغيّرون كلمة المرور.";return}
- const ph=$("aP").value.replace(/\D/g,"");
- window.open("https://wa.me/"+p+"?text="+encodeURIComponent("مرحباً، نسيت كلمة المرور."+(ph?" رقمي: "+ph:"")),"_blank");
+ if(!p){$("aRE").textContent="راسل الدعم حتى يعطونك الرمز.";return}
+ window.open("https://wa.me/"+p+"?text="+encodeURIComponent("مرحباً، أنا "+lg.name+" وأريد رمز الدخول. رقمي: "+lg.phone),"_blank");
 };
+$("aRB").onclick=async()=>{
+ $("aRE").textContent="";
+ const cd=$("aRC").value.replace(/\D/g,"");
+ if(cd.length!==6){$("aRE").textContent="اكتب الرمز (6 أرقام)";return}
+ $("aRB").disabled=true;
+ try{const j=await wpub("login_with_code",{phone:lg.phone,code:cd});await signInWithCustomToken(auth,j.token)}
+ catch(e){$("aRE").textContent=(e&&e.message)||"تعذر الدخول"}
+ $("aRB").disabled=false;
+};
+$("out").onclick=()=>signOut(auth);
 // ---- إشعارات FCM (تصل حتى لو النظام قتل التطبيق) ----
 let pushL=false;
 async function setupPush(path){
@@ -669,14 +684,12 @@ onAuthStateChanged(auth,async u=>{
  unsubs.forEach(f=>f());unsubs=[];me=u;
  $("auth").hidden=!!u;$("app").hidden=!u;$("out").hidden=!u;document.body.classList.toggle("authing",!u);
  if(!u){orders={};restsLoaded=false;approved=false;apFlag=false;acFlag=false;reqApp=false;for(const k in lastSt)delete lastSt[k];return}
- if(pendingReg)await pendingReg.catch(()=>{});
  try{
  const s=await get(ref(db,"customers/"+u.uid));prof=s.val();
  if(!prof){
   const role=(await get(ref(db,"users/"+u.uid+"/role"))).val();
   if(role){await signOut(auth);$("aE").textContent="هذا حساب موظف وليس زبون. افتح صفحة الزبون من متصفح آخر";return}
-  await signOut(auth);$("aE").textContent="هذا الحساب غير موجود أو تم حذفه من الإدارة. أنشئ حساباً جديداً.";
-  if(!reg)$("aS").click();
+  await signOut(auth);$("aMain").hidden=false;$("aStep2").hidden=true;$("aE").textContent="هذا الحساب غير موجود أو تم حذفه. اطلب رمز دخول جديد.";
   return;
  }
  }catch(e){await signOut(auth);$("aE").textContent="خطأ: "+(e.message||e);return}
@@ -698,9 +711,9 @@ onAuthStateChanged(auth,async u=>{
  unsubs.push(onValue(ref(db,"wallets/"+u.uid),s=>{wallet=Math.max(0,Number((s.val()||{}).balance)||0);drawWallet();drawCur()},()=>{}));
 unsubs.push(onValue(ref(db,"customers/"+u.uid),s=>{
   if(s.exists()){prof=s.val();renderMe();return}
-  if(pendingReg||!prof)return;
+  if(!prof)return;
   prof=null;
-  signOut(auth).then(()=>{$("aE").textContent="تم حذف هذا الحساب من قبل الإدارة.";if(!reg)$("aS").click()});
+  signOut(auth).then(()=>{$("aMain").hidden=false;$("aStep2").hidden=true;$("aE").textContent="تم حذف هذا الحساب من قبل الإدارة."});
  }));
 });
 

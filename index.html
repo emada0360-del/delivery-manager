@@ -348,6 +348,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <div id="feeRows"></div>
 <input id="custFees" type="hidden">
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" id="btnFeeAdd">+ إضافة فئة</button><button type="button" id="btnCustFees" class="grn">حفظ الأسعار</button></div></div>
+<div class="box"><h3>طلبات الدخول</h3><p class="sub">زبون كتب اسمه ورقمه. اضغط «إرسال الرمز» ليفتح واتساب برسالة فيها الرمز، وبعدها يدخل ويتفعّل حسابه.</p><div id="loginReqs" class="wrap"></div></div>
 <div class="box"><h3>الزبائن وتفعيل الحسابات والحظر</h3><button type="button" id="btnApproveAll" class="grn" style="margin-bottom:10px">تفعيل جميع الزبائن الحاليين</button><p class="sub">الزبون الجديد يظهر هنا مع رمز تفعيل عشوائي؛ اضغط «إرسال الرمز» ليفتح واتساب برسالة جاهزة فيها الرمز. الحظر يمنع الرقم والجهاز من الدخول. (يعتمد على معرّف الجهاز داخل الـAPK، وفي المتصفح على معرّف محلي أضعف.) زر «حذف» يزيل حساب الزبون من التطبيق وتبقى طلباته السابقة، ولا يظهر للزبون المحظور (فك الحظر أولاً).</p><input type="search" id="custSearch" placeholder="ابحث عن زبون بالاسم أو رقم الهاتف" autocomplete="off" style="margin:0 0 10px"><div id="custUsers" class="wrap"></div></div>
 </section>
 
@@ -491,7 +492,7 @@ function stageChip(o){
 
 $("f").innerHTML+=Object.entries(ST).filter(([k])=>k!=="waiting_store"&&k!=="delivering").map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
 
-let wal={},rfs={},rfCust={},rfFilter="pending",clogs={},appr={},acts={},codes={},cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
+let lreq={},wal={},rfs={},rfCust={},rfFilter="pending",clogs={},appr={},acts={},codes={},cord={},custers={},banned={},users={},orders={},areas={},fin={},pres={},settings={},started=false;
 let showProfitFlag=false;
 
 function say(t,bad){const m=$("msg");m.textContent=t;m.style.display="block";m.style.background=bad?"#fde8ec":"#dff5ea";m.style.color=bad?"#b0002a":"#0b7a4e";clearTimeout(say._t);say._t=setTimeout(()=>m.style.display="none",5000)}
@@ -565,7 +566,7 @@ function scheduleDraw(){
 }
 
 function start(){
- const src={callLogs:v=>clogs=v,customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customers:v=>custers=v,approvedCustomers:v=>appr=v,activations:v=>acts=v,customerCodes:v=>codes=v,bannedDevices:v=>banned=v,finance:v=>fin=v,refunds:v=>rfs=v||{},wallets:v=>wal=v||{},presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
+ const src={callLogs:v=>clogs=v,customerOrders:v=>cord=v,users:v=>users=v,orders:v=>orders=v,areas:v=>areas=v,customers:v=>custers=v,approvedCustomers:v=>appr=v,activations:v=>acts=v,customerCodes:v=>codes=v,bannedDevices:v=>banned=v,finance:v=>fin=v,refunds:v=>rfs=v||{},wallets:v=>wal=v||{},loginRequests:v=>lreq=v||{},presence:v=>pres=v,settings:v=>{settings=v;fillSettings()}};
  const prev={};
  for(const p in src)onValue(ref(db,p),s=>{
    const v=s.val()||{};
@@ -614,7 +615,7 @@ function renderCust(){
   return `<tr><td><b>${esc(c.name)}</b> ${bn?'<span class="tag r">محظور</span>':''}</td><td dir="ltr">${esc(c.phone)}</td>
   <td><span class="tag ${ok?"g":"y"}">${ok?"مفعّل":"بانتظار التفعيل"}</span></td>
   <td dir="ltr"><b>${ok?"—":esc(code||"...")}</b></td>
-  <td><div class="acts"><button type="button" data-pw="${esc(id)}" class="gray">كلمة مرور جديدة</button>${ok?`<button type="button" data-na="${esc(id)}" class="org">إيقاف التفعيل</button>`:`<a class="tag b" target="_blank" href="${esc(waLink(c.phone,msg))}">إرسال الرمز</a><button type="button" data-ap="${esc(id)}" class="grn">تفعيل مباشر</button><button type="button" data-nc="${esc(id)}" class="gray">رمز جديد</button>`}
+  <td><div class="acts"><button type="button" data-lcu="${esc(id)}" class="gray">رمز دخول</button>${ok?`<button type="button" data-na="${esc(id)}" class="org">إيقاف التفعيل</button>`:`<a class="tag b" target="_blank" href="${esc(waLink(c.phone,msg))}">إرسال الرمز</a><button type="button" data-ap="${esc(id)}" class="grn">تفعيل مباشر</button><button type="button" data-nc="${esc(id)}" class="gray">رمز جديد</button>`}
   <button type="button" data-${bn?"ub":"bn"}="${esc(id)}" class="${bn?"grn":"red"}">${bn?"فك الحظر":"حظر"}</button>${bn?"":`<button type="button" data-dc="${esc(id)}" class="red">حذف</button>`}</div></td></tr>`}),"لا يوجد زبائن.");
 }
 function renderCancelReqs(){
@@ -645,14 +646,6 @@ $("t10").addEventListener("click",e=>{
  });
  if(d.bn&&confirm("حظر رقم وجهاز هذا الزبون؟"))run(async()=>{const c=custers[d.bn],rec={name:c.name,phone:c.phone,at:Date.now()},u={["bannedDevices/ph_"+c.phone]:rec,["approvedCustomers/"+d.bn]:null,["activations/"+d.bn]:null};if(c.deviceId)u["bannedDevices/"+c.deviceId]=rec;await update(ref(db),u);say("تم حظر الرقم والجهاز.")});
  if(d.nc)run(async()=>{await update(ref(db),{["customerCodes/"+d.nc]:newCode(),["activations/"+d.nc]:null});say("تم إنشاء رمز جديد.")});
- if(d.pw)run(async()=>{
-  const c=custers[d.pw]||{};
-  const v=prompt("كلمة المرور الجديدة للزبون (6 أحرف أو أكثر)",String(Math.floor(100000+Math.random()*900000)));
-  if(v===null)return;const pw=v.trim();if(pw.length<6)throw Error("6 أحرف على الأقل");
-  await adminW("customer_set_password",{customerUid:d.pw,password:pw});
-  say("تم تغيير كلمة المرور.");
-  if(c.phone)window.open(waLink(c.phone,"كلمة مرورك الجديدة لتطبيق Baqubah Delivery: "+pw),"_blank");
- });
  if(d.ap)run(async()=>{await set(ref(db,"approvedCustomers/"+d.ap),true);say("تم تفعيل الزبون.")});
  if(d.na)run(async()=>{await update(ref(db),{["approvedCustomers/"+d.na]:null,["activations/"+d.na]:null,["customerCodes/"+d.na]:newCode()});say("تم إيقاف التفعيل.")});
  if(b.id==="btnApproveAll"&&confirm("تفعيل جميع الزبائن الحاليين؟"))run(async()=>{const u={};Object.keys(custers).forEach(k=>{u["approvedCustomers/"+k]=true});await update(ref(db),u);say("تم تفعيل الجميع.")});
@@ -1004,7 +997,7 @@ function draw(){
  drawLiveOrders();
  lastNet=liveProfit+archProfit-profitReset;lastReset=profitReset;
  drawProfitTab();
- drawCalls();drawRefunds();drawWallets();
+ drawCalls();drawRefunds();drawWallets();drawLoginReqs();
  syncCust();
  checkForced();
 
@@ -1633,6 +1626,26 @@ document.addEventListener("click",e=>{
    else{const v=prompt("المبلغ الصحيح (د.ع)",String(r.amount));if(v===null)return;n=parseInt(String(v).replace(/\D/g,""),10);if(!(n>=0))throw Error("مبلغ غير صحيح")}
    const note=prompt("السبب","")||"";
    const res=await adminW("wallet_set_change",{orderId:id,amount:n,note});say("تم التصحيح. رصيد الزبون "+fmt(res.balance)+" د.ع");
+  }
+ });
+});
+
+
+// ---- طلبات الدخول (اسم + رقم) ورمز التحقق عبر واتساب ----
+function drawLoginReqs(){
+ const el=$("loginReqs");if(!el)return;
+ const rows=Object.entries(lreq).filter(([,r])=>r&&r.phone).sort((a,b)=>(b[1].at||0)-(a[1].at||0));
+ el.innerHTML=rows.length?table(["الاسم","الهاتف","الوقت","الحالة","إجراءات"],rows.map(([p,r])=>`<tr><td>${esc(r.name)}</td><td><a href="tel:${esc(r.phone)}" dir="ltr">${esc(r.phone)}</a></td><td>${tm(r.at)}</td><td>${r.status==="code_sent"?"أُرسل الرمز":"بانتظارك"}</td><td><div class="acts"><button type="button" data-lc="${esc(p)}" class="grn">إرسال الرمز</button><button type="button" data-lx="${esc(p)}" class="red">حذف</button></div></td></tr>`),"لا توجد طلبات."):'<p class="sub">لا توجد طلبات دخول جديدة.</p>';
+}
+document.addEventListener("click",e=>{
+ const b=e.target.closest("[data-lc],[data-lx],[data-lcu]");if(!b)return;
+ run(async()=>{
+  if(b.dataset.lc||b.dataset.lcu){
+   const r=await adminW("customer_login_code",b.dataset.lc?{phone:b.dataset.lc}:{customerUid:b.dataset.lcu});
+   say("رمز الدخول: "+r.code+" ("+r.minutes+" دقيقة)");
+   window.open(waLink(r.phone,"مرحباً "+(r.name||"")+"، رمز دخولك لتطبيق Baqubah Delivery: "+r.code+" (صالح "+r.minutes+" دقيقة)."),"_blank");
+  }else{
+   await set(ref(db,"loginRequests/"+b.dataset.lx),null);
   }
  });
 });
