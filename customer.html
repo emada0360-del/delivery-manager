@@ -307,6 +307,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
  <div class="a-card" id="aMain">
   <h3 id="aT">تسجيل الدخول</h3>
   <p class="hint">اكتب اسمك ورقمك، وبعدها يوصلك رمز التحقق على واتساب.</p>
+  <p class="hint">بالدخول أنت توافق على <a href="https://emada0360-del.github.io/delivery-manager/privacy.html" target="_blank" rel="noopener">الشروط وسياسة الخصوصية</a>.</p>
   <input id="aN" placeholder="الاسم" autocomplete="name" maxlength="40">
   <input id="aP" type="tel" inputmode="numeric" maxlength="11" placeholder="رقم الهاتف (07XXXXXXXXX)" dir="ltr" autocomplete="tel">
   <div class="err" id="aE"></div>
@@ -354,8 +355,10 @@ button:disabled{opacity:.5;cursor:not-allowed}
   <div class="mlist">
    <button class="mi" id="meLoc"><span class="mi-ic"><svg class="ic"><use href="#i-pin"/></svg></span><span class="mi-t">تحديث موقعي<small>لحساب أجرة التوصيل</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
    <button class="mi" id="meFees"><span class="mi-ic"><svg class="ic"><use href="#i-tag"/></svg></span><span class="mi-t">أسعار التوصيل<small>حسب بعدك عن المتجر</small></span><svg class="ic chev"><use href="#i-chev"/></svg></button>
+   <button class="mi danger" id="delAcc"><span class="mi-ic"><svg class="ic"><use href="#i-logout"/></svg></span><span class="mi-t">حذف حسابي<small>حذف بياناتك نهائياً</small></span></button>
    <button class="mi danger" id="out"><span class="mi-ic"><svg class="ic"><use href="#i-logout"/></svg></span><span class="mi-t">تسجيل الخروج</span></button>
   </div>
+  <p class="hint c"><a href="https://emada0360-del.github.io/delivery-manager/privacy.html" target="_blank" rel="noopener">سياسة الخصوصية والشروط</a> · <a href="https://emada0360-del.github.io/delivery-manager/delete-account.html" target="_blank" rel="noopener">طلب حذف الحساب</a></p>
   <p class="hint c">Baqubah Delivery · تطبيق الزبون</p>
  </section>
 </main>
@@ -407,9 +410,8 @@ let restsLoaded=false,filt="all",curTab="home",firstSt=true;const lastSt={};
 
 // ===== مكالمة صوتية داخل التطبيق (WebRTC + Firebase للإشارات) =====
 async function iceServers(){
- const EX_U="000000002109565717",EX_P="9KWEX2Wj/WDdKMDTubxNjONG1RM=";
- const ex=[{urls:"turn:free.expressturn.com:3478",username:EX_U,credential:EX_P},{urls:"turn:free.expressturn.com:3478?transport=tcp",username:EX_U,credential:EX_P}];
- return [...ex,{urls:"stun:free.expressturn.com:3478"},{urls:"stun:stun.l.google.com:19302"}];
+ const fb=[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:free.expressturn.com:3478"}];
+ try{const j=await wcall("turn_creds",{});return Array.isArray(j.iceServers)&&j.iceServers.length?j.iceServers:fb}catch(e){return fb}
 }
 const PUSH_WORKER="https://baqubah-push.emada0360.workers.dev";/* ضع هنا رابط الـWorker بعد النشر، مثال: https://baqubah-push.اسمك.workers.dev */
 let wallet=0;const relTried={};
@@ -664,6 +666,28 @@ $("aRB").onclick=async()=>{
  $("aRB").disabled=false;
 };
 $("out").onclick=()=>signOut(auth);
+// ---- حذف الحساب ----
+$("delAcc").onclick=async()=>{
+ if(!confirm("حذف حسابك نهائياً؟ ستُحذف بياناتك ورصيد محفظتك ولا يمكن التراجع."))return;
+ try{await wcall("delete_account",{});try{await signOut(auth)}catch(e){}toast("تم حذف حسابك وبياناتك")}
+ catch(e){supportOpen("مرحباً، أريد حذف حسابي وبياناتي نهائياً. الاسم: "+((prof&&prof.name)||"")+" الرقم: "+((prof&&prof.phone)||""));toast("أرسل رسالة الواتساب لإكمال طلب الحذف")}
+};
+// ---- نافذة إفصاح/موافقة عامة (تُعرض قبل صلاحيات الموقع والمايك) ----
+function askDisclosure(title,body,okText,key){
+ return new Promise(res=>{
+  try{if(key&&localStorage.getItem(key)==="1")return res(true)}catch(e){}
+  const d=document.createElement("div");d.id="tipsM";
+  d.innerHTML=`<div class="sheet"><h3>${esc(title)}</h3><p style="line-height:1.9;margin:8px 0 12px">${body}</p><button class="g full" data-a="ok">${esc(okText)}</button><button class="l full" data-a="no">إلغاء</button></div>`;
+  d.onclick=e=>{const b=e.target.closest("button");if(e.target===d||(b&&b.dataset.a==="no")){d.remove();return res(false)}if(b&&b.dataset.a==="ok"){try{if(key)localStorage.setItem(key,"1")}catch(e){}d.remove();res(true)}};
+  document.body.appendChild(d);
+ });
+}
+function ensureCallConsent(){
+ return askDisclosure("موافقة على المكالمة والتسجيل",`هذه المكالمة تستخدم <b>المايك</b>، وتُسجَّل (صوتك وصوت المتجر) لأغراض الجودة وحل الشكاوى. يحتفظ بها فريق الإدارة لمدة محدودة ولا تُشارك مع أي جهة أخرى. تفاصيل أكثر في <a href="https://emada0360-del.github.io/delivery-manager/privacy.html" target="_blank" rel="noopener">سياسة الخصوصية</a>.<br>بالضغط على «موافق» أنت تسمح بتسجيل المكالمة وباستخدام المايك.`,"موافق، اتصل الآن","callConsentV1");
+}
+function ensureLocDisclosure(){
+ return askDisclosure("لماذا نطلب موقعك؟",`نستخدم موقعك <b>فقط أثناء فتح التطبيق</b> لحساب أجرة التوصيل وإيصال طلبك لعنوانك. لا نتتبع موقعك وهو مغلق، وتقدر توقف الإذن من إعدادات الهاتف بأي وقت.`,"متابعة","locDiscV1");
+}
 // ---- إشعارات FCM (تصل حتى لو النظام قتل التطبيق) ----
 let pushL=false;
 async function setupPush(path){
@@ -795,7 +819,7 @@ function startTracking(){
  if(NG)(async()=>{
   try{
    let pr=await TO(NG.checkPermissions(),5000);
-   if(pr.location!=="granted"&&pr.coarseLocation!=="granted")pr=await TO(NG.requestPermissions({permissions:["location"]}),30000);
+   if(pr.location!=="granted"&&pr.coarseLocation!=="granted"){if(!(await ensureLocDisclosure())){$("gHint").textContent="الموقع مطلوب لحساب أجرة التوصيل. اضغط إعادة التحديد عندما تكون جاهز.";$("locGate").hidden=false;return}pr=await TO(NG.requestPermissions({permissions:["location"]}),30000)}
    if(pr.location!=="granted"&&pr.coarseLocation!=="granted"){$("gHint").textContent="إذن الموقع مرفوض. فعّله من إعدادات الهاتف ثم اضغط إعادة التحديد.";$("locGate").hidden=false;return}
    const cb=(pos,err)=>{if(pos)onFix(pos);else if(err)onGeoErr(err)};
    wN="p";NG.watchPosition({enableHighAccuracy:false,timeout:20000,maximumAge:60000},cb).then(id=>{wN=id}).catch(()=>{wN=null});
@@ -920,8 +944,13 @@ function getImg(id,v){
  return "";
 }
 // ---- نصائح قبل الاتصال ----
-const DEF_TIPS=["راجع منيو المتجر قبل الاتصال حتى لا تنسى شيئاً من طلبك.","المكالمة مسجّلة بالكامل لأغراض الجودة.","ما تحتاج تعطي المتجر رقمك. السائق عنده كل المعلومات."];
-function askTips(r){
+const DEF_TIPS=["راجع منيو المتجر قبل الاتصال حتى لا تنسى شيئاً من طلبك.","المكالمة مسجّلة بالكامل لأغراض الجودة، وستُطلب موافقتك قبل أول مكالمة.","ما تحتاج تعطي المتجر رقمك. السائق عنده كل المعلومات."];
+async function askTips(r){
+ const ok=await askTips0(r);
+ if(!ok)return false;
+ return await ensureCallConsent();
+}
+function askTips0(r){
  return new Promise(res=>{
   const t=(Array.isArray(callTips)?callTips:Object.values(callTips||{})).map(x=>String(x||"").trim()).filter(Boolean),L=t.length?t:DEF_TIPS,mu=safeUrl(r.menuUrl);
   const d=document.createElement("div");d.id="tipsM";
